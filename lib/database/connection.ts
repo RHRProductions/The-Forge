@@ -18,6 +18,7 @@ export function getDatabase(): Database.Database {
 function initializeDatabase() {
   if (!db) return;
 
+  // First, create the table with original structure if it doesn't exist
   db.exec(`
     CREATE TABLE IF NOT EXISTS leads (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -35,10 +36,86 @@ function initializeDatabase() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+  `);
 
+  // Add new columns if they don't exist (ALTER TABLE approach for existing data)
+  const newColumns = [
+    'phone_2 TEXT',
+    'address TEXT DEFAULT ""',
+    'city TEXT DEFAULT ""',
+    'state TEXT DEFAULT ""',
+    'zip_code TEXT DEFAULT ""',
+    'date_of_birth TEXT',
+    'age INTEGER',
+    'gender TEXT',
+    'marital_status TEXT',
+    'occupation TEXT',
+    'income TEXT',
+    'household_size INTEGER',
+    'lead_score INTEGER DEFAULT 0',
+    'last_contact_date TEXT',
+    'next_follow_up TEXT'
+  ];
+
+  newColumns.forEach(column => {
+    try {
+      const columnName = column.split(' ')[0];
+      db.exec(`ALTER TABLE leads ADD COLUMN ${column};`);
+    } catch (error) {
+      // Column already exists, ignore error
+    }
+  });
+
+  // Create related tables
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS lead_notes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      lead_id INTEGER NOT NULL,
+      note TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS lead_images (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      lead_id INTEGER NOT NULL,
+      filename TEXT NOT NULL,
+      original_name TEXT NOT NULL,
+      file_path TEXT NOT NULL,
+      file_size INTEGER NOT NULL,
+      mime_type TEXT NOT NULL,
+      uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS lead_policies (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      lead_id INTEGER NOT NULL,
+      policy_number TEXT,
+      policy_type TEXT NOT NULL,
+      coverage_amount REAL,
+      premium_amount REAL,
+      start_date TEXT,
+      end_date TEXT,
+      status TEXT DEFAULT 'pending',
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE
+    );
+  `);
+
+  // Create indexes
+  db.exec(`
     CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
     CREATE INDEX IF NOT EXISTS idx_leads_created_at ON leads(created_at);
     CREATE INDEX IF NOT EXISTS idx_leads_email ON leads(email);
+    CREATE INDEX IF NOT EXISTS idx_leads_zip_code ON leads(zip_code);
+    CREATE INDEX IF NOT EXISTS idx_leads_age ON leads(age);
+    CREATE INDEX IF NOT EXISTS idx_leads_state ON leads(state);
+    
+    CREATE INDEX IF NOT EXISTS idx_lead_notes_lead_id ON lead_notes(lead_id);
+    CREATE INDEX IF NOT EXISTS idx_lead_images_lead_id ON lead_images(lead_id);
+    CREATE INDEX IF NOT EXISTS idx_lead_policies_lead_id ON lead_policies(lead_id);
   `);
 }
 

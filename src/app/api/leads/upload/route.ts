@@ -22,7 +22,7 @@ const COLUMN_MAPPINGS = {
   phone_2: ['phone_2', 'phone2', 'secondary_phone', 'work_phone', 'other_phone_1', 'other_phone_2', 'other phone 1', 'other phone 2'],
   
   // Address variations
-  address: ['address', 'address1', 'street_address', 'home_address', 'mailing_address'],
+  address: ['address', 'address1', 'addressline1', 'street_address', 'home_address', 'mailing_address'],
   city: ['city', 'town', 'municipality'],
   state: ['state', 'province', 'region', 'st'],
   zip_code: ['zip_code', 'zip', 'zipcode', 'postal_code', 'postcode'],
@@ -131,6 +131,64 @@ function collectUnmappedData(row: any, usedKeys: Set<string>): string {
   return unmappedEntries.length > 0 ? unmappedEntries.join(' | ') : '';
 }
 
+function detectLeadType(row: any, source: string, campaign: string = '', notes: string = ''): 't65' | 'life' | 'client' | 'other' {
+  // Convert to lowercase for case-insensitive matching
+  const sourceStr = source.toLowerCase();
+  const campaignStr = campaign.toLowerCase();
+  const notesStr = notes.toLowerCase();
+  const allText = `${sourceStr} ${campaignStr} ${notesStr}`.toLowerCase();
+  
+  // T65 (Medicare Turning 65) indicators
+  const t65Indicators = [
+    't65', 'turning 65', 'medicare', 'supplement', 'medigap', 
+    'advantage', 'part d', 'partd', 'open enrollment',
+    'aep', 'annual enrollment', 'medicare annual'
+  ];
+  
+  // Life insurance indicators  
+  const lifeIndicators = [
+    'life', 'final expense', 'fe ', 'burial', 'funeral',
+    'whole life', 'term life', 'universal life',
+    'life insurance', 'death benefit', 'beneficiary'
+  ];
+  
+  // Client indicators
+  const clientIndicators = [
+    'client', 'customer', 'existing', 'current', 'sold',
+    'policy holder', 'policyholder', 'renew', 'renewal',
+    'service', 'claim', 'existing policy', 'current policy'
+  ];
+  
+  // Check for T65 indicators
+  for (const indicator of t65Indicators) {
+    if (allText.includes(indicator)) {
+      return 't65';
+    }
+  }
+  
+  // Check for Life indicators
+  for (const indicator of lifeIndicators) {
+    if (allText.includes(indicator)) {
+      return 'life';
+    }
+  }
+  
+  // Check for Client indicators
+  for (const indicator of clientIndicators) {
+    if (allText.includes(indicator)) {
+      return 'client';
+    }
+  }
+  
+  // Age-based detection for T65 leads (approaching Medicare age)
+  const age = parseInt(findColumnValue(row, COLUMN_MAPPINGS.age)) || 0;
+  if (age >= 64 && age <= 67) {
+    return 't65';
+  }
+  
+  return 'other';
+}
+
 function processCSVData(results: any, totalSpent: number) {
   const db = getDatabase();
   const insertStmt = db.prepare(`
@@ -138,9 +196,9 @@ function processCSVData(results: any, totalSpent: number) {
       first_name, last_name, email, phone, phone_2, company, 
       address, city, state, zip_code, date_of_birth, age, gender,
       marital_status, occupation, income, household_size, status, 
-      contact_method, cost_per_lead, sales_amount, notes, source, 
+      contact_method, lead_type, cost_per_lead, sales_amount, notes, source, 
       lead_score, last_contact_date, next_follow_up, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
   `);
 
   let successCount = 0;
@@ -221,6 +279,10 @@ function processCSVData(results: any, totalSpent: number) {
         notes = notes ? `${notes} | Additional Data: ${unmappedData}` : `Additional Data: ${unmappedData}`;
       }
 
+      // Detect lead type based on source, campaign, notes, and age
+      const campaign = findColumnValue(row, ['campaign', 'Campaign']) || '';
+      const leadType = detectLeadType(row, source, campaign, notes);
+
       // Debug logging for first row
       if (successCount === 0) {
         console.log('Debug - Processing first lead:');
@@ -233,6 +295,7 @@ function processCSVData(results: any, totalSpent: number) {
         console.log('state:', findColumnValue(row, COLUMN_MAPPINGS.state));
         console.log('zip:', findColumnValue(row, COLUMN_MAPPINGS.zip_code));
         console.log('age:', finalAge);
+        console.log('lead type:', leadType);
         console.log('unmapped data:', unmappedData);
         console.log('final notes:', notes);
         console.log('Raw row keys:', Object.keys(row));
@@ -258,6 +321,7 @@ function processCSVData(results: any, totalSpent: number) {
         parseInt(findColumnValue(row, COLUMN_MAPPINGS.household_size)) || null,
         findColumnValue(row, COLUMN_MAPPINGS.status) || 'new',
         contactMethod,
+        leadType,
         parseFloat(findColumnValue(row, COLUMN_MAPPINGS.cost_per_lead)) || costPerLead,
         parseFloat(findColumnValue(row, COLUMN_MAPPINGS.sales_amount)) || 0,
         notes,

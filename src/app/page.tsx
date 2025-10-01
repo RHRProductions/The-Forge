@@ -243,6 +243,7 @@ export default function Home() {
   const [currentLeadIndex, setCurrentLeadIndex] = useState<number>(0);
   const [pendingChanges, setPendingChanges] = useState<Partial<Lead> | null>(null);
   const [deleteStatus, setDeleteStatus] = useState<string>('');
+  const [showDevMenu, setShowDevMenu] = useState(false);
   const [filters, setFilters] = useState({
     status: '',
     lead_type: '',
@@ -289,6 +290,18 @@ export default function Home() {
   useEffect(() => {
     applyFilters();
   }, [leads, filters]);
+
+  // Developer menu keyboard shortcut (Ctrl+Shift+D)
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+        e.preventDefault();
+        setShowDevMenu(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, []);
 
   const fetchLeads = async () => {
     try {
@@ -427,6 +440,15 @@ export default function Home() {
     setEditingLead(null);
   };
 
+  const handleFormChange = (field: string, value: any) => {
+    setFormData({ ...formData, [field]: value });
+  };
+
+  const handleDateOfBirthChange = (dateValue: string) => {
+    const calculatedAge = calculateAge(dateValue);
+    setFormData({ ...formData, date_of_birth: dateValue, age: calculatedAge });
+  };
+
   const startEdit = (lead: Lead) => {
     setFormData({
       first_name: lead.first_name,
@@ -448,6 +470,7 @@ export default function Home() {
       household_size: lead.household_size || 0,
       status: lead.status,
       contact_method: lead.contact_method || '' as ContactMethod,
+      lead_type: lead.lead_type || 'other' as LeadType,
       cost_per_lead: lead.cost_per_lead,
       sales_amount: lead.sales_amount,
       notes: lead.notes || '',
@@ -493,18 +516,29 @@ export default function Home() {
   };
 
   const handleBulkDelete = async () => {
-    if (confirm(`Are you sure you want to delete ALL ${leads.length} leads? This action cannot be undone.`)) {
+    const warningMessage = `⚠️ DANGER: DELETE ALL LEADS ⚠️
+
+This will permanently delete ALL ${leads.length} leads from your database!
+
+This action CANNOT be undone!
+
+Type "DELETE ALL" to confirm:`;
+
+    const userInput = prompt(warningMessage);
+
+    if (userInput === 'DELETE ALL') {
       try {
         setDeleteStatus('Deleting all leads...');
         const response = await fetch('/api/leads/bulk-delete', {
           method: 'DELETE',
         });
-        
+
         const result = await response.json();
-        
+
         if (response.ok) {
           setDeleteStatus(`Successfully deleted ${result.deletedCount} leads!`);
           fetchLeads();
+          setShowDevMenu(false);
           setTimeout(() => {
             setDeleteStatus('');
           }, 3000);
@@ -514,6 +548,8 @@ export default function Home() {
       } catch (error) {
         setDeleteStatus('Delete failed. Please try again.');
       }
+    } else if (userInput !== null) {
+      alert('Deletion cancelled - incorrect confirmation text');
     }
   };
 
@@ -636,15 +672,6 @@ export default function Home() {
             >
               {showAddForm ? 'Cancel' : 'Add Lead'}
             </button>
-            {leads.length > 0 && (
-              <button
-                onClick={handleBulkDelete}
-                className="bg-red-800 text-white px-6 py-2 rounded hover:bg-red-900 transition-colors border-2 border-red-900"
-                disabled={deleteStatus.includes('Deleting')}
-              >
-                {deleteStatus.includes('Deleting') ? 'Deleting...' : 'Clear All'}
-              </button>
-            )}
           </div>
         </div>
 
@@ -690,11 +717,10 @@ export default function Home() {
                   />
                   <input
                     type="email"
-                    placeholder="Email"
+                    placeholder="Email (Optional)"
                     value={formData.email}
                     onChange={(e) => handleFormChange('email', e.target.value)}
                     className="p-3 border border-gray-300 rounded focus:border-red-600 focus:outline-none"
-                    required
                   />
                   <input
                     type="tel"
@@ -1025,6 +1051,7 @@ export default function Home() {
               >
                 <option value="">All Types</option>
                 <option value="t65">T65 (Medicare)</option>
+                <option value="t65_wl">T65 WL</option>
                 <option value="life">Life Insurance</option>
                 <option value="client">Client</option>
                 <option value="other">Other</option>
@@ -1164,12 +1191,14 @@ export default function Home() {
                           <br />
                           <span className={`px-2 py-1 rounded text-xs font-medium ${
                             lead.lead_type === 't65' ? 'bg-purple-100 text-purple-800' :
+                            lead.lead_type === 't65_wl' ? 'bg-indigo-100 text-indigo-800' :
                             lead.lead_type === 'life' ? 'bg-orange-100 text-orange-800' :
                             lead.lead_type === 'client' ? 'bg-green-100 text-green-800' :
                             'bg-gray-100 text-gray-800'
                           }`}>
-                            {lead.lead_type === 't65' ? 'T65' : 
-                             lead.lead_type === 'life' ? 'Life' : 
+                            {lead.lead_type === 't65' ? 'T65' :
+                             lead.lead_type === 't65_wl' ? 'T65 WL' :
+                             lead.lead_type === 'life' ? 'Life' :
                              lead.lead_type === 'client' ? 'Client' : 'Other'}
                           </span>
                         </div>
@@ -1193,6 +1222,32 @@ export default function Home() {
           </div>
         </div>
       </main>
+
+      {/* Developer Menu - Press Ctrl+Shift+D to toggle */}
+      {showDevMenu && (
+        <div className="fixed bottom-4 right-4 bg-red-900 text-white p-4 rounded-lg shadow-2xl border-4 border-red-600 z-50">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-sm font-bold">⚠️ Developer Menu</h3>
+            <button
+              onClick={() => setShowDevMenu(false)}
+              className="text-white hover:text-gray-300 text-xl leading-none"
+            >
+              ×
+            </button>
+          </div>
+          <p className="text-xs mb-3 text-red-200">Dangerous operations - use with caution</p>
+          {leads.length > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              className="w-full bg-red-700 text-white px-4 py-2 rounded hover:bg-red-800 transition-colors border-2 border-red-500 font-bold"
+              disabled={deleteStatus.includes('Deleting')}
+            >
+              {deleteStatus.includes('Deleting') ? 'Deleting...' : '🗑️ Delete All Leads'}
+            </button>
+          )}
+          <p className="text-xs mt-2 text-red-300">Press Ctrl+Shift+D to hide</p>
+        </div>
+      )}
 
       {/* Lead Detail Modal */}
       {showLeadDetail && selectedLead && (
@@ -1365,13 +1420,12 @@ function LeadDetailForm({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email (Optional)</label>
               <input
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleFormChange('email', e.target.value)}
                 className="w-full p-2 border border-gray-300 rounded focus:border-red-600 focus:outline-none"
-                required
               />
             </div>
             <div>
@@ -1525,6 +1579,7 @@ function LeadDetailForm({
               >
                 <option value="other">Other</option>
                 <option value="t65">T65 (Medicare)</option>
+                <option value="t65_wl">T65 WL</option>
                 <option value="life">Life Insurance</option>
                 <option value="client">Client</option>
               </select>

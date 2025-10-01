@@ -80,8 +80,9 @@ export type ContactMethod =
   | 'text'
   | 'email';
 
-export type LeadType = 
+export type LeadType =
   | 't65'
+  | 't65_wl'
   | 'life'
   | 'client'
   | 'other';

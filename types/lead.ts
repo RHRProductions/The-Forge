@@ -19,6 +19,7 @@ export interface Lead {
   household_size?: number;
   status: LeadStatus;
   contact_method?: ContactMethod;
+  lead_type: LeadType;
   cost_per_lead: number;
   sales_amount: number;
   notes?: string;
@@ -78,3 +79,9 @@ export type ContactMethod =
   | 'phone'
   | 'text'
   | 'email';
+
+export type LeadType = 
+  | 't65'
+  | 'life'
+  | 'client'
+  | 'other';

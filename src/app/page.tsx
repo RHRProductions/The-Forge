@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Lead, LeadStatus, ContactMethod } from '../../types/lead';
+import { Lead, LeadStatus, ContactMethod, LeadType } from '../../types/lead';
 import { formatPhoneNumber, formatName, formatLocation, formatDateForInput, calculateAge } from '../../lib/utils';
 import { TimestampedNote, LeadImage, LeadPolicy } from '../../types/lead';
 
@@ -26,13 +26,42 @@ function ResizableMovableModal({
   totalCount?: number;
 }) {
   const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [size, setSize] = useState({ width: 1000, height: 600 });
+  const [size, setSize] = useState(() => {
+    // Load saved size from localStorage or use defaults
+    if (typeof window !== 'undefined') {
+      const savedSize = localStorage.getItem('modal-size');
+      if (savedSize) {
+        try {
+          const parsed = JSON.parse(savedSize);
+          // Validate the saved values
+          if (parsed.width >= 400 && parsed.height >= 300 && 
+              parsed.width <= window.innerWidth && parsed.height <= window.innerHeight) {
+            console.log('Loading saved modal size:', parsed);
+            return parsed;
+          }
+        } catch (e) {
+          // If parsing fails, use defaults
+        }
+      }
+    }
+    console.log('Using default modal size: { width: 1000, height: 600 }');
+    return { width: 1000, height: 600 };
+  });
   const [isInitialized, setIsInitialized] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [hasInteracted, setHasInteracted] = useState(false);
+  const [justFinishedResizing, setJustFinishedResizing] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
+
+  // Save size to localStorage
+  const saveSize = (newSize: { width: number; height: number }) => {
+    if (typeof window !== 'undefined') {
+      console.log('Saving modal size:', newSize);
+      localStorage.setItem('modal-size', JSON.stringify(newSize));
+    }
+  };
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).classList.contains('drag-handle')) {
@@ -58,6 +87,11 @@ function ResizableMovableModal({
   };
 
   const handleMouseUp = () => {
+    // Mark that we just finished resizing
+    if (isResizing) {
+      setJustFinishedResizing(true);
+    }
+    
     setIsDragging(false);
     setIsResizing(false);
     // Reset interaction flag after a small delay to prevent accidental close
@@ -93,6 +127,14 @@ function ResizableMovableModal({
       setIsInitialized(true);
     }
   }, [isInitialized, size]);
+
+  // Save size when resizing is complete
+  useEffect(() => {
+    if (justFinishedResizing) {
+      saveSize(size);
+      setJustFinishedResizing(false);
+    }
+  }, [justFinishedResizing, size]);
 
   useEffect(() => {
     if (isDragging) {
@@ -201,6 +243,15 @@ export default function Home() {
   const [currentLeadIndex, setCurrentLeadIndex] = useState<number>(0);
   const [pendingChanges, setPendingChanges] = useState<Partial<Lead> | null>(null);
   const [deleteStatus, setDeleteStatus] = useState<string>('');
+  const [filters, setFilters] = useState({
+    status: '',
+    lead_type: '',
+    city: '',
+    zip_code: '',
+    age_min: '',
+    age_max: ''
+  });
+  const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -221,6 +272,7 @@ export default function Home() {
     household_size: 0,
     status: 'new' as LeadStatus,
     contact_method: '' as ContactMethod,
+    lead_type: 'other' as LeadType,
     cost_per_lead: 0,
     sales_amount: 0,
     notes: '',
@@ -234,6 +286,10 @@ export default function Home() {
     fetchLeads();
   }, []);
 
+  useEffect(() => {
+    applyFilters();
+  }, [leads, filters]);
+
   const fetchLeads = async () => {
     try {
       const response = await fetch('/api/leads');
@@ -244,6 +300,62 @@ export default function Home() {
     } catch (error) {
       console.error('Error fetching leads:', error);
     }
+  };
+
+  const applyFilters = () => {
+    let filtered = leads;
+
+    // Filter by status
+    if (filters.status) {
+      filtered = filtered.filter(lead => lead.status === filters.status);
+    }
+
+    // Filter by lead type
+    if (filters.lead_type) {
+      filtered = filtered.filter(lead => lead.lead_type === filters.lead_type);
+    }
+
+    // Filter by city
+    if (filters.city) {
+      filtered = filtered.filter(lead => 
+        lead.city.toLowerCase().includes(filters.city.toLowerCase())
+      );
+    }
+
+    // Filter by zip code
+    if (filters.zip_code) {
+      filtered = filtered.filter(lead => 
+        lead.zip_code.includes(filters.zip_code)
+      );
+    }
+
+    // Filter by age range
+    if (filters.age_min) {
+      filtered = filtered.filter(lead => 
+        lead.age && lead.age >= parseInt(filters.age_min)
+      );
+    }
+    if (filters.age_max) {
+      filtered = filtered.filter(lead => 
+        lead.age && lead.age <= parseInt(filters.age_max)
+      );
+    }
+
+    setFilteredLeads(filtered);
+  };
+
+  const handleFilterChange = (field: keyof typeof filters, value: string) => {
+    setFilters(prev => ({ ...prev, [field]: value }));
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      status: '',
+      city: '',
+      zip_code: '',
+      age_min: '',
+      age_max: ''
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -879,6 +991,110 @@ export default function Home() {
           </div>
         )}
 
+        {/* Filter Controls */}
+        <div className="bg-gray-50 border-2 border-red-600 rounded p-4 mb-4">
+          <div className="flex flex-wrap gap-4 items-center">
+            <h3 className="text-lg font-semibold text-gray-800 mr-4">Filter Leads:</h3>
+            
+            {/* Status Filter */}
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-600 mb-1">Status</label>
+              <select
+                value={filters.status}
+                onChange={(e) => handleFilterChange('status', e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none"
+              >
+                <option value="">All Statuses</option>
+                <option value="new">New</option>
+                <option value="no_answer">No Answer</option>
+                <option value="follow_up_needed">Follow Up Needed</option>
+                <option value="not_set">Not Set</option>
+                <option value="appointment_set">Appointment Set</option>
+                <option value="refund_needed">Refund Needed</option>
+                <option value="closed">Closed</option>
+              </select>
+            </div>
+
+            {/* Lead Type Filter */}
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-600 mb-1">Lead Type</label>
+              <select
+                value={filters.lead_type}
+                onChange={(e) => handleFilterChange('lead_type', e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none"
+              >
+                <option value="">All Types</option>
+                <option value="t65">T65 (Medicare)</option>
+                <option value="life">Life Insurance</option>
+                <option value="client">Client</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            {/* City Filter */}
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-600 mb-1">City</label>
+              <input
+                type="text"
+                placeholder="Filter by city"
+                value={filters.city}
+                onChange={(e) => handleFilterChange('city', e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none w-32"
+              />
+            </div>
+
+            {/* Zip Code Filter */}
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-600 mb-1">Zip Code</label>
+              <input
+                type="text"
+                placeholder="Filter by zip"
+                value={filters.zip_code}
+                onChange={(e) => handleFilterChange('zip_code', e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none w-28"
+              />
+            </div>
+
+            {/* Age Range Filter */}
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-600 mb-1">Age Range</label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  placeholder="Min"
+                  value={filters.age_min}
+                  onChange={(e) => handleFilterChange('age_min', e.target.value)}
+                  className="px-2 py-2 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none w-16"
+                />
+                <input
+                  type="number"
+                  placeholder="Max"
+                  value={filters.age_max}
+                  onChange={(e) => handleFilterChange('age_max', e.target.value)}
+                  className="px-2 py-2 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none w-16"
+                />
+              </div>
+            </div>
+
+            {/* Clear Filters Button */}
+            <div className="flex flex-col justify-end">
+              <button
+                onClick={clearFilters}
+                className="px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition-colors"
+              >
+                Clear Filters
+              </button>
+            </div>
+
+            {/* Results Count */}
+            <div className="flex flex-col justify-end">
+              <div className="text-sm text-gray-600">
+                Showing {filteredLeads.length} of {leads.length} leads
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Leads Table */}
         <div className="bg-white rounded border-2 border-red-600 overflow-hidden">
           <div className="overflow-x-auto">
@@ -894,14 +1110,14 @@ export default function Home() {
                 </tr>
               </thead>
               <tbody>
-                {leads.length === 0 ? (
+                {filteredLeads.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="p-8 text-center text-black">
                       No leads found. Add your first lead to get started!
                     </td>
                   </tr>
                 ) : (
-                  leads.map((lead) => (
+                  filteredLeads.map((lead) => (
                     <tr 
                       key={lead.id} 
                       className="border-b hover:bg-gray-50 cursor-pointer"
@@ -935,15 +1151,28 @@ export default function Home() {
                         </div>
                       </td>
                       <td className="p-4">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          lead.status === 'new' ? 'bg-blue-100 text-blue-800' :
-                          lead.status === 'contacted' ? 'bg-yellow-100 text-yellow-800' :
-                          lead.status === 'qualified' ? 'bg-green-100 text-green-800' :
-                          lead.status === 'closed_won' ? 'bg-green-100 text-green-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {lead.status.replace('_', ' ')}
-                        </span>
+                        <div className="space-y-1">
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                            lead.status === 'new' ? 'bg-blue-100 text-blue-800' :
+                            lead.status === 'contacted' ? 'bg-yellow-100 text-yellow-800' :
+                            lead.status === 'qualified' ? 'bg-green-100 text-green-800' :
+                            lead.status === 'closed_won' ? 'bg-green-100 text-green-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {lead.status.replace('_', ' ')}
+                          </span>
+                          <br />
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                            lead.lead_type === 't65' ? 'bg-purple-100 text-purple-800' :
+                            lead.lead_type === 'life' ? 'bg-orange-100 text-orange-800' :
+                            lead.lead_type === 'client' ? 'bg-green-100 text-green-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {lead.lead_type === 't65' ? 'T65' : 
+                             lead.lead_type === 'life' ? 'Life' : 
+                             lead.lead_type === 'client' ? 'Client' : 'Other'}
+                          </span>
+                        </div>
                       </td>
                       <td className="p-4 text-sm">{lead.contact_method?.replace('_', ' ') || '-'}</td>
                       <td className="p-4">
@@ -1288,6 +1517,19 @@ function LeadDetailForm({
               </select>
             </div>
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Lead Type</label>
+              <select
+                value={formData.lead_type}
+                onChange={(e) => handleFormChange('lead_type', e.target.value as LeadType)}
+                className="w-full p-2 border border-gray-300 rounded focus:border-red-600 focus:outline-none"
+              >
+                <option value="other">Other</option>
+                <option value="t65">T65 (Medicare)</option>
+                <option value="life">Life Insurance</option>
+                <option value="client">Client</option>
+              </select>
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Cost Per Lead</label>
               <input
                 type="number"
@@ -1618,7 +1860,18 @@ function ImagesSection({ leadId }: { leadId: number }) {
 function PoliciesSection({ leadId }: { leadId: number }) {
   const [policies, setPolicies] = useState<LeadPolicy[]>([]);
   const [isAddingPolicy, setIsAddingPolicy] = useState(false);
+  const [editingPolicy, setEditingPolicy] = useState<LeadPolicy | null>(null);
   const [newPolicy, setNewPolicy] = useState({
+    policy_type: '',
+    policy_number: '',
+    coverage_amount: '',
+    premium_amount: '',
+    start_date: '',
+    end_date: '',
+    status: 'pending' as const,
+    notes: ''
+  });
+  const [editPolicy, setEditPolicy] = useState({
     policy_type: '',
     policy_number: '',
     coverage_amount: '',
@@ -1689,6 +1942,53 @@ function PoliciesSection({ leadId }: { leadId: number }) {
       }
     } catch (error) {
       console.error('Failed to delete policy:', error);
+    }
+  };
+
+  const openEditPolicy = (policy: LeadPolicy) => {
+    setEditingPolicy(policy);
+    setEditPolicy({
+      policy_type: policy.policy_type,
+      policy_number: policy.policy_number || '',
+      coverage_amount: policy.coverage_amount?.toString() || '',
+      premium_amount: policy.premium_amount?.toString() || '',
+      start_date: policy.start_date || '',
+      end_date: policy.end_date || '',
+      status: policy.status,
+      notes: policy.notes || ''
+    });
+  };
+
+  const updatePolicy = async () => {
+    if (!editingPolicy || !editPolicy.policy_type.trim()) return;
+
+    try {
+      const response = await fetch(`/api/leads/${leadId}/policies/${editingPolicy.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...editPolicy,
+          coverage_amount: editPolicy.coverage_amount ? parseFloat(editPolicy.coverage_amount) : undefined,
+          premium_amount: editPolicy.premium_amount ? parseFloat(editPolicy.premium_amount) : undefined
+        })
+      });
+      
+      if (response.ok) {
+        setEditingPolicy(null);
+        setEditPolicy({
+          policy_type: '',
+          policy_number: '',
+          coverage_amount: '',
+          premium_amount: '',
+          start_date: '',
+          end_date: '',
+          status: 'pending',
+          notes: ''
+        });
+        await fetchPolicies();
+      }
+    } catch (error) {
+      console.error('Failed to update policy:', error);
     }
   };
 
@@ -1802,7 +2102,12 @@ function PoliciesSection({ leadId }: { leadId: number }) {
           <p className="text-gray-500 text-sm">No policies added</p>
         ) : (
           policies.map((policy) => (
-            <div key={policy.id} className="bg-gray-50 p-3 rounded border">
+            <div 
+              key={policy.id} 
+              className="bg-gray-50 p-3 rounded border cursor-pointer hover:bg-gray-100 transition-colors" 
+              onDoubleClick={() => openEditPolicy(policy)}
+              title="Double-click to edit policy"
+            >
               <div className="flex justify-between items-start mb-2">
                 <div>
                   <h5 className="text-sm font-medium text-gray-900">{policy.policy_type}</h5>
@@ -1848,6 +2153,111 @@ function PoliciesSection({ leadId }: { leadId: number }) {
           ))
         )}
       </div>
+
+      {/* Edit Policy Modal */}
+      {editingPolicy && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Edit Policy</h3>
+              <button
+                onClick={() => setEditingPolicy(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <input
+                  type="text"
+                  placeholder="Policy Type (e.g., Life, Health, Auto)"
+                  value={editPolicy.policy_type}
+                  onChange={(e) => setEditPolicy({...editPolicy, policy_type: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none"
+                  required
+                />
+              </div>
+              <div>
+                <input
+                  type="text"
+                  placeholder="Policy Number"
+                  value={editPolicy.policy_number}
+                  onChange={(e) => setEditPolicy({...editPolicy, policy_number: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="Coverage Amount"
+                  value={editPolicy.coverage_amount}
+                  onChange={(e) => setEditPolicy({...editPolicy, coverage_amount: e.target.value})}
+                  className="p-3 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none"
+                />
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="Premium Amount"
+                  value={editPolicy.premium_amount}
+                  onChange={(e) => setEditPolicy({...editPolicy, premium_amount: e.target.value})}
+                  className="p-3 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  type="date"
+                  placeholder="Start Date"
+                  value={editPolicy.start_date}
+                  onChange={(e) => setEditPolicy({...editPolicy, start_date: e.target.value})}
+                  className="p-3 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none"
+                />
+                <input
+                  type="date"
+                  placeholder="End Date"
+                  value={editPolicy.end_date}
+                  onChange={(e) => setEditPolicy({...editPolicy, end_date: e.target.value})}
+                  className="p-3 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none"
+                />
+              </div>
+              <select
+                value={editPolicy.status}
+                onChange={(e) => setEditPolicy({...editPolicy, status: e.target.value as any})}
+                className="w-full p-3 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none"
+              >
+                <option value="pending">Pending</option>
+                <option value="active">Active</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="expired">Expired</option>
+              </select>
+              <textarea
+                placeholder="Notes"
+                value={editPolicy.notes}
+                onChange={(e) => setEditPolicy({...editPolicy, notes: e.target.value})}
+                rows={3}
+                className="w-full p-3 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none resize-none"
+              />
+              
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => setEditingPolicy(null)}
+                  className="flex-1 bg-gray-200 text-gray-800 px-4 py-3 rounded text-sm hover:bg-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={updatePolicy}
+                  className="flex-1 bg-red-600 text-white px-4 py-3 rounded text-sm hover:bg-red-700 transition-colors"
+                >
+                  Update Policy
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

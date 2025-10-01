@@ -52,6 +52,7 @@ function initializeDatabase() {
     'occupation TEXT',
     'income TEXT',
     'household_size INTEGER',
+    'lead_type TEXT DEFAULT "other"',
     'lead_score INTEGER DEFAULT 0',
     'last_contact_date TEXT',
     'next_follow_up TEXT'

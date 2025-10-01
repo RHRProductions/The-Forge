@@ -23,9 +23,9 @@ export async function POST(request: NextRequest) {
         first_name, last_name, email, phone, phone_2, company, 
         address, city, state, zip_code, date_of_birth, age, gender, 
         marital_status, occupation, income, household_size, status, 
-        contact_method, cost_per_lead, sales_amount, notes, source, 
+        contact_method, lead_type, cost_per_lead, sales_amount, notes, source, 
         lead_score, last_contact_date, next_follow_up, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
     ).run(
       lead.first_name,
       lead.last_name,
@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
       lead.household_size || null,
       lead.status,
       lead.contact_method || '',
+      lead.lead_type || 'other',
       lead.cost_per_lead,
       lead.sales_amount,
       lead.notes || '',

@@ -1771,16 +1771,16 @@ function ActivitiesSection({ leadId }: { leadId: number }) {
 
   const formatActivityDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    // Convert to Mountain Time using Intl.DateTimeFormat
+    return new Intl.DateTimeFormat('en-US', {
       month: '2-digit',
       day: '2-digit',
       year: 'numeric',
-      timeZone: 'America/Denver'
-    }) + ' ' + date.toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
-      timeZone: 'America/Denver'
-    });
+      timeZone: 'America/Denver',
+      hour12: true
+    }).format(date);
   };
 
   const getActivityTypeIcon = (type: ActivityType) => {
@@ -2079,16 +2079,16 @@ function NotesSection({ leadId }: { leadId: number }) {
 
   const formatNoteDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    // Convert to Mountain Time using Intl.DateTimeFormat
+    return new Intl.DateTimeFormat('en-US', {
       month: '2-digit',
       day: '2-digit',
       year: 'numeric',
-      timeZone: 'America/Denver'
-    }) + ' ' + date.toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
-      timeZone: 'America/Denver'
-    });
+      timeZone: 'America/Denver',
+      hour12: true
+    }).format(date);
   };
 
   return (

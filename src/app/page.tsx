@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Lead, LeadStatus, ContactMethod, LeadType } from '../../types/lead';
 import { formatPhoneNumber, formatName, formatLocation, formatDateForInput, calculateAge } from '../../lib/utils';
-import { TimestampedNote, LeadImage, LeadPolicy } from '../../types/lead';
+import { TimestampedNote, LeadImage, LeadPolicy, LeadActivity, ActivityType, ActivityOutcome } from '../../types/lead';
 
 // Resizable and Movable Modal Component
 function ResizableMovableModal({ 
@@ -1626,17 +1626,291 @@ function LeadDetailForm({
       </form>
         </div>
 
-        {/* Right Column - Notes, Images, and Policies */}
+        {/* Right Column - Activities, Notes, Images, and Policies */}
         <div className="lg:col-span-1 space-y-6">
+          {/* Activity Timeline */}
+          <ActivitiesSection leadId={lead.id!} />
+
           {/* Notes Section */}
           <NotesSection leadId={lead.id!} />
-          
+
           {/* Images Section */}
           <ImagesSection leadId={lead.id!} />
-          
+
           {/* Policies Section */}
           <PoliciesSection leadId={lead.id!} />
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ActivitiesSection Component
+function ActivitiesSection({ leadId }: { leadId: number }) {
+  const [activities, setActivities] = useState<LeadActivity[]>([]);
+  const [showActivityForm, setShowActivityForm] = useState(false);
+  const [activityType, setActivityType] = useState<ActivityType>('call');
+  const [activityDetail, setActivityDetail] = useState('');
+  const [activityOutcome, setActivityOutcome] = useState<ActivityOutcome | ''>('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    fetchActivities();
+  }, [leadId]);
+
+  const fetchActivities = async () => {
+    try {
+      const response = await fetch(`/api/leads/${leadId}/activities`);
+      if (response.ok) {
+        const data = await response.json();
+        setActivities(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch activities:', error);
+    }
+  };
+
+  const addActivity = async () => {
+    if (!activityDetail.trim() || isLoading) return;
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/leads/${leadId}/activities`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lead_id: leadId,
+          activity_type: activityType,
+          activity_detail: activityDetail.trim(),
+          outcome: activityOutcome || null
+        })
+      });
+
+      if (response.ok) {
+        setActivityDetail('');
+        setActivityOutcome('');
+        setShowActivityForm(false);
+        await fetchActivities();
+      }
+    } catch (error) {
+      console.error('Failed to add activity:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const deleteActivity = async (activityId: number) => {
+    try {
+      const response = await fetch(`/api/leads/${leadId}/activities/${activityId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        await fetchActivities();
+      }
+    } catch (error) {
+      console.error('Failed to delete activity:', error);
+    }
+  };
+
+  const formatActivityDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: '2-digit',
+      day: '2-digit',
+      year: 'numeric'
+    }) + ' ' + date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getActivityTypeIcon = (type: ActivityType) => {
+    switch(type) {
+      case 'call': return '📞';
+      case 'text': return '💬';
+      case 'email': return '📧';
+      case 'note': return '📝';
+      case 'status_change': return '🔄';
+      case 'appointment': return '📅';
+      case 'sale': return '💰';
+      default: return '📋';
+    }
+  };
+
+  const getActivityTypeLabel = (type: ActivityType) => {
+    switch(type) {
+      case 'call': return 'Call';
+      case 'text': return 'Text';
+      case 'email': return 'Email';
+      case 'note': return 'Note';
+      case 'status_change': return 'Status Change';
+      case 'appointment': return 'Appointment';
+      case 'sale': return 'Sale';
+      default: return type;
+    }
+  };
+
+  const getOutcomeColor = (outcome: ActivityOutcome) => {
+    switch(outcome) {
+      case 'answered': return 'bg-green-100 text-green-800';
+      case 'scheduled': return 'bg-blue-100 text-blue-800';
+      case 'completed': return 'bg-green-100 text-green-800';
+      case 'closed': return 'bg-purple-100 text-purple-800';
+      case 'voicemail': return 'bg-yellow-100 text-yellow-800';
+      case 'no_answer': return 'bg-gray-100 text-gray-800';
+      case 'busy': return 'bg-orange-100 text-orange-800';
+      case 'cancelled': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  return (
+    <div className="bg-white border border-gray-200 rounded p-4">
+      <h4 className="text-lg font-semibold mb-4 text-gray-900">Activity Timeline</h4>
+
+      {/* Quick Action Buttons */}
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        <button
+          onClick={() => {
+            setActivityType('call');
+            setShowActivityForm(true);
+          }}
+          className="px-2 py-2 bg-blue-50 text-blue-700 rounded text-xs hover:bg-blue-100 transition-colors"
+        >
+          📞 Call
+        </button>
+        <button
+          onClick={() => {
+            setActivityType('text');
+            setShowActivityForm(true);
+          }}
+          className="px-2 py-2 bg-green-50 text-green-700 rounded text-xs hover:bg-green-100 transition-colors"
+        >
+          💬 Text
+        </button>
+        <button
+          onClick={() => {
+            setActivityType('email');
+            setShowActivityForm(true);
+          }}
+          className="px-2 py-2 bg-purple-50 text-purple-700 rounded text-xs hover:bg-purple-100 transition-colors"
+        >
+          📧 Email
+        </button>
+      </div>
+
+      {/* Activity Form */}
+      {showActivityForm && (
+        <div className="mb-4 bg-gray-50 p-3 rounded border">
+          <div className="mb-2">
+            <label className="block text-xs font-medium text-gray-700 mb-1">Activity Type</label>
+            <select
+              value={activityType}
+              onChange={(e) => setActivityType(e.target.value as ActivityType)}
+              className="w-full p-2 border border-gray-300 rounded focus:border-red-600 focus:outline-none text-sm"
+            >
+              <option value="call">Call</option>
+              <option value="text">Text</option>
+              <option value="email">Email</option>
+              <option value="note">Note</option>
+              <option value="status_change">Status Change</option>
+              <option value="appointment">Appointment</option>
+              <option value="sale">Sale</option>
+            </select>
+          </div>
+
+          <div className="mb-2">
+            <label className="block text-xs font-medium text-gray-700 mb-1">Details</label>
+            <textarea
+              value={activityDetail}
+              onChange={(e) => setActivityDetail(e.target.value)}
+              placeholder="What happened?..."
+              className="w-full p-2 border border-gray-300 rounded focus:border-red-600 focus:outline-none resize-none text-sm"
+              rows={2}
+            />
+          </div>
+
+          <div className="mb-3">
+            <label className="block text-xs font-medium text-gray-700 mb-1">Outcome (Optional)</label>
+            <select
+              value={activityOutcome}
+              onChange={(e) => setActivityOutcome(e.target.value as ActivityOutcome | '')}
+              className="w-full p-2 border border-gray-300 rounded focus:border-red-600 focus:outline-none text-sm"
+            >
+              <option value="">None</option>
+              <option value="answered">Answered</option>
+              <option value="voicemail">Voicemail</option>
+              <option value="no_answer">No Answer</option>
+              <option value="busy">Busy</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+              <option value="closed">Closed</option>
+            </select>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={addActivity}
+              disabled={!activityDetail.trim() || isLoading}
+              className="flex-1 bg-red-600 text-white px-3 py-2 rounded text-xs hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {isLoading ? 'Adding...' : 'Add Activity'}
+            </button>
+            <button
+              onClick={() => {
+                setShowActivityForm(false);
+                setActivityDetail('');
+                setActivityOutcome('');
+              }}
+              className="px-3 py-2 bg-gray-200 text-gray-700 rounded text-xs hover:bg-gray-300 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Activities Timeline */}
+      <div className="space-y-2 max-h-96 overflow-y-auto">
+        {activities.length === 0 ? (
+          <p className="text-gray-500 text-sm">No activities yet</p>
+        ) : (
+          activities.map((activity) => (
+            <div key={activity.id} className="bg-gray-50 p-3 rounded border border-gray-200 relative">
+              <div className="flex items-start gap-2">
+                <span className="text-lg">{getActivityTypeIcon(activity.activity_type)}</span>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-semibold text-gray-700">
+                      {getActivityTypeLabel(activity.activity_type)}
+                    </span>
+                    {activity.outcome && (
+                      <span className={`px-2 py-0.5 rounded text-xs ${getOutcomeColor(activity.outcome)}`}>
+                        {activity.outcome.replace('_', ' ')}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-800 mb-1">{activity.activity_detail}</p>
+                  <div className="flex justify-between items-center">
+                    <p className="text-xs text-gray-500">{formatActivityDate(activity.created_at)}</p>
+                    <button
+                      onClick={() => {
+                        if (confirm('Delete this activity?')) {
+                          deleteActivity(activity.id!);
+                        }
+                      }}
+                      className="text-red-600 hover:text-red-800 text-xs"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

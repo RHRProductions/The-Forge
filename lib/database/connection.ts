@@ -103,6 +103,16 @@ function initializeDatabase() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS lead_activities (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      lead_id INTEGER NOT NULL,
+      activity_type TEXT NOT NULL,
+      activity_detail TEXT NOT NULL,
+      outcome TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE
+    );
   `);
 
   // Create indexes
@@ -113,10 +123,13 @@ function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_leads_zip_code ON leads(zip_code);
     CREATE INDEX IF NOT EXISTS idx_leads_age ON leads(age);
     CREATE INDEX IF NOT EXISTS idx_leads_state ON leads(state);
-    
+
     CREATE INDEX IF NOT EXISTS idx_lead_notes_lead_id ON lead_notes(lead_id);
     CREATE INDEX IF NOT EXISTS idx_lead_images_lead_id ON lead_images(lead_id);
     CREATE INDEX IF NOT EXISTS idx_lead_policies_lead_id ON lead_policies(lead_id);
+    CREATE INDEX IF NOT EXISTS idx_lead_activities_lead_id ON lead_activities(lead_id);
+    CREATE INDEX IF NOT EXISTS idx_lead_activities_type ON lead_activities(activity_type);
+    CREATE INDEX IF NOT EXISTS idx_lead_activities_created_at ON lead_activities(created_at);
   `);
 }
 

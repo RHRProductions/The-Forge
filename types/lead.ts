@@ -26,6 +26,7 @@ export interface Lead {
   timestamped_notes?: TimestampedNote[];
   images?: LeadImage[];
   policies?: LeadPolicy[];
+  activities?: LeadActivity[];
   source: string;
   lead_score?: number;
   last_contact_date?: string;
@@ -65,6 +66,34 @@ export interface LeadPolicy {
   notes?: string;
   created_at: string;
 }
+
+export interface LeadActivity {
+  id?: number;
+  lead_id: number;
+  activity_type: ActivityType;
+  activity_detail: string;
+  outcome?: ActivityOutcome;
+  created_at: string;
+}
+
+export type ActivityType =
+  | 'call'
+  | 'text'
+  | 'email'
+  | 'note'
+  | 'status_change'
+  | 'appointment'
+  | 'sale';
+
+export type ActivityOutcome =
+  | 'answered'
+  | 'voicemail'
+  | 'no_answer'
+  | 'busy'
+  | 'scheduled'
+  | 'completed'
+  | 'cancelled'
+  | 'closed';
 
 export type LeadStatus = 
   | 'new'

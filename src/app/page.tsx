@@ -5,6 +5,169 @@ import { Lead, LeadStatus, ContactMethod, LeadType } from '../../types/lead';
 import { formatPhoneNumber, formatName, formatLocation, formatDateForInput, calculateAge } from '../../lib/utils';
 import { TimestampedNote, LeadImage, LeadPolicy, LeadActivity, ActivityType, ActivityOutcome, LeadTemperature } from '../../types/lead';
 
+// Follow-Up Reminders Component
+function FollowUpReminders({
+  leads,
+  onLeadClick
+}: {
+  leads: Lead[];
+  onLeadClick: (lead: Lead) => void;
+}) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Filter for warm/hot leads with follow-up dates
+  const followUpLeads = leads.filter(lead =>
+    (lead.lead_temperature === 'warm' || lead.lead_temperature === 'hot') &&
+    lead.next_follow_up
+  );
+
+  // Categorize leads
+  const overdue = followUpLeads.filter(lead => {
+    const followUpDate = new Date(lead.next_follow_up!);
+    followUpDate.setHours(0, 0, 0, 0);
+    return followUpDate < today;
+  }).sort((a, b) => {
+    // Sort by temperature (hot first) then by date
+    if (a.lead_temperature === b.lead_temperature) {
+      return new Date(a.next_follow_up!).getTime() - new Date(b.next_follow_up!).getTime();
+    }
+    return a.lead_temperature === 'hot' ? -1 : 1;
+  });
+
+  const todayLeads = followUpLeads.filter(lead => {
+    const followUpDate = new Date(lead.next_follow_up!);
+    followUpDate.setHours(0, 0, 0, 0);
+    return followUpDate.getTime() === today.getTime();
+  }).sort((a, b) => a.lead_temperature === 'hot' ? -1 : 1);
+
+  const upcoming = followUpLeads.filter(lead => {
+    const followUpDate = new Date(lead.next_follow_up!);
+    followUpDate.setHours(0, 0, 0, 0);
+    const sevenDaysFromNow = new Date(today);
+    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+    return followUpDate > today && followUpDate <= sevenDaysFromNow;
+  }).sort((a, b) => {
+    if (a.lead_temperature === b.lead_temperature) {
+      return new Date(a.next_follow_up!).getTime() - new Date(b.next_follow_up!).getTime();
+    }
+    return a.lead_temperature === 'hot' ? -1 : 1;
+  });
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${month}/${day}`;
+  };
+
+  const LeadCard = ({ lead, category }: { lead: Lead; category: 'overdue' | 'today' | 'upcoming' }) => (
+    <div
+      onClick={() => onLeadClick(lead)}
+      className="p-3 bg-white border border-gray-200 rounded hover:border-red-600 hover:shadow-md cursor-pointer transition-all"
+    >
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex-1">
+          <div className="font-semibold text-sm text-gray-900">
+            {formatName(lead.first_name)} {formatName(lead.last_name)}
+          </div>
+          <div className="text-xs text-gray-500">{formatPhoneNumber(lead.phone)}</div>
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          <span className={`text-xs px-2 py-0.5 rounded ${
+            lead.lead_temperature === 'hot'
+              ? 'bg-red-100 text-red-800'
+              : 'bg-orange-100 text-orange-800'
+          }`}>
+            {lead.lead_temperature === 'hot' ? '🔥 Hot' : '☀️ Warm'}
+          </span>
+          {lead.contact_attempt_count && lead.contact_attempt_count > 0 && (
+            <span className="text-xs px-2 py-0.5 rounded bg-blue-100 text-blue-800">
+              #{lead.contact_attempt_count}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center justify-between">
+        <span className={`text-xs font-medium ${
+          category === 'overdue' ? 'text-red-600' :
+          category === 'today' ? 'text-green-600' :
+          'text-gray-600'
+        }`}>
+          {category === 'overdue' && '⚠️ '}
+          {category === 'today' && '📅 '}
+          {formatDate(lead.next_follow_up!)}
+        </span>
+        <span className="text-xs text-gray-500">
+          {formatLocation(lead.city)}, {formatLocation(lead.state)}
+        </span>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="bg-gray-50 border-2 border-red-600 rounded p-4 sticky top-6 max-h-[calc(100vh-8rem)] overflow-y-auto">
+      <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+        <span>🎯</span>
+        Follow-Up Reminders
+      </h3>
+
+      {followUpLeads.length === 0 ? (
+        <div className="text-center py-8 text-gray-500 text-sm">
+          <p>No warm or hot leads</p>
+          <p>with follow-ups scheduled</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {/* Overdue */}
+          {overdue.length > 0 && (
+            <div>
+              <h4 className="text-xs font-semibold text-red-600 uppercase mb-2 flex items-center gap-1">
+                <span>⚠️</span>
+                Overdue ({overdue.length})
+              </h4>
+              <div className="space-y-2">
+                {overdue.map(lead => (
+                  <LeadCard key={lead.id} lead={lead} category="overdue" />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Today */}
+          {todayLeads.length > 0 && (
+            <div>
+              <h4 className="text-xs font-semibold text-green-600 uppercase mb-2 flex items-center gap-1">
+                <span>📅</span>
+                Today ({todayLeads.length})
+              </h4>
+              <div className="space-y-2">
+                {todayLeads.map(lead => (
+                  <LeadCard key={lead.id} lead={lead} category="today" />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Upcoming */}
+          {upcoming.length > 0 && (
+            <div>
+              <h4 className="text-xs font-semibold text-gray-600 uppercase mb-2">
+                Upcoming 7 Days ({upcoming.length})
+              </h4>
+              <div className="space-y-2">
+                {upcoming.map(lead => (
+                  <LeadCard key={lead.id} lead={lead} category="upcoming" />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Resizable and Movable Modal Component
 function ResizableMovableModal({ 
   children, 
@@ -1122,10 +1285,18 @@ Type "DELETE ALL" to confirm:`;
           </div>
         </div>
 
-        {/* Leads Table */}
-        <div className="bg-white rounded border-2 border-red-600 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
+        {/* Content Grid: Sidebar + Leads Table */}
+        <div className="flex gap-6">
+          {/* Follow-Up Reminders Sidebar - Left Side */}
+          <div className="w-80 flex-shrink-0">
+            <FollowUpReminders leads={leads} onLeadClick={handleLeadDoubleClick} />
+          </div>
+
+          {/* Leads Table - Main Area */}
+          <div className="flex-1">
+            <div className="bg-white rounded border-2 border-red-600 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
               <thead className="bg-black text-white">
                 <tr>
                   <th className="p-4 text-left">Name</th>
@@ -1219,6 +1390,8 @@ Type "DELETE ALL" to confirm:`;
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
           </div>
         </div>
       </main>

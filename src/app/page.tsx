@@ -1774,10 +1774,12 @@ function ActivitiesSection({ leadId }: { leadId: number }) {
     return date.toLocaleDateString('en-US', {
       month: '2-digit',
       day: '2-digit',
-      year: 'numeric'
+      year: 'numeric',
+      timeZone: 'America/Denver'
     }) + ' ' + date.toLocaleTimeString('en-US', {
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZone: 'America/Denver'
     });
   };
 
@@ -2080,10 +2082,12 @@ function NotesSection({ leadId }: { leadId: number }) {
     return date.toLocaleDateString('en-US', {
       month: '2-digit',
       day: '2-digit',
-      year: 'numeric'
+      year: 'numeric',
+      timeZone: 'America/Denver'
     }) + ' ' + date.toLocaleTimeString('en-US', {
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZone: 'America/Denver'
     });
   };
 

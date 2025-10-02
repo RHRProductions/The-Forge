@@ -1770,7 +1770,8 @@ function ActivitiesSection({ leadId }: { leadId: number }) {
   };
 
   const formatActivityDate = (dateString: string) => {
-    const date = new Date(dateString);
+    // SQLite stores timestamps as UTC strings, append 'Z' to ensure proper parsing
+    const date = new Date(dateString + (dateString.includes('Z') ? '' : 'Z'));
     // Convert to Mountain Time using Intl.DateTimeFormat
     return new Intl.DateTimeFormat('en-US', {
       month: '2-digit',
@@ -2078,7 +2079,8 @@ function NotesSection({ leadId }: { leadId: number }) {
   };
 
   const formatNoteDate = (dateString: string) => {
-    const date = new Date(dateString);
+    // SQLite stores timestamps as UTC strings, append 'Z' to ensure proper parsing
+    const date = new Date(dateString + (dateString.includes('Z') ? '' : 'Z'));
     // Convert to Mountain Time using Intl.DateTimeFormat
     return new Intl.DateTimeFormat('en-US', {
       month: '2-digit',

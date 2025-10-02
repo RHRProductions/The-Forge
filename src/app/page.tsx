@@ -1678,8 +1678,8 @@ function ActivitiesSection({ leadId }: { leadId: number }) {
 
     const today = new Date();
     const suggestions: { [key: string]: number } = {
-      'no_answer': 1,        // Try again tomorrow
-      'busy': 1,             // Try again tomorrow
+      'no_answer': 0,        // No auto-suggestion - need more data on patterns
+      'busy': 0,             // No auto-suggestion - need more data on patterns
       'voicemail': 2,        // Give them 2 days to call back
       'answered': 7,         // Follow up in a week if they asked
       'scheduled': 0,        // No follow-up needed, appointment is set
@@ -1695,12 +1695,12 @@ function ActivitiesSection({ leadId }: { leadId: number }) {
     return today.toISOString().split('T')[0];
   };
 
-  // Update suggested follow-up when outcome changes
+  // Update suggested follow-up when temperature changes to warm/hot
   useEffect(() => {
-    if (activityOutcome && !nextFollowUpDate) {
+    if ((leadTemperature === 'warm' || leadTemperature === 'hot') && activityOutcome && !nextFollowUpDate) {
       setNextFollowUpDate(suggestFollowUpDate(activityOutcome));
     }
-  }, [activityOutcome]);
+  }, [leadTemperature, activityOutcome]);
 
   const addActivity = async () => {
     if (isLoading) return;

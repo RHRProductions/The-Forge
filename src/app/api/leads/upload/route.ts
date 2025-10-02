@@ -7,8 +7,8 @@ import * as Papa from 'papaparse';
 const COLUMN_MAPPINGS = {
   // First Name variations
   first_name: ['first_name', 'firstname', 'fname', 'given_name'],
-  
-  // Last Name variations  
+
+  // Last Name variations
   last_name: ['last_name', 'lastname', 'lname', 'surname', 'family_name'],
   
   // Name (when combined) - will need splitting
@@ -18,8 +18,8 @@ const COLUMN_MAPPINGS = {
   email: ['email', 'email_address', 'e_mail', 'contact_email'],
   
   // Phone variations
-  phone: ['phone', 'phone_number', 'primary_phone', 'home_phone', 'contact_phone', 'telephone', 'cell'],
-  phone_2: ['phone_2', 'phone2', 'secondary_phone', 'work_phone', 'other_phone_1', 'other_phone_2', 'other phone 1', 'other phone 2'],
+  phone: ['phone', 'phone_number', 'primary_phone', 'home_phone', 'contact_phone', 'telephone', 'cell', 'other_phone_1', 'mobile', 'work'],
+  phone_2: ['phone_2', 'phone2', 'secondary_phone', 'work_phone', 'other_phone_2', 'home'],
   
   // Address variations
   address: ['address', 'address1', 'addressline1', 'street_address', 'home_address', 'mailing_address'],
@@ -29,7 +29,7 @@ const COLUMN_MAPPINGS = {
   
   // Age and DOB variations
   age: ['age', 'est_age', 'estimated_age', 'current_age'],
-  date_of_birth: ['date_of_birth', 'dob', 'birth_date', 'birthday', 'birth_month'],
+  date_of_birth: ['date_of_birth', 'dob', 'birth_date', 'birthday', 'birth_month', 'date_of_birth'],
   
   // Income variations
   income: ['income', 'est_income', 'estimated_income', 'annual_income', 'household_income'],
@@ -384,14 +384,27 @@ export async function POST(request: NextRequest) {
       const results = Papa.parse(text, {
         header: true,
         skipEmptyLines: true,
-        transformHeader: (header) => header.toLowerCase().replace(/\s+/g, '_')
+        transformHeader: (header) => header.toLowerCase().replace(/\s+/g, '_'),
+        quotes: true,
+        quoteChar: '"',
+        escapeChar: '"',
+        skipFirstNLines: 0,
+        fastMode: false
       });
       
-      if (results.errors.length > 0) {
+      // Filter out quote errors - we'll handle malformed quotes
+      const criticalErrors = results.errors.filter(e => e.code !== 'InvalidQuotes');
+
+      if (criticalErrors.length > 0) {
+        console.error('CSV Parsing Errors:', JSON.stringify(criticalErrors, null, 2));
         return NextResponse.json(
-          { error: 'CSV parsing error', details: results.errors },
+          { error: 'CSV parsing error', details: criticalErrors },
           { status: 400 }
         );
+      }
+
+      if (results.errors.length > 0) {
+        console.log('Non-critical CSV warnings (InvalidQuotes):', results.errors.length, 'warnings ignored');
       }
       
       console.log('Using standard CSV parsing - Headers:', results.meta?.fields);

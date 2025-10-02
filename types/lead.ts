@@ -29,8 +29,10 @@ export interface Lead {
   activities?: LeadActivity[];
   source: string;
   lead_score?: number;
+  lead_temperature?: LeadTemperature;
   last_contact_date?: string;
   next_follow_up?: string;
+  contact_attempt_count?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -73,6 +75,9 @@ export interface LeadActivity {
   activity_type: ActivityType;
   activity_detail: string;
   outcome?: ActivityOutcome;
+  lead_temperature_after?: LeadTemperature;
+  next_follow_up_date?: string;
+  contact_attempt_number?: number;
   created_at: string;
 }
 
@@ -115,3 +120,8 @@ export type LeadType =
   | 'life'
   | 'client'
   | 'other';
+
+export type LeadTemperature =
+  | 'hot'
+  | 'warm'
+  | 'cold';

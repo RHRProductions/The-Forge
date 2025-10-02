@@ -54,8 +54,10 @@ function initializeDatabase() {
     'household_size INTEGER',
     'lead_type TEXT DEFAULT "other"',
     'lead_score INTEGER DEFAULT 0',
+    'lead_temperature TEXT',
     'last_contact_date TEXT',
-    'next_follow_up TEXT'
+    'next_follow_up TEXT',
+    'contact_attempt_count INTEGER DEFAULT 0'
   ];
 
   newColumns.forEach(column => {
@@ -110,6 +112,9 @@ function initializeDatabase() {
       activity_type TEXT NOT NULL,
       activity_detail TEXT NOT NULL,
       outcome TEXT,
+      lead_temperature_after TEXT,
+      next_follow_up_date TEXT,
+      contact_attempt_number INTEGER,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE
     );

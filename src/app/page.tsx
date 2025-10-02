@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Lead, LeadStatus, ContactMethod, LeadType } from '../../types/lead';
 import { formatPhoneNumber, formatName, formatLocation, formatDateForInput, calculateAge } from '../../lib/utils';
-import { TimestampedNote, LeadImage, LeadPolicy, LeadActivity, ActivityType, ActivityOutcome } from '../../types/lead';
+import { TimestampedNote, LeadImage, LeadPolicy, LeadActivity, ActivityType, ActivityOutcome, LeadTemperature } from '../../types/lead';
 
 // Resizable and Movable Modal Component
 function ResizableMovableModal({ 
@@ -1652,6 +1652,8 @@ function ActivitiesSection({ leadId }: { leadId: number }) {
   const [activityType, setActivityType] = useState<ActivityType>('call');
   const [activityDetail, setActivityDetail] = useState('');
   const [activityOutcome, setActivityOutcome] = useState<ActivityOutcome | ''>('');
+  const [leadTemperature, setLeadTemperature] = useState<LeadTemperature | ''>('');
+  const [nextFollowUpDate, setNextFollowUpDate] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -1670,8 +1672,58 @@ function ActivitiesSection({ leadId }: { leadId: number }) {
     }
   };
 
+  // Auto-suggest follow-up date based on outcome
+  const suggestFollowUpDate = (outcome: ActivityOutcome | '') => {
+    if (!outcome) return '';
+
+    const today = new Date();
+    const suggestions: { [key: string]: number } = {
+      'no_answer': 1,        // Try again tomorrow
+      'busy': 1,             // Try again tomorrow
+      'voicemail': 2,        // Give them 2 days to call back
+      'answered': 7,         // Follow up in a week if they asked
+      'scheduled': 0,        // No follow-up needed, appointment is set
+      'completed': 30,       // Check back in a month
+      'cancelled': 7,        // Try again in a week
+      'closed': 0            // No follow-up needed
+    };
+
+    const daysToAdd = suggestions[outcome] || 3;
+    if (daysToAdd === 0) return '';
+
+    today.setDate(today.getDate() + daysToAdd);
+    return today.toISOString().split('T')[0];
+  };
+
+  // Update suggested follow-up when outcome changes
+  useEffect(() => {
+    if (activityOutcome && !nextFollowUpDate) {
+      setNextFollowUpDate(suggestFollowUpDate(activityOutcome));
+    }
+  }, [activityOutcome]);
+
   const addActivity = async () => {
-    if (!activityDetail.trim() || isLoading) return;
+    if (isLoading) return;
+
+    // Auto-generate detail if empty but outcome is selected
+    let detail = activityDetail.trim();
+    if (!detail && activityOutcome) {
+      // Generate a default message based on outcome
+      const outcomeMessages: { [key: string]: string } = {
+        'answered': 'Call answered',
+        'voicemail': 'Left voicemail',
+        'no_answer': 'No answer',
+        'busy': 'Line busy',
+        'scheduled': 'Appointment scheduled',
+        'completed': 'Completed',
+        'cancelled': 'Cancelled',
+        'closed': 'Closed'
+      };
+      detail = outcomeMessages[activityOutcome] || `${activityType} - ${activityOutcome}`;
+    }
+
+    // Must have either detail or outcome
+    if (!detail && !activityOutcome) return;
 
     setIsLoading(true);
     try {
@@ -1681,14 +1733,18 @@ function ActivitiesSection({ leadId }: { leadId: number }) {
         body: JSON.stringify({
           lead_id: leadId,
           activity_type: activityType,
-          activity_detail: activityDetail.trim(),
-          outcome: activityOutcome || null
+          activity_detail: detail,
+          outcome: activityOutcome || null,
+          lead_temperature_after: leadTemperature || null,
+          next_follow_up_date: nextFollowUpDate || null
         })
       });
 
       if (response.ok) {
         setActivityDetail('');
         setActivityOutcome('');
+        setLeadTemperature('');
+        setNextFollowUpDate('');
         setShowActivityForm(false);
         await fetchActivities();
       }
@@ -1820,25 +1876,14 @@ function ActivitiesSection({ leadId }: { leadId: number }) {
             </select>
           </div>
 
-          <div className="mb-2">
-            <label className="block text-xs font-medium text-gray-700 mb-1">Details</label>
-            <textarea
-              value={activityDetail}
-              onChange={(e) => setActivityDetail(e.target.value)}
-              placeholder="What happened?..."
-              className="w-full p-2 border border-gray-300 rounded focus:border-red-600 focus:outline-none resize-none text-sm"
-              rows={2}
-            />
-          </div>
-
           <div className="mb-3">
-            <label className="block text-xs font-medium text-gray-700 mb-1">Outcome (Optional)</label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Outcome</label>
             <select
               value={activityOutcome}
               onChange={(e) => setActivityOutcome(e.target.value as ActivityOutcome | '')}
               className="w-full p-2 border border-gray-300 rounded focus:border-red-600 focus:outline-none text-sm"
             >
-              <option value="">None</option>
+              <option value="">Select outcome...</option>
               <option value="answered">Answered</option>
               <option value="voicemail">Voicemail</option>
               <option value="no_answer">No Answer</option>
@@ -1850,10 +1895,47 @@ function ActivitiesSection({ leadId }: { leadId: number }) {
             </select>
           </div>
 
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Lead Temperature</label>
+              <select
+                value={leadTemperature}
+                onChange={(e) => setLeadTemperature(e.target.value as LeadTemperature | '')}
+                className="w-full p-2 border border-gray-300 rounded focus:border-red-600 focus:outline-none text-sm"
+              >
+                <option value="">Not set</option>
+                <option value="hot">🔥 Hot</option>
+                <option value="warm">☀️ Warm</option>
+                <option value="cold">❄️ Cold</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Next Follow-Up</label>
+              <input
+                type="date"
+                value={nextFollowUpDate}
+                onChange={(e) => setNextFollowUpDate(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded focus:border-red-600 focus:outline-none text-sm"
+              />
+            </div>
+          </div>
+
+          <div className="mb-2">
+            <label className="block text-xs font-medium text-gray-700 mb-1">Additional Details (Optional)</label>
+            <textarea
+              value={activityDetail}
+              onChange={(e) => setActivityDetail(e.target.value)}
+              placeholder="Add notes if needed..."
+              className="w-full p-2 border border-gray-300 rounded focus:border-red-600 focus:outline-none resize-none text-sm"
+              rows={2}
+            />
+          </div>
+
           <div className="flex gap-2">
             <button
               onClick={addActivity}
-              disabled={!activityDetail.trim() || isLoading}
+              disabled={(!activityDetail.trim() && !activityOutcome) || isLoading}
               className="flex-1 bg-red-600 text-white px-3 py-2 rounded text-xs hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isLoading ? 'Adding...' : 'Add Activity'}
@@ -1863,6 +1945,8 @@ function ActivitiesSection({ leadId }: { leadId: number }) {
                 setShowActivityForm(false);
                 setActivityDetail('');
                 setActivityOutcome('');
+                setLeadTemperature('');
+                setNextFollowUpDate('');
               }}
               className="px-3 py-2 bg-gray-200 text-gray-700 rounded text-xs hover:bg-gray-300 transition-colors"
             >
@@ -1882,7 +1966,7 @@ function ActivitiesSection({ leadId }: { leadId: number }) {
               <div className="flex items-start gap-2">
                 <span className="text-lg">{getActivityTypeIcon(activity.activity_type)}</span>
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <span className="text-xs font-semibold text-gray-700">
                       {getActivityTypeLabel(activity.activity_type)}
                     </span>
@@ -1891,8 +1975,25 @@ function ActivitiesSection({ leadId }: { leadId: number }) {
                         {activity.outcome.replace('_', ' ')}
                       </span>
                     )}
+                    {activity.contact_attempt_number && (
+                      <span className="px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800">
+                        Attempt #{activity.contact_attempt_number}
+                      </span>
+                    )}
+                    {activity.lead_temperature_after && (
+                      <span className="px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-800">
+                        {activity.lead_temperature_after === 'hot' && '🔥 Hot'}
+                        {activity.lead_temperature_after === 'warm' && '☀️ Warm'}
+                        {activity.lead_temperature_after === 'cold' && '❄️ Cold'}
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm text-gray-800 mb-1">{activity.activity_detail}</p>
+                  {activity.next_follow_up_date && (
+                    <p className="text-xs text-blue-600 mb-1">
+                      📅 Follow up: {new Date(activity.next_follow_up_date).toLocaleDateString()}
+                    </p>
+                  )}
                   <div className="flex justify-between items-center">
                     <p className="text-xs text-gray-500">{formatActivityDate(activity.created_at)}</p>
                     <button

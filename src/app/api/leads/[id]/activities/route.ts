@@ -63,6 +63,11 @@ export async function POST(
       updates.push(`contact_attempt_count = ${newAttemptNumber}`);
     }
 
+    // Auto-update lead status to "no_answer" when outcome is "no_answer"
+    if (activity.outcome === 'no_answer') {
+      updates.push(`status = 'no_answer'`);
+    }
+
     // Update lead temperature if provided
     if (activity.lead_temperature_after) {
       updates.push(`lead_temperature = '${activity.lead_temperature_after}'`);

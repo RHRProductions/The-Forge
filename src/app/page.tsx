@@ -413,7 +413,8 @@ export default function Home() {
     city: '',
     zip_code: '',
     age_min: '',
-    age_max: ''
+    age_max: '',
+    search: ''
   });
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
   const [formData, setFormData] = useState({
@@ -481,6 +482,20 @@ export default function Home() {
   const applyFilters = () => {
     let filtered = leads;
 
+    // Search filter - searches name and phone
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase().replace(/\D/g, ''); // Remove non-digits for phone search
+      filtered = filtered.filter(lead => {
+        const fullName = `${lead.first_name} ${lead.last_name}`.toLowerCase();
+        const phone = lead.phone.replace(/\D/g, '');
+        const phone2 = lead.phone_2?.replace(/\D/g, '') || '';
+
+        return fullName.includes(filters.search.toLowerCase()) ||
+               phone.includes(searchLower) ||
+               phone2.includes(searchLower);
+      });
+    }
+
     // Filter by status
     if (filters.status) {
       filtered = filtered.filter(lead => lead.status === filters.status);
@@ -493,26 +508,26 @@ export default function Home() {
 
     // Filter by city
     if (filters.city) {
-      filtered = filtered.filter(lead => 
+      filtered = filtered.filter(lead =>
         lead.city.toLowerCase().includes(filters.city.toLowerCase())
       );
     }
 
     // Filter by zip code
     if (filters.zip_code) {
-      filtered = filtered.filter(lead => 
+      filtered = filtered.filter(lead =>
         lead.zip_code.includes(filters.zip_code)
       );
     }
 
     // Filter by age range
     if (filters.age_min) {
-      filtered = filtered.filter(lead => 
+      filtered = filtered.filter(lead =>
         lead.age && lead.age >= parseInt(filters.age_min)
       );
     }
     if (filters.age_max) {
-      filtered = filtered.filter(lead => 
+      filtered = filtered.filter(lead =>
         lead.age && lead.age <= parseInt(filters.age_max)
       );
     }
@@ -527,10 +542,12 @@ export default function Home() {
   const clearFilters = () => {
     setFilters({
       status: '',
+      lead_type: '',
       city: '',
       zip_code: '',
       age_min: '',
-      age_max: ''
+      age_max: '',
+      search: ''
     });
   };
 
@@ -717,7 +734,7 @@ Type "DELETE ALL" to confirm:`;
   };
 
   const handleLeadDoubleClick = (lead: Lead) => {
-    const index = leads.findIndex(l => l.id === lead.id);
+    const index = filteredLeads.findIndex(l => l.id === lead.id);
     setCurrentLeadIndex(index);
     setSelectedLead(lead);
     setShowLeadDetail(true);
@@ -734,9 +751,9 @@ Type "DELETE ALL" to confirm:`;
   const handleNext = async () => {
     await saveCurrentChanges();
     const nextIndex = currentLeadIndex + 1;
-    if (nextIndex < leads.length) {
+    if (nextIndex < filteredLeads.length) {
       setCurrentLeadIndex(nextIndex);
-      setSelectedLead(leads[nextIndex]);
+      setSelectedLead(filteredLeads[nextIndex]);
     }
   };
 
@@ -745,7 +762,7 @@ Type "DELETE ALL" to confirm:`;
     const prevIndex = currentLeadIndex - 1;
     if (prevIndex >= 0) {
       setCurrentLeadIndex(prevIndex);
-      setSelectedLead(leads[prevIndex]);
+      setSelectedLead(filteredLeads[prevIndex]);
     }
   };
 
@@ -1184,7 +1201,19 @@ Type "DELETE ALL" to confirm:`;
         <div className="bg-gray-50 border-2 border-red-600 rounded p-4 mb-4">
           <div className="flex flex-wrap gap-4 items-center">
             <h3 className="text-lg font-semibold text-gray-800 mr-4">Filter Leads:</h3>
-            
+
+            {/* Search Bar */}
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-600 mb-1">Search</label>
+              <input
+                type="text"
+                placeholder="Name or phone..."
+                value={filters.search}
+                onChange={(e) => handleFilterChange('search', e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none w-48"
+              />
+            </div>
+
             {/* Status Filter */}
             <div className="flex flex-col">
               <label className="text-sm font-medium text-gray-600 mb-1">Status</label>
@@ -1432,12 +1461,12 @@ Type "DELETE ALL" to confirm:`;
           }}
           onNext={handleNext}
           onPrevious={handlePrevious}
-          hasNext={currentLeadIndex < leads.length - 1}
+          hasNext={currentLeadIndex < filteredLeads.length - 1}
           hasPrevious={currentLeadIndex > 0}
           currentIndex={currentLeadIndex}
-          totalCount={leads.length}
+          totalCount={filteredLeads.length}
         >          
-          <LeadDetailForm 
+          <LeadDetailForm
             lead={selectedLead}
             onUpdate={handleLeadDetailUpdate}
             onClose={async () => {
@@ -1446,6 +1475,18 @@ Type "DELETE ALL" to confirm:`;
               setSelectedLead(null);
             }}
             setPendingChanges={setPendingChanges}
+            onLeadChange={(updatedLead) => {
+              console.log('onLeadChange called in main component with:', updatedLead);
+              console.log('Setting selectedLead to:', updatedLead);
+              setSelectedLead(updatedLead);
+              // Also update the leads array so the dashboard reflects the change
+              console.log('Updating leads array');
+              setLeads(prevLeads => {
+                const newLeads = prevLeads.map(l => l.id === updatedLead.id ? updatedLead : l);
+                console.log('Updated leads array');
+                return newLeads;
+              });
+            }}
           />
         </ResizableMovableModal>
       )}
@@ -1454,16 +1495,18 @@ Type "DELETE ALL" to confirm:`;
 }
 
 // Lead Detail Form Component
-function LeadDetailForm({ 
-  lead, 
-  onUpdate, 
+function LeadDetailForm({
+  lead,
+  onUpdate,
   onClose,
-  setPendingChanges
-}: { 
-  lead: Lead; 
-  onUpdate: (lead: Lead) => void; 
+  setPendingChanges,
+  onLeadChange
+}: {
+  lead: Lead;
+  onUpdate: (lead: Lead) => void;
   onClose: () => void;
   setPendingChanges: (changes: Partial<Lead> | null) => void;
+  onLeadChange?: (lead: Lead) => void;
 }) {
   const [formData, setFormData] = useState({
     first_name: formatName(lead.first_name),
@@ -1484,7 +1527,8 @@ function LeadDetailForm({
     income: lead.income || '',
     household_size: lead.household_size || 0,
     status: lead.status,
-    contact_method: lead.contact_method || '' as ContactMethod,
+    contact_method: lead.contact_method || 'phone' as ContactMethod,
+    lead_type: lead.lead_type,
     cost_per_lead: lead.cost_per_lead,
     sales_amount: lead.sales_amount,
     notes: lead.notes || '',
@@ -1515,7 +1559,8 @@ function LeadDetailForm({
       income: lead.income || '',
       household_size: lead.household_size || 0,
       status: lead.status,
-      contact_method: lead.contact_method || '' as ContactMethod,
+      contact_method: lead.contact_method || 'phone' as ContactMethod,
+      lead_type: lead.lead_type,
       cost_per_lead: lead.cost_per_lead,
       sales_amount: lead.sales_amount,
       notes: lead.notes || '',
@@ -1802,7 +1847,20 @@ function LeadDetailForm({
         {/* Right Column - Activities, Notes, Images, and Policies */}
         <div className="lg:col-span-1 space-y-6">
           {/* Activity Timeline */}
-          <ActivitiesSection leadId={lead.id!} />
+          <ActivitiesSection
+            leadId={lead.id!}
+            lead={lead}
+            onLeadUpdate={(updatedLead) => {
+              console.log('ActivitiesSection onLeadUpdate called with:', updatedLead);
+              // Update the lead without closing modal
+              if (onLeadChange) {
+                console.log('Calling onLeadChange');
+                onLeadChange(updatedLead);
+              } else {
+                console.log('onLeadChange is not defined!');
+              }
+            }}
+          />
 
           {/* Notes Section */}
           <NotesSection leadId={lead.id!} />
@@ -1819,12 +1877,12 @@ function LeadDetailForm({
 }
 
 // ActivitiesSection Component
-function ActivitiesSection({ leadId }: { leadId: number }) {
+function ActivitiesSection({ leadId, lead, onLeadUpdate }: { leadId: number; lead: Lead; onLeadUpdate: (lead: Lead) => void }) {
   const [activities, setActivities] = useState<LeadActivity[]>([]);
   const [showActivityForm, setShowActivityForm] = useState(false);
   const [activityType, setActivityType] = useState<ActivityType>('call');
   const [activityDetail, setActivityDetail] = useState('');
-  const [activityOutcome, setActivityOutcome] = useState<ActivityOutcome | ''>('');
+  const [activityOutcome, setActivityOutcome] = useState<ActivityOutcome | ''>('no_answer');
   const [leadTemperature, setLeadTemperature] = useState<LeadTemperature | ''>('');
   const [nextFollowUpDate, setNextFollowUpDate] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -1915,11 +1973,23 @@ function ActivitiesSection({ leadId }: { leadId: number }) {
 
       if (response.ok) {
         setActivityDetail('');
-        setActivityOutcome('');
+        setActivityOutcome('no_answer');
         setLeadTemperature('');
         setNextFollowUpDate('');
         setShowActivityForm(false);
         await fetchActivities();
+
+        // Fetch updated lead data to refresh the status
+        console.log('Fetching updated lead data for leadId:', leadId);
+        const leadResponse = await fetch(`/api/leads/${leadId}`);
+        if (leadResponse.ok) {
+          const updatedLead = await leadResponse.json();
+          console.log('Updated lead received:', updatedLead);
+          console.log('Updated lead status:', updatedLead.status);
+          // Update the lead in the parent component to reflect status change
+          onLeadUpdate({ ...lead, ...updatedLead });
+          console.log('Called onLeadUpdate with updated lead');
+        }
       }
     } catch (error) {
       console.error('Failed to add activity:', error);

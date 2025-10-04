@@ -132,11 +132,15 @@ function collectUnmappedData(row: any, usedKeys: Set<string>): string {
 }
 
 function detectLeadType(row: any, source: string, campaign: string = '', notes: string = ''): 't65' | 'life' | 'client' | 'other' {
+  // Check if there's an explicit Lead Type column in the CSV
+  const leadTypeFromCSV = findColumnValue(row, ['lead_type', 'Lead Type', 'lead type', 'type', 'Type']) || '';
+
   // Convert to lowercase for case-insensitive matching
   const sourceStr = source.toLowerCase();
   const campaignStr = campaign.toLowerCase();
   const notesStr = notes.toLowerCase();
-  const allText = `${sourceStr} ${campaignStr} ${notesStr}`.toLowerCase();
+  const leadTypeStr = leadTypeFromCSV.toLowerCase();
+  const allText = `${sourceStr} ${campaignStr} ${notesStr} ${leadTypeStr}`.toLowerCase();
   
   // T65 (Medicare Turning 65) indicators
   const t65Indicators = [

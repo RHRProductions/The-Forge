@@ -2,6 +2,26 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '../../../../../lib/database/connection';
 import { Lead } from '../../../../../types/lead';
 
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const db = getDatabase();
+    const lead = db.prepare('SELECT * FROM leads WHERE id = ?').get(parseInt(id));
+
+    if (!lead) {
+      return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(lead);
+  } catch (error) {
+    console.error('Error fetching lead:', error);
+    return NextResponse.json({ error: 'Failed to fetch lead' }, { status: 500 });
+  }
+}
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: { id: string } }

@@ -946,15 +946,17 @@ Type "DELETE ALL" to confirm:`;
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold">Lead Management</h2>
           <div className="flex gap-4">
-            <button
-              onClick={() => {
-                setShowUploadForm(!showUploadForm);
-                setShowAddForm(false);
-              }}
-              className="bg-black text-white px-6 py-2 rounded hover:bg-gray-800 transition-colors"
-            >
-              {showUploadForm ? 'Cancel Upload' : 'Upload CSV'}
-            </button>
+            {(session.user as any).role !== 'setter' && (
+              <button
+                onClick={() => {
+                  setShowUploadForm(!showUploadForm);
+                  setShowAddForm(false);
+                }}
+                className="bg-black text-white px-6 py-2 rounded hover:bg-gray-800 transition-colors"
+              >
+                {showUploadForm ? 'Cancel Upload' : 'Upload CSV'}
+              </button>
+            )}
             <button
               onClick={() => {
                 setShowAddForm(!showAddForm);
@@ -1522,14 +1524,16 @@ Type "DELETE ALL" to confirm:`;
                       </td>
                       <td className="p-4 text-sm">{lead.contact_method?.replace('_', ' ') || '-'}</td>
                       <td className="p-4">
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleDelete(lead.id!)}
-                            className="text-red-600 hover:text-red-800 text-sm font-medium"
-                          >
-                            Delete
-                          </button>
-                        </div>
+                        {(session.user as any).role !== 'setter' && (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleDelete(lead.id!)}
+                              className="text-red-600 hover:text-red-800 text-sm font-medium"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -1590,6 +1594,7 @@ Type "DELETE ALL" to confirm:`;
               setSelectedLead(null);
             }}
             setPendingChanges={setPendingChanges}
+            session={session}
             onLeadChange={(updatedLead) => {
               console.log('onLeadChange called in main component with:', updatedLead);
               console.log('Setting selectedLead to:', updatedLead);
@@ -1615,13 +1620,15 @@ function LeadDetailForm({
   onUpdate,
   onClose,
   setPendingChanges,
-  onLeadChange
+  onLeadChange,
+  session
 }: {
   lead: Lead;
   onUpdate: (lead: Lead) => void;
   onClose: () => void;
   setPendingChanges: (changes: Partial<Lead> | null) => void;
   onLeadChange?: (lead: Lead) => void;
+  session: any;
 }) {
   const [formData, setFormData] = useState({
     first_name: formatName(lead.first_name),
@@ -1969,6 +1976,7 @@ function LeadDetailForm({
           <ActivitiesSection
             leadId={lead.id!}
             lead={lead}
+            session={session}
             onLeadUpdate={(updatedLead) => {
               console.log('ActivitiesSection onLeadUpdate called with:', updatedLead);
               // Update the lead without closing modal
@@ -1996,7 +2004,7 @@ function LeadDetailForm({
 }
 
 // ActivitiesSection Component
-function ActivitiesSection({ leadId, lead, onLeadUpdate }: { leadId: number; lead: Lead; onLeadUpdate: (lead: Lead) => void }) {
+function ActivitiesSection({ leadId, lead, onLeadUpdate, session }: { leadId: number; lead: Lead; onLeadUpdate: (lead: Lead) => void; session: any }) {
   const [activities, setActivities] = useState<LeadActivity[]>([]);
   const [showActivityForm, setShowActivityForm] = useState(false);
   const [activityType, setActivityType] = useState<ActivityType>('call');
@@ -2006,6 +2014,8 @@ function ActivitiesSection({ leadId, lead, onLeadUpdate }: { leadId: number; lea
   const [nextFollowUpDate, setNextFollowUpDate] = useState('');
   const [dialCount, setDialCount] = useState<number>(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [appointmentDateTime, setAppointmentDateTime] = useState('');
+  const [appointmentEndDateTime, setAppointmentEndDateTime] = useState('');
 
   useEffect(() => {
     fetchActivities();
@@ -2084,11 +2094,48 @@ function ActivitiesSection({ leadId, lead, onLeadUpdate }: { leadId: number; lea
       });
 
       if (response.ok) {
+        // If outcome is scheduled and appointment time is set, create calendar event
+        if (activityOutcome === 'scheduled' && appointmentDateTime) {
+          // Determine the correct agent_id
+          const userRole = (session?.user as any)?.role;
+          const userId = (session?.user as any)?.id;
+          let agentId = userId;
+
+          if (userRole === 'setter') {
+            // Setters create events on their agent's calendar
+            const agentIdValue = (session?.user as any)?.agent_id;
+            if (agentIdValue) {
+              agentId = agentIdValue;
+            }
+          }
+
+          // Create calendar event
+          const calendarResponse = await fetch('/api/calendar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              agent_id: agentId,
+              lead_id: leadId,
+              title: `Appointment: ${lead.first_name} ${lead.last_name}`,
+              description: `${lead.address || ''}\n${lead.city || ''}, ${lead.state || ''} ${lead.zip_code || ''}\nPhone: ${lead.phone || ''}\n${lead.phone_2 ? `Phone 2: ${lead.phone_2}\n` : ''}${detail ? `\nNotes: ${detail}` : ''}`.trim(),
+              start_time: appointmentDateTime,
+              end_time: appointmentEndDateTime || appointmentDateTime,
+              event_type: 'appointment',
+            }),
+          });
+
+          if (!calendarResponse.ok) {
+            console.error('Failed to create calendar event');
+          }
+        }
+
         setActivityDetail('');
         setActivityOutcome('no_answer');
         setLeadTemperature('');
         setNextFollowUpDate('');
         setDialCount(1);
+        setAppointmentDateTime('');
+        setAppointmentEndDateTime('');
         setShowActivityForm(false);
         await fetchActivities();
 
@@ -2259,6 +2306,136 @@ function ActivitiesSection({ leadId, lead, onLeadUpdate }: { leadId: number; lea
               </select>
             </div>
           </div>
+
+          {/* Appointment Date/Time fields - only show when scheduled */}
+          {activityOutcome === 'scheduled' && (
+            <div className="space-y-2 mb-2">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Appointment Date *</label>
+                <input
+                  type="date"
+                  value={appointmentDateTime.split('T')[0] || ''}
+                  onChange={(e) => {
+                    const date = e.target.value;
+                    const time = appointmentDateTime.split('T')[1] || '08:00';
+                    setAppointmentDateTime(`${date}T${time}`);
+
+                    // Update end time
+                    if (appointmentEndDateTime) {
+                      const endTime = appointmentEndDateTime.split('T')[1];
+                      setAppointmentEndDateTime(`${date}T${endTime}`);
+                    }
+                  }}
+                  className="w-full p-2 border border-gray-300 rounded focus:border-red-600 focus:outline-none text-sm"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Start Time *</label>
+                  <select
+                    value={appointmentDateTime.split('T')[1] || '08:00'}
+                    onChange={(e) => {
+                      const time = e.target.value;
+                      const date = appointmentDateTime.split('T')[0] || (() => {
+                        const tomorrow = new Date();
+                        tomorrow.setDate(tomorrow.getDate() + 1);
+                        const year = tomorrow.getFullYear();
+                        const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+                        const day = String(tomorrow.getDate()).padStart(2, '0');
+                        return `${year}-${month}-${day}`;
+                      })();
+
+                      setAppointmentDateTime(`${date}T${time}`);
+
+                      // Auto-set end time to 1 hour later
+                      const [hours, minutes] = time.split(':').map(Number);
+                      let endHour = hours + 1;
+                      const endMinutes = minutes;
+
+                      if (endHour >= 24) endHour = 23;
+                      const endTime = `${String(endHour).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
+                      setAppointmentEndDateTime(`${date}T${endTime}`);
+                    }}
+                    className="w-full p-2 border border-gray-300 rounded focus:border-red-600 focus:outline-none text-sm"
+                    required
+                  >
+                    <option value="08:00">8:00 AM</option>
+                    <option value="08:30">8:30 AM</option>
+                    <option value="09:00">9:00 AM</option>
+                    <option value="09:30">9:30 AM</option>
+                    <option value="10:00">10:00 AM</option>
+                    <option value="10:30">10:30 AM</option>
+                    <option value="11:00">11:00 AM</option>
+                    <option value="11:30">11:30 AM</option>
+                    <option value="12:00">12:00 PM</option>
+                    <option value="12:30">12:30 PM</option>
+                    <option value="13:00">1:00 PM</option>
+                    <option value="13:30">1:30 PM</option>
+                    <option value="14:00">2:00 PM</option>
+                    <option value="14:30">2:30 PM</option>
+                    <option value="15:00">3:00 PM</option>
+                    <option value="15:30">3:30 PM</option>
+                    <option value="16:00">4:00 PM</option>
+                    <option value="16:30">4:30 PM</option>
+                    <option value="17:00">5:00 PM</option>
+                    <option value="17:30">5:30 PM</option>
+                    <option value="18:00">6:00 PM</option>
+                    <option value="18:30">6:30 PM</option>
+                    <option value="19:00">7:00 PM</option>
+                    <option value="19:30">7:30 PM</option>
+                    <option value="20:00">8:00 PM</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">End Time</label>
+                  <select
+                    value={appointmentEndDateTime.split('T')[1] || '09:00'}
+                    onChange={(e) => {
+                      const time = e.target.value;
+                      const date = appointmentDateTime.split('T')[0] || (() => {
+                        const tomorrow = new Date();
+                        tomorrow.setDate(tomorrow.getDate() + 1);
+                        const year = tomorrow.getFullYear();
+                        const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+                        const day = String(tomorrow.getDate()).padStart(2, '0');
+                        return `${year}-${month}-${day}`;
+                      })();
+
+                      setAppointmentEndDateTime(`${date}T${time}`);
+                    }}
+                    className="w-full p-2 border border-gray-300 rounded focus:border-red-600 focus:outline-none text-sm"
+                  >
+                    <option value="08:30">8:30 AM</option>
+                    <option value="09:00">9:00 AM</option>
+                    <option value="09:30">9:30 AM</option>
+                    <option value="10:00">10:00 AM</option>
+                    <option value="10:30">10:30 AM</option>
+                    <option value="11:00">11:00 AM</option>
+                    <option value="11:30">11:30 AM</option>
+                    <option value="12:00">12:00 PM</option>
+                    <option value="12:30">12:30 PM</option>
+                    <option value="13:00">1:00 PM</option>
+                    <option value="13:30">1:30 PM</option>
+                    <option value="14:00">2:00 PM</option>
+                    <option value="14:30">2:30 PM</option>
+                    <option value="15:00">3:00 PM</option>
+                    <option value="15:30">3:30 PM</option>
+                    <option value="16:00">4:00 PM</option>
+                    <option value="16:30">4:30 PM</option>
+                    <option value="17:00">5:00 PM</option>
+                    <option value="17:30">5:30 PM</option>
+                    <option value="18:00">6:00 PM</option>
+                    <option value="18:30">6:30 PM</option>
+                    <option value="19:00">7:00 PM</option>
+                    <option value="19:30">7:30 PM</option>
+                    <option value="20:00">8:00 PM</option>
+                    <option value="20:30">8:30 PM</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-2 mb-2">
             <div>

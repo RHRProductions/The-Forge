@@ -37,9 +37,11 @@ export async function GET(request: NextRequest) {
         ce.*,
         l.first_name as lead_first_name,
         l.last_name as lead_last_name,
-        l.phone as lead_phone
+        l.phone as lead_phone,
+        u.name as created_by_name
       FROM calendar_events ce
       LEFT JOIN leads l ON ce.lead_id = l.id
+      LEFT JOIN users u ON ce.created_by_user_id = u.id
       WHERE ce.agent_id = ?
       ORDER BY ce.start_time ASC
     `).all(agentId);

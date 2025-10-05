@@ -8,10 +8,12 @@ import { TimestampedNote, LeadImage, LeadPolicy, LeadActivity, ActivityType, Act
 // Follow-Up Reminders Component
 function FollowUpReminders({
   leads,
-  onLeadClick
+  onLeadClick,
+  onRemoveFollowUp
 }: {
   leads: Lead[];
   onLeadClick: (lead: Lead) => void;
+  onRemoveFollowUp: (leadId: number) => void;
 }) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -64,8 +66,18 @@ function FollowUpReminders({
   const LeadCard = ({ lead, category }: { lead: Lead; category: 'overdue' | 'today' | 'upcoming' }) => (
     <div
       onClick={() => onLeadClick(lead)}
-      className="p-3 bg-white border border-gray-200 rounded hover:border-red-600 hover:shadow-md cursor-pointer transition-all"
+      className="p-3 bg-white border border-gray-200 rounded hover:border-red-600 hover:shadow-md cursor-pointer transition-all relative group"
     >
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onRemoveFollowUp(lead.id!);
+        }}
+        className="absolute top-2 right-2 w-5 h-5 flex items-center justify-center bg-red-100 text-red-600 rounded-full opacity-0 group-hover:opacity-100 hover:bg-red-200 transition-opacity text-xs font-bold"
+        title="Remove follow-up"
+      >
+        ×
+      </button>
       <div className="flex items-start justify-between mb-2">
         <div className="flex-1">
           <div className="font-semibold text-sm text-gray-900">
@@ -587,6 +599,34 @@ export default function Home() {
     }
   };
 
+  const handleRemoveFollowUp = async (leadId: number) => {
+    try {
+      const response = await fetch(`/api/leads/${leadId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ next_follow_up: null }),
+      });
+
+      if (response.ok) {
+        const updatedLead = await response.json();
+
+        // Update leads array
+        setLeads(prevLeads =>
+          prevLeads.map(l => l.id === leadId ? updatedLead : l)
+        );
+
+        // Update selectedLead if it's the same lead
+        if (selectedLead?.id === leadId) {
+          setSelectedLead(updatedLead);
+        }
+      }
+    } catch (error) {
+      console.error('Error removing follow-up:', error);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       first_name: '',
@@ -1041,7 +1081,7 @@ Type "DELETE ALL" to confirm:`;
                     <option value="new">New</option>
                     <option value="contacted">Contacted</option>
                     <option value="no_answer">No Answer</option>
-                    <option value="follow_up_needed">Follow Up Needed</option>
+                    <option value="follow_up_needed">Follow Up</option>
                     <option value="qualified">Qualified</option>
                     <option value="not_qualified">Not Qualified</option>
                     <option value="closed_won">Closed Won</option>
@@ -1225,7 +1265,7 @@ Type "DELETE ALL" to confirm:`;
                 <option value="">All Statuses</option>
                 <option value="new">New</option>
                 <option value="no_answer">No Answer</option>
-                <option value="follow_up_needed">Follow Up Needed</option>
+                <option value="follow_up_needed">Follow Up</option>
                 <option value="not_set">Not Set</option>
                 <option value="appointment_set">Appointment Set</option>
                 <option value="refund_needed">Refund Needed</option>
@@ -1318,7 +1358,11 @@ Type "DELETE ALL" to confirm:`;
         <div className="flex gap-6">
           {/* Follow-Up Reminders Sidebar - Left Side */}
           <div className="w-80 flex-shrink-0">
-            <FollowUpReminders leads={leads} onLeadClick={handleLeadDoubleClick} />
+            <FollowUpReminders
+              leads={leads}
+              onLeadClick={handleLeadDoubleClick}
+              onRemoveFollowUp={handleRemoveFollowUp}
+            />
           </div>
 
           {/* Leads Table - Main Area */}
@@ -1768,7 +1812,7 @@ function LeadDetailForm({
               >
                 <option value="new">New</option>
                 <option value="no_answer">No Answer</option>
-                <option value="follow_up_needed">Follow Up Needed</option>
+                <option value="follow_up_needed">Follow Up</option>
                 <option value="not_set">Not Set</option>
                 <option value="appointment_set">Appointment Set</option>
                 <option value="refund_needed">Refund Needed</option>
@@ -1885,6 +1929,7 @@ function ActivitiesSection({ leadId, lead, onLeadUpdate }: { leadId: number; lea
   const [activityOutcome, setActivityOutcome] = useState<ActivityOutcome | ''>('no_answer');
   const [leadTemperature, setLeadTemperature] = useState<LeadTemperature | ''>('');
   const [nextFollowUpDate, setNextFollowUpDate] = useState('');
+  const [dialCount, setDialCount] = useState<number>(1);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -1910,13 +1955,8 @@ function ActivitiesSection({ leadId, lead, onLeadUpdate }: { leadId: number; lea
     const today = new Date();
     const suggestions: { [key: string]: number } = {
       'no_answer': 0,        // No auto-suggestion - need more data on patterns
-      'busy': 0,             // No auto-suggestion - need more data on patterns
-      'voicemail': 2,        // Give them 2 days to call back
       'answered': 7,         // Follow up in a week if they asked
-      'scheduled': 0,        // No follow-up needed, appointment is set
-      'completed': 30,       // Check back in a month
-      'cancelled': 7,        // Try again in a week
-      'closed': 0            // No follow-up needed
+      'scheduled': 0         // No follow-up needed, appointment is set
     };
 
     const daysToAdd = suggestions[outcome] || 3;
@@ -1942,13 +1982,9 @@ function ActivitiesSection({ leadId, lead, onLeadUpdate }: { leadId: number; lea
       // Generate a default message based on outcome
       const outcomeMessages: { [key: string]: string } = {
         'answered': 'Call answered',
-        'voicemail': 'Left voicemail',
         'no_answer': 'No answer',
-        'busy': 'Line busy',
         'scheduled': 'Appointment scheduled',
-        'completed': 'Completed',
-        'cancelled': 'Cancelled',
-        'closed': 'Closed'
+        'disconnected': 'Phone disconnected'
       };
       detail = outcomeMessages[activityOutcome] || `${activityType} - ${activityOutcome}`;
     }
@@ -1967,7 +2003,8 @@ function ActivitiesSection({ leadId, lead, onLeadUpdate }: { leadId: number; lea
           activity_detail: detail,
           outcome: activityOutcome || null,
           lead_temperature_after: leadTemperature || null,
-          next_follow_up_date: nextFollowUpDate || null
+          next_follow_up_date: nextFollowUpDate || null,
+          dial_count: dialCount
         })
       });
 
@@ -1976,6 +2013,7 @@ function ActivitiesSection({ leadId, lead, onLeadUpdate }: { leadId: number; lea
         setActivityOutcome('no_answer');
         setLeadTemperature('');
         setNextFollowUpDate('');
+        setDialCount(1);
         setShowActivityForm(false);
         await fetchActivities();
 
@@ -2057,12 +2095,8 @@ function ActivitiesSection({ leadId, lead, onLeadUpdate }: { leadId: number; lea
     switch(outcome) {
       case 'answered': return 'bg-green-100 text-green-800';
       case 'scheduled': return 'bg-blue-100 text-blue-800';
-      case 'completed': return 'bg-green-100 text-green-800';
-      case 'closed': return 'bg-purple-100 text-purple-800';
-      case 'voicemail': return 'bg-yellow-100 text-yellow-800';
       case 'no_answer': return 'bg-gray-100 text-gray-800';
-      case 'busy': return 'bg-orange-100 text-orange-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
+      case 'disconnected': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -2122,23 +2156,33 @@ function ActivitiesSection({ leadId, lead, onLeadUpdate }: { leadId: number; lea
             </select>
           </div>
 
-          <div className="mb-3">
-            <label className="block text-xs font-medium text-gray-700 mb-1">Outcome</label>
-            <select
-              value={activityOutcome}
-              onChange={(e) => setActivityOutcome(e.target.value as ActivityOutcome | '')}
-              className="w-full p-2 border border-gray-300 rounded focus:border-red-600 focus:outline-none text-sm"
-            >
-              <option value="">Select outcome...</option>
-              <option value="answered">Answered</option>
-              <option value="voicemail">Voicemail</option>
-              <option value="no_answer">No Answer</option>
-              <option value="busy">Busy</option>
-              <option value="scheduled">Scheduled</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-              <option value="closed">Closed</option>
-            </select>
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Outcome</label>
+              <select
+                value={activityOutcome}
+                onChange={(e) => setActivityOutcome(e.target.value as ActivityOutcome | '')}
+                className="w-full p-2 border border-gray-300 rounded focus:border-red-600 focus:outline-none text-sm"
+              >
+                <option value="">Select outcome...</option>
+                <option value="answered">Answered</option>
+                <option value="no_answer">No Answer</option>
+                <option value="scheduled">Scheduled</option>
+                <option value="disconnected">Disconnected</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Number of Dials</label>
+              <select
+                value={dialCount}
+                onChange={(e) => setDialCount(parseInt(e.target.value))}
+                className="w-full p-2 border border-gray-300 rounded focus:border-red-600 focus:outline-none text-sm"
+              >
+                <option value="1">1 Dial</option>
+                <option value="2">2 Dials</option>
+              </select>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-2 mb-2">
@@ -2152,7 +2196,6 @@ function ActivitiesSection({ leadId, lead, onLeadUpdate }: { leadId: number; lea
                 <option value="">Not set</option>
                 <option value="hot">🔥 Hot</option>
                 <option value="warm">☀️ Warm</option>
-                <option value="cold">❄️ Cold</option>
               </select>
             </div>
 
@@ -2221,9 +2264,14 @@ function ActivitiesSection({ leadId, lead, onLeadUpdate }: { leadId: number; lea
                         {activity.outcome.replace('_', ' ')}
                       </span>
                     )}
-                    {activity.contact_attempt_number && (
+                    {activity.total_dials_at_time && (
                       <span className="px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800">
-                        Attempt #{activity.contact_attempt_number}
+                        Dial #{activity.total_dials_at_time}
+                      </span>
+                    )}
+                    {activity.dial_count && activity.dial_count > 1 && (
+                      <span className="px-2 py-0.5 rounded text-xs bg-purple-100 text-purple-800">
+                        ({activity.dial_count} dials made)
                       </span>
                     )}
                     {activity.lead_temperature_after && (

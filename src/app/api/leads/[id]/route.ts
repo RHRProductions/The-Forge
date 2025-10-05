@@ -29,66 +29,57 @@ export async function PUT(
   try {
     const leadData: Partial<Lead> = await request.json();
     const db = getDatabase();
-    
-    db.prepare(
-      `UPDATE leads SET 
-        first_name = COALESCE(?, first_name),
-        last_name = COALESCE(?, last_name),
-        email = COALESCE(?, email),
-        phone = COALESCE(?, phone),
-        phone_2 = COALESCE(?, phone_2),
-        company = COALESCE(?, company),
-        address = COALESCE(?, address),
-        city = COALESCE(?, city),
-        state = COALESCE(?, state),
-        zip_code = COALESCE(?, zip_code),
-        date_of_birth = COALESCE(?, date_of_birth),
-        age = COALESCE(?, age),
-        gender = COALESCE(?, gender),
-        marital_status = COALESCE(?, marital_status),
-        occupation = COALESCE(?, occupation),
-        income = COALESCE(?, income),
-        household_size = COALESCE(?, household_size),
-        status = COALESCE(?, status),
-        contact_method = COALESCE(?, contact_method),
-        lead_type = COALESCE(?, lead_type),
-        cost_per_lead = COALESCE(?, cost_per_lead),
-        sales_amount = COALESCE(?, sales_amount),
-        notes = COALESCE(?, notes),
-        lead_score = COALESCE(?, lead_score),
-        last_contact_date = COALESCE(?, last_contact_date),
-        next_follow_up = COALESCE(?, next_follow_up),
-        updated_at = CURRENT_TIMESTAMP
-       WHERE id = ?`
-    ).run(
-      leadData.first_name,
-      leadData.last_name,
-      leadData.email,
-      leadData.phone,
-      leadData.phone_2,
-      leadData.company,
-      leadData.address,
-      leadData.city,
-      leadData.state,
-      leadData.zip_code,
-      leadData.date_of_birth,
-      leadData.age,
-      leadData.gender,
-      leadData.marital_status,
-      leadData.occupation,
-      leadData.income,
-      leadData.household_size,
-      leadData.status,
-      leadData.contact_method,
-      leadData.lead_type,
-      leadData.cost_per_lead,
-      leadData.sales_amount,
-      leadData.notes,
-      leadData.lead_score,
-      leadData.last_contact_date,
-      leadData.next_follow_up,
-      params.id
-    );
+
+    // Build dynamic UPDATE query based on provided fields
+    const updates: string[] = [];
+    const values: any[] = [];
+
+    // Helper to add field to update - allows explicit null values
+    const addField = (field: string, value: any) => {
+      if (value !== undefined) {
+        updates.push(`${field} = ?`);
+        values.push(value);
+      }
+    };
+
+    addField('first_name', leadData.first_name);
+    addField('last_name', leadData.last_name);
+    addField('email', leadData.email);
+    addField('phone', leadData.phone);
+    addField('phone_2', leadData.phone_2);
+    addField('company', leadData.company);
+    addField('address', leadData.address);
+    addField('city', leadData.city);
+    addField('state', leadData.state);
+    addField('zip_code', leadData.zip_code);
+    addField('date_of_birth', leadData.date_of_birth);
+    addField('age', leadData.age);
+    addField('gender', leadData.gender);
+    addField('marital_status', leadData.marital_status);
+    addField('occupation', leadData.occupation);
+    addField('income', leadData.income);
+    addField('household_size', leadData.household_size);
+    addField('status', leadData.status);
+    addField('contact_method', leadData.contact_method);
+    addField('lead_type', leadData.lead_type);
+    addField('cost_per_lead', leadData.cost_per_lead);
+    addField('sales_amount', leadData.sales_amount);
+    addField('notes', leadData.notes);
+    addField('lead_score', leadData.lead_score);
+    addField('last_contact_date', leadData.last_contact_date);
+    addField('next_follow_up', leadData.next_follow_up);
+    addField('lead_temperature', leadData.lead_temperature);
+
+    // Always update updated_at
+    updates.push('updated_at = CURRENT_TIMESTAMP');
+
+    // Add the id parameter
+    values.push(params.id);
+
+    if (updates.length > 1) { // More than just updated_at
+      const query = `UPDATE leads SET ${updates.join(', ')} WHERE id = ?`;
+      db.prepare(query).run(...values);
+    }
 
     const updatedLead = db.prepare('SELECT * FROM leads WHERE id = ?').get(params.id);
     return NextResponse.json(updatedLead);

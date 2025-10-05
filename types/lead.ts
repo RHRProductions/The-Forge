@@ -33,6 +33,7 @@ export interface Lead {
   last_contact_date?: string;
   next_follow_up?: string;
   contact_attempt_count?: number;
+  total_dials?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -78,6 +79,8 @@ export interface LeadActivity {
   lead_temperature_after?: LeadTemperature;
   next_follow_up_date?: string;
   contact_attempt_number?: number;
+  dial_count?: number;
+  total_dials_at_time?: number;
   created_at: string;
 }
 
@@ -92,13 +95,9 @@ export type ActivityType =
 
 export type ActivityOutcome =
   | 'answered'
-  | 'voicemail'
   | 'no_answer'
-  | 'busy'
   | 'scheduled'
-  | 'completed'
-  | 'cancelled'
-  | 'closed';
+  | 'disconnected';
 
 export type LeadStatus = 
   | 'new'
@@ -123,5 +122,4 @@ export type LeadType =
 
 export type LeadTemperature =
   | 'hot'
-  | 'warm'
-  | 'cold';
+  | 'warm';

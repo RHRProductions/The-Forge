@@ -115,10 +115,33 @@ function initializeDatabase() {
       lead_temperature_after TEXT,
       next_follow_up_date TEXT,
       contact_attempt_number INTEGER,
+      dial_count INTEGER DEFAULT 1,
+      total_dials_at_time INTEGER,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE
     );
   `);
+
+  // Add dial_count column to existing lead_activities table
+  try {
+    db.exec(`ALTER TABLE lead_activities ADD COLUMN dial_count INTEGER DEFAULT 1;`);
+  } catch (error) {
+    // Column already exists, ignore error
+  }
+
+  // Add total_dials_at_time column to existing lead_activities table
+  try {
+    db.exec(`ALTER TABLE lead_activities ADD COLUMN total_dials_at_time INTEGER;`);
+  } catch (error) {
+    // Column already exists, ignore error
+  }
+
+  // Add total_dials column to leads table
+  try {
+    db.exec(`ALTER TABLE leads ADD COLUMN total_dials INTEGER DEFAULT 0;`);
+  } catch (error) {
+    // Column already exists, ignore error
+  }
 
   // Create indexes
   db.exec(`

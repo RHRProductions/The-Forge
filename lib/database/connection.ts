@@ -19,6 +19,21 @@ function initializeDatabase() {
   if (!db) return;
 
   // First, create the table with original structure if it doesn't exist
+  // Create users table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL,
+      role TEXT DEFAULT 'agent',
+      agent_id INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (agent_id) REFERENCES users(id) ON DELETE SET NULL
+    );
+  `);
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS leads (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -57,7 +72,9 @@ function initializeDatabase() {
     'lead_temperature TEXT',
     'last_contact_date TEXT',
     'next_follow_up TEXT',
-    'contact_attempt_count INTEGER DEFAULT 0'
+    'contact_attempt_count INTEGER DEFAULT 0',
+    'owner_id INTEGER',
+    'worked_by_id INTEGER'
   ];
 
   newColumns.forEach(column => {
@@ -117,8 +134,10 @@ function initializeDatabase() {
       contact_attempt_number INTEGER,
       dial_count INTEGER DEFAULT 1,
       total_dials_at_time INTEGER,
+      created_by_user_id INTEGER,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE
+      FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE,
+      FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL
     );
   `);
 
@@ -143,6 +162,34 @@ function initializeDatabase() {
     // Column already exists, ignore error
   }
 
+  // Add created_by_user_id column to lead_activities table
+  try {
+    db.exec(`ALTER TABLE lead_activities ADD COLUMN created_by_user_id INTEGER;`);
+  } catch (error) {
+    // Column already exists, ignore error
+  }
+
+  // Add lead_temperature_after column to lead_activities table
+  try {
+    db.exec(`ALTER TABLE lead_activities ADD COLUMN lead_temperature_after TEXT;`);
+  } catch (error) {
+    // Column already exists, ignore error
+  }
+
+  // Add next_follow_up_date column to lead_activities table
+  try {
+    db.exec(`ALTER TABLE lead_activities ADD COLUMN next_follow_up_date TEXT;`);
+  } catch (error) {
+    // Column already exists, ignore error
+  }
+
+  // Add contact_attempt_number column to lead_activities table
+  try {
+    db.exec(`ALTER TABLE lead_activities ADD COLUMN contact_attempt_number INTEGER;`);
+  } catch (error) {
+    // Column already exists, ignore error
+  }
+
   // Create indexes
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
@@ -151,6 +198,11 @@ function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_leads_zip_code ON leads(zip_code);
     CREATE INDEX IF NOT EXISTS idx_leads_age ON leads(age);
     CREATE INDEX IF NOT EXISTS idx_leads_state ON leads(state);
+    CREATE INDEX IF NOT EXISTS idx_leads_owner_id ON leads(owner_id);
+    CREATE INDEX IF NOT EXISTS idx_leads_worked_by_id ON leads(worked_by_id);
+
+    CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+    CREATE INDEX IF NOT EXISTS idx_users_agent_id ON users(agent_id);
 
     CREATE INDEX IF NOT EXISTS idx_lead_notes_lead_id ON lead_notes(lead_id);
     CREATE INDEX IF NOT EXISTS idx_lead_images_lead_id ON lead_images(lead_id);
@@ -158,6 +210,7 @@ function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_lead_activities_lead_id ON lead_activities(lead_id);
     CREATE INDEX IF NOT EXISTS idx_lead_activities_type ON lead_activities(activity_type);
     CREATE INDEX IF NOT EXISTS idx_lead_activities_created_at ON lead_activities(created_at);
+    CREATE INDEX IF NOT EXISTS idx_lead_activities_created_by ON lead_activities(created_by_user_id);
   `);
 }
 

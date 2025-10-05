@@ -496,15 +496,27 @@ export default function Home() {
 
     // Search filter - searches name and phone
     if (filters.search) {
-      const searchLower = filters.search.toLowerCase().replace(/\D/g, ''); // Remove non-digits for phone search
+      const searchTerm = filters.search.toLowerCase().trim();
+      const searchDigits = filters.search.replace(/\D/g, ''); // Remove non-digits for phone search
+
       filtered = filtered.filter(lead => {
         const fullName = `${lead.first_name} ${lead.last_name}`.toLowerCase();
-        const phone = lead.phone.replace(/\D/g, '');
-        const phone2 = lead.phone_2?.replace(/\D/g, '') || '';
 
-        return fullName.includes(filters.search.toLowerCase()) ||
-               phone.includes(searchLower) ||
-               phone2.includes(searchLower);
+        // Always check name match
+        const nameMatch = fullName.includes(searchTerm);
+
+        // Only check phone if there are digits to search for
+        let phoneMatch = false;
+        let phone2Match = false;
+
+        if (searchDigits.length > 0) {
+          const phone = lead.phone.replace(/\D/g, '');
+          const phone2 = lead.phone_2?.replace(/\D/g, '') || '';
+          phoneMatch = phone.includes(searchDigits);
+          phone2Match = phone2.includes(searchDigits);
+        }
+
+        return nameMatch || phoneMatch || phone2Match;
       });
     }
 
@@ -1354,22 +1366,19 @@ Type "DELETE ALL" to confirm:`;
           </div>
         </div>
 
-        {/* Content Grid: Sidebar + Leads Table */}
-        <div className="flex gap-6">
-          {/* Follow-Up Reminders Sidebar - Left Side */}
-          <div className="w-80 flex-shrink-0">
-            <FollowUpReminders
-              leads={leads}
-              onLeadClick={handleLeadDoubleClick}
-              onRemoveFollowUp={handleRemoveFollowUp}
-            />
-          </div>
+        {/* Follow-Up Reminders - Full Width Above Table */}
+        <div className="mb-6">
+          <FollowUpReminders
+            leads={leads}
+            onLeadClick={handleLeadDoubleClick}
+            onRemoveFollowUp={handleRemoveFollowUp}
+          />
+        </div>
 
-          {/* Leads Table - Main Area */}
-          <div className="flex-1">
-            <div className="bg-white rounded border-2 border-red-600 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
+        {/* Leads Table - Full Width */}
+        <div className="bg-white rounded border-2 border-red-600 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
               <thead className="bg-black text-white">
                 <tr>
                   <th className="p-4 text-left">Name</th>
@@ -1463,8 +1472,6 @@ Type "DELETE ALL" to confirm:`;
                 )}
               </tbody>
             </table>
-          </div>
-        </div>
           </div>
         </div>
       </main>

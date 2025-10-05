@@ -1,3 +1,14 @@
+export interface User {
+  id?: number;
+  name: string;
+  email: string;
+  password?: string;
+  role: 'admin' | 'agent' | 'setter';
+  agent_id?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface Lead {
   id?: number;
   first_name: string;
@@ -34,6 +45,8 @@ export interface Lead {
   next_follow_up?: string;
   contact_attempt_count?: number;
   total_dials?: number;
+  owner_id?: number;
+  worked_by_id?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -81,6 +94,7 @@ export interface LeadActivity {
   contact_attempt_number?: number;
   dial_count?: number;
   total_dials_at_time?: number;
+  created_by_user_id?: number;
   created_at: string;
 }
 

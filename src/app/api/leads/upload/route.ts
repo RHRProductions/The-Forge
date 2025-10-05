@@ -197,15 +197,24 @@ function processCSVData(results: any, totalSpent: number) {
   const db = getDatabase();
   const insertStmt = db.prepare(`
     INSERT INTO leads (
-      first_name, last_name, email, phone, phone_2, company, 
+      first_name, last_name, email, phone, phone_2, company,
       address, city, state, zip_code, date_of_birth, age, gender,
-      marital_status, occupation, income, household_size, status, 
-      contact_method, lead_type, cost_per_lead, sales_amount, notes, source, 
+      marital_status, occupation, income, household_size, status,
+      contact_method, lead_type, cost_per_lead, sales_amount, notes, source,
       lead_score, last_contact_date, next_follow_up, updated_at
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
   `);
 
+  // Prepare duplicate check statement
+  const duplicateCheckStmt = db.prepare(`
+    SELECT id FROM leads
+    WHERE LOWER(first_name) = LOWER(?)
+    AND LOWER(last_name) = LOWER(?)
+    AND phone = ?
+  `);
+
   let successCount = 0;
+  let duplicateCount = 0;
   let errors = [];
   
   // Calculate cost per lead based on total spent
@@ -305,6 +314,19 @@ function processCSVData(results: any, totalSpent: number) {
         console.log('Raw row keys:', Object.keys(row));
       }
 
+      // Check for duplicates based on name + phone
+      const phone = formatPhoneNumber(findColumnValue(row, COLUMN_MAPPINGS.phone));
+      const duplicate = duplicateCheckStmt.get(
+        firstName || '',
+        lastName || '',
+        phone
+      );
+
+      if (duplicate) {
+        duplicateCount++;
+        continue; // Skip this lead
+      }
+
       insertStmt.run(
         formatName(firstName),
         formatName(lastName), 
@@ -341,9 +363,10 @@ function processCSVData(results: any, totalSpent: number) {
   }
 
   return {
-    message: `Successfully imported ${successCount} leads`,
+    message: `Successfully imported ${successCount} leads${duplicateCount > 0 ? ` (${duplicateCount} duplicates skipped)` : ''}`,
     total: results.data.length,
     successCount,
+    duplicateCount,
     costPerLead,
     totalSpent,
     errors: errors.length > 0 ? errors : undefined
@@ -384,9 +407,61 @@ export async function POST(request: NextRequest) {
     }
     
     if (headerLineIndex === -1) {
+      // Check if first line looks like a header or data
+      const firstLine = lines[0];
+      const hasHeaderRow = firstLine.toLowerCase().includes('first') ||
+                          firstLine.toLowerCase().includes('name') ||
+                          firstLine.toLowerCase().includes('email') ||
+                          firstLine.toLowerCase().includes('phone');
+
+      // If no header row detected, check if it's a Lead Hero export format
+      // Lead Hero format: lead_id, received_date, first_name, last_name, status, lead_type, lead_owner, dob, age, email, ..., phone, ..., address, city, state, zip, county, notes
+      const firstLineFields = firstLine.split(',');
+      const looksLikeLeadHeroData = firstLineFields.length > 20 &&
+                                    /^\d{8}$/.test(firstLineFields[0].trim()) && // 8-digit lead ID
+                                    /^\d{2}\/\d{2}\/\d{4}$/.test(firstLineFields[1].trim()); // MM/DD/YYYY date
+
+      if (!hasHeaderRow && looksLikeLeadHeroData) {
+        console.log('Detected Lead Hero format without header row - adding headers');
+        // Insert headers for Lead Hero format
+        const leadHeroHeaders = 'Lead Id,Received Date,First Name,Last Name,Status,Lead Type,Lead Owner,Date Of Birth,Age,Email,Home,Phone 1,Phone 2,Mobile,Phone 4,Phone 5,Phone 6,Last Modified,Street Address,City,State,Zip,County,Lead Partner Notes,Assets Notes,Extra';
+        const csvWithHeaders = leadHeroHeaders + '\n' + text;
+
+        const results = Papa.parse(csvWithHeaders, {
+          header: true,
+          skipEmptyLines: true,
+          transformHeader: (header) => header.toLowerCase().replace(/\s+/g, '_'),
+          quotes: true,
+          quoteChar: '"',
+          escapeChar: '"',
+          skipFirstNLines: 0,
+          fastMode: false
+        });
+
+        // Filter out quote errors - we'll handle malformed quotes
+        const criticalErrors = results.errors.filter(e => e.code !== 'InvalidQuotes');
+
+        if (criticalErrors.length > 0) {
+          console.error('CSV Parsing Errors:', JSON.stringify(criticalErrors, null, 2));
+          return NextResponse.json(
+            { error: 'CSV parsing error', details: criticalErrors },
+            { status: 400 }
+          );
+        }
+
+        if (results.errors.length > 0) {
+          console.log('Non-critical CSV warnings (InvalidQuotes):', results.errors.length, 'warnings ignored');
+        }
+
+        console.log('Using Lead Hero format with injected headers - Headers:', results.meta?.fields);
+
+        const response = processCSVData(results, totalSpent);
+        return NextResponse.json(response);
+      }
+
       // Fallback: try standard parsing for normal CSV files
       const results = Papa.parse(text, {
-        header: true,
+        header: hasHeaderRow,
         skipEmptyLines: true,
         transformHeader: (header) => header.toLowerCase().replace(/\s+/g, '_'),
         quotes: true,

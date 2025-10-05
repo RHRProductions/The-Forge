@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '../../../../../lib/database/connection';
 import { formatPhoneNumber, formatName, formatLocation } from '../../../../../lib/utils';
+import { auth } from '../../../../../auth';
 import * as Papa from 'papaparse';
 
 // Column mapping for different vendor formats
@@ -193,7 +194,7 @@ function detectLeadType(row: any, source: string, campaign: string = '', notes: 
   return 'other';
 }
 
-function processCSVData(results: any, totalSpent: number) {
+function processCSVData(results: any, totalSpent: number, userId: number) {
   const db = getDatabase();
   const insertStmt = db.prepare(`
     INSERT INTO leads (
@@ -201,8 +202,8 @@ function processCSVData(results: any, totalSpent: number) {
       address, city, state, zip_code, date_of_birth, age, gender,
       marital_status, occupation, income, household_size, status,
       contact_method, lead_type, cost_per_lead, sales_amount, notes, source,
-      lead_score, last_contact_date, next_follow_up, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      lead_score, last_contact_date, next_follow_up, owner_id, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
   `);
 
   // Prepare duplicate check statement
@@ -354,7 +355,8 @@ function processCSVData(results: any, totalSpent: number) {
         source,
         parseInt(findColumnValue(row, COLUMN_MAPPINGS.lead_score)) || 0,
         findColumnValue(row, ['last_contact_date', 'got_on']),
-        findColumnValue(row, ['next_follow_up'])
+        findColumnValue(row, ['next_follow_up']),
+        userId
       );
       successCount++;
     } catch (error) {
@@ -375,10 +377,17 @@ function processCSVData(results: any, totalSpent: number) {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const totalSpent = parseFloat(formData.get('totalSpent') as string) || 0;
-    
+    const userId = parseInt((session.user as any).id);
+
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
@@ -455,7 +464,7 @@ export async function POST(request: NextRequest) {
 
         console.log('Using Lead Hero format with injected headers - Headers:', results.meta?.fields);
 
-        const response = processCSVData(results, totalSpent);
+        const response = processCSVData(results, totalSpent, userId);
         return NextResponse.json(response);
       }
 

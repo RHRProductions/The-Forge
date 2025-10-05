@@ -190,6 +190,26 @@ function initializeDatabase() {
     // Column already exists, ignore error
   }
 
+  // Create calendar_events table for agent scheduling
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS calendar_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      agent_id INTEGER NOT NULL,
+      lead_id INTEGER,
+      title TEXT NOT NULL,
+      description TEXT,
+      start_time DATETIME NOT NULL,
+      end_time DATETIME NOT NULL,
+      event_type TEXT DEFAULT 'appointment',
+      created_by_user_id INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (agent_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE SET NULL,
+      FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL
+    );
+  `);
+
   // Create indexes
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
@@ -211,6 +231,10 @@ function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_lead_activities_type ON lead_activities(activity_type);
     CREATE INDEX IF NOT EXISTS idx_lead_activities_created_at ON lead_activities(created_at);
     CREATE INDEX IF NOT EXISTS idx_lead_activities_created_by ON lead_activities(created_by_user_id);
+
+    CREATE INDEX IF NOT EXISTS idx_calendar_events_agent_id ON calendar_events(agent_id);
+    CREATE INDEX IF NOT EXISTS idx_calendar_events_lead_id ON calendar_events(lead_id);
+    CREATE INDEX IF NOT EXISTS idx_calendar_events_start_time ON calendar_events(start_time);
   `);
 }
 

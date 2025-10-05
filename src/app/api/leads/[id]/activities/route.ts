@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '../../../../../../lib/database/connection';
 import { LeadActivity } from '../../../../../../types/lead';
+import { auth } from '../../../../../../auth';
 
 export async function GET(
   request: NextRequest,
@@ -25,10 +26,17 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await auth();
+
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { id } = await params;
     const activity: Omit<LeadActivity, 'id' | 'created_at'> = await request.json();
     const db = getDatabase();
     const leadId = parseInt(id);
+    const userId = parseInt((session.user as any).id);
 
     // Get current lead data
     const lead = db.prepare('SELECT contact_attempt_count, lead_temperature, total_dials FROM leads WHERE id = ?').get(leadId) as any;
@@ -46,8 +54,8 @@ export async function POST(
     const result = db.prepare(
       `INSERT INTO lead_activities (
         lead_id, activity_type, activity_detail, outcome,
-        lead_temperature_after, next_follow_up_date, contact_attempt_number, dial_count, total_dials_at_time
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        lead_temperature_after, next_follow_up_date, contact_attempt_number, dial_count, total_dials_at_time, created_by_user_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       leadId,
       activity.activity_type,
@@ -57,7 +65,8 @@ export async function POST(
       activity.next_follow_up_date || null,
       newAttemptNumber,
       activity.dial_count || 1,
-      newTotalDials
+      newTotalDials,
+      userId
     );
 
     // Update lead record

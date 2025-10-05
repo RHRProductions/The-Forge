@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useSession, signOut } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { Lead, LeadStatus, ContactMethod, LeadType } from '../../types/lead';
 import { formatPhoneNumber, formatName, formatLocation, formatDateForInput, calculateAge } from '../../lib/utils';
 import { TimestampedNote, LeadImage, LeadPolicy, LeadActivity, ActivityType, ActivityOutcome, LeadTemperature } from '../../types/lead';
@@ -407,6 +409,16 @@ function ResizableMovableModal({
 }
 
 export default function Home() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login');
+    }
+  }, [status, router]);
+
   const [leads, setLeads] = useState<Lead[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showUploadForm, setShowUploadForm] = useState(false);
@@ -845,39 +857,87 @@ Type "DELETE ALL" to confirm:`;
   const totalSales = leads.reduce((sum, lead) => sum + lead.sales_amount, 0);
   const roi = totalCost > 0 ? ((totalSales - totalCost) / totalCost * 100).toFixed(1) : '0';
 
+  // Show loading while checking auth
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-white text-xl">Loading...</div>
+      </div>
+    );
+  }
+
+  // Don't render if not authenticated
+  if (!session) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-white text-black">
       {/* Header */}
       <header className="bg-black text-white p-8 border-b-4 border-red-600">
-        <div className="max-w-7xl mx-auto text-center">
-          <h1 className="text-6xl font-black mb-3">
-            🔥 The Forge 🔥
-          </h1>
-          <p className="text-gray-300 text-lg">Where Cold Leads Turn to Gold Leads</p>
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+            <div className="flex flex-col items-center">
+              <h1 className="text-5xl md:text-6xl font-black whitespace-nowrap">
+                🔥 The Forge 🔥
+              </h1>
+              <p className="text-gray-300 text-lg mt-2">Where Cold Leads Turn to Gold Leads</p>
+            </div>
+            <div className="flex flex-wrap justify-center md:justify-end items-center gap-3">
+              <div className="text-center md:text-right">
+                <div className="text-sm text-gray-300">{session.user?.name}</div>
+                <div className="text-xs text-gray-400">{session.user?.email}</div>
+              </div>
+              <button
+                onClick={() => router.push('/calendar')}
+                className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-bold text-sm transition-colors whitespace-nowrap"
+              >
+                📅 Calendar
+              </button>
+              {(session.user as any).role === 'admin' && (
+                <button
+                  onClick={() => router.push('/settings')}
+                  className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded font-bold text-sm transition-colors whitespace-nowrap"
+                >
+                  ⚙️ Settings
+                </button>
+              )}
+              <button
+                onClick={() => signOut({ callbackUrl: '/login' })}
+                className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded font-bold text-sm transition-colors whitespace-nowrap"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
         </div>
       </header>
 
       {/* Dashboard Stats */}
       <div className="bg-gray-100 p-6 border-b-2 border-red-600">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className={`max-w-7xl mx-auto grid grid-cols-1 ${(session.user as any).role === 'setter' ? 'md:grid-cols-1' : 'md:grid-cols-4'} gap-6`}>
           <div className="bg-white p-4 rounded border-l-4 border-red-600 shadow">
             <h3 className="text-sm font-medium text-gray-600">Total Leads</h3>
             <p className="text-2xl font-bold">{totalLeads}</p>
           </div>
-          <div className="bg-white p-4 rounded border-l-4 border-red-600 shadow">
-            <h3 className="text-sm font-medium text-gray-600">Total Cost</h3>
-            <p className="text-2xl font-bold">${totalCost.toFixed(2)}</p>
-          </div>
-          <div className="bg-white p-4 rounded border-l-4 border-red-600 shadow">
-            <h3 className="text-sm font-medium text-gray-600">Total Sales</h3>
-            <p className="text-2xl font-bold">${totalSales.toFixed(2)}</p>
-          </div>
-          <div className="bg-white p-4 rounded border-l-4 border-red-600 shadow">
-            <h3 className="text-sm font-medium text-gray-600">ROI</h3>
-            <p className={`text-2xl font-bold ${parseFloat(roi) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {roi}%
-            </p>
-          </div>
+          {(session.user as any).role !== 'setter' && (
+            <>
+              <div className="bg-white p-4 rounded border-l-4 border-red-600 shadow">
+                <h3 className="text-sm font-medium text-gray-600">Total Cost</h3>
+                <p className="text-2xl font-bold">${totalCost.toFixed(2)}</p>
+              </div>
+              <div className="bg-white p-4 rounded border-l-4 border-red-600 shadow">
+                <h3 className="text-sm font-medium text-gray-600">Total Sales</h3>
+                <p className="text-2xl font-bold">${totalSales.toFixed(2)}</p>
+              </div>
+              <div className="bg-white p-4 rounded border-l-4 border-red-600 shadow">
+                <h3 className="text-sm font-medium text-gray-600">ROI</h3>
+                <p className={`text-2xl font-bold ${parseFloat(roi) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {roi}%
+                </p>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -1114,22 +1174,26 @@ Type "DELETE ALL" to confirm:`;
                     <option value="in_person">In Person</option>
                     <option value="social_media">Social Media</option>
                   </select>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="Cost Per Lead"
-                    value={formData.cost_per_lead.toFixed(2)}
-                    onChange={(e) => handleFormChange('cost_per_lead', parseFloat(e.target.value) || 0)}
-                    className="p-3 border border-gray-300 rounded focus:border-red-600 focus:outline-none"
-                  />
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="Sales Amount"
-                    value={formData.sales_amount}
-                    onChange={(e) => handleFormChange('sales_amount', parseFloat(e.target.value) || 0)}
-                    className="p-3 border border-gray-300 rounded focus:border-red-600 focus:outline-none"
-                  />
+                  {(session.user as any).role !== 'setter' && (
+                    <>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="Cost Per Lead"
+                        value={formData.cost_per_lead.toFixed(2)}
+                        onChange={(e) => handleFormChange('cost_per_lead', parseFloat(e.target.value) || 0)}
+                        className="p-3 border border-gray-300 rounded focus:border-red-600 focus:outline-none"
+                      />
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="Sales Amount"
+                        value={formData.sales_amount}
+                        onChange={(e) => handleFormChange('sales_amount', parseFloat(e.target.value) || 0)}
+                        className="p-3 border border-gray-300 rounded focus:border-red-600 focus:outline-none"
+                      />
+                    </>
+                  )}
                   <input
                     type="number"
                     placeholder="Lead Score (0-100)"
@@ -1853,26 +1917,30 @@ function LeadDetailForm({
                 <option value="client">Client</option>
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Cost Per Lead</label>
-              <input
-                type="number"
-                step="0.01"
-                value={formData.cost_per_lead.toFixed(2)}
-                onChange={(e) => handleFormChange('cost_per_lead', parseFloat(e.target.value) || 0)}
-                className="w-full p-2 border border-gray-300 rounded focus:border-red-600 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Sales Amount</label>
-              <input
-                type="number"
-                step="0.01"
-                value={formData.sales_amount}
-                onChange={(e) => handleFormChange('sales_amount', parseFloat(e.target.value) || 0)}
-                className="w-full p-2 border border-gray-300 rounded focus:border-red-600 focus:outline-none"
-              />
-            </div>
+            {(session.user as any).role !== 'setter' && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Cost Per Lead</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.cost_per_lead.toFixed(2)}
+                    onChange={(e) => handleFormChange('cost_per_lead', parseFloat(e.target.value) || 0)}
+                    className="w-full p-2 border border-gray-300 rounded focus:border-red-600 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Sales Amount</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.sales_amount}
+                    onChange={(e) => handleFormChange('sales_amount', parseFloat(e.target.value) || 0)}
+                    className="w-full p-2 border border-gray-300 rounded focus:border-red-600 focus:outline-none"
+                  />
+                </div>
+              </>
+            )}
           </div>
         </div>
 

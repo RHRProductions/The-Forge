@@ -435,6 +435,7 @@ export default function Home() {
     status: '',
     lead_type: '',
     city: '',
+    state: '',
     zip_code: '',
     age_min: '',
     age_max: '',
@@ -549,6 +550,13 @@ export default function Home() {
       );
     }
 
+    // Filter by state
+    if (filters.state) {
+      filtered = filtered.filter(lead =>
+        lead.state?.toUpperCase() === filters.state.toUpperCase()
+      );
+    }
+
     // Filter by zip code
     if (filters.zip_code) {
       filtered = filtered.filter(lead =>
@@ -580,6 +588,7 @@ export default function Home() {
       status: '',
       lead_type: '',
       city: '',
+      state: '',
       zip_code: '',
       age_min: '',
       age_max: '',
@@ -759,22 +768,17 @@ export default function Home() {
     }
   };
 
-  const handleBulkDelete = async () => {
-    const warningMessage = `⚠️ DANGER: DELETE ALL LEADS ⚠️
-
-This will permanently delete ALL ${leads.length} leads from your database!
-
-This action CANNOT be undone!
-
-Type "DELETE ALL" to confirm:`;
-
-    const userInput = prompt(warningMessage);
-
-    if (userInput === 'DELETE ALL') {
+  const handleBulkDelete = async (leadIds?: number[]) => {
+    // If leadIds provided, delete specific leads; otherwise delete all leads
+    if (leadIds && leadIds.length > 0) {
       try {
-        setDeleteStatus('Deleting all leads...');
+        setDeleteStatus(`Deleting ${leadIds.length} leads...`);
         const response = await fetch('/api/leads/bulk-delete', {
           method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ leadIds }),
         });
 
         const result = await response.json();
@@ -782,7 +786,6 @@ Type "DELETE ALL" to confirm:`;
         if (response.ok) {
           setDeleteStatus(`Successfully deleted ${result.deletedCount} leads!`);
           fetchLeads();
-          setShowDevMenu(false);
           setTimeout(() => {
             setDeleteStatus('');
           }, 3000);
@@ -792,8 +795,43 @@ Type "DELETE ALL" to confirm:`;
       } catch (error) {
         setDeleteStatus('Delete failed. Please try again.');
       }
-    } else if (userInput !== null) {
-      alert('Deletion cancelled - incorrect confirmation text');
+    } else {
+      // Original delete all functionality
+      const warningMessage = `⚠️ DANGER: DELETE ALL LEADS ⚠️
+
+This will permanently delete ALL ${leads.length} leads from your database!
+
+This action CANNOT be undone!
+
+Type "DELETE ALL" to confirm:`;
+
+      const userInput = prompt(warningMessage);
+
+      if (userInput === 'DELETE ALL') {
+        try {
+          setDeleteStatus('Deleting all leads...');
+          const response = await fetch('/api/leads/bulk-delete', {
+            method: 'DELETE',
+          });
+
+          const result = await response.json();
+
+          if (response.ok) {
+            setDeleteStatus(`Successfully deleted ${result.deletedCount} leads!`);
+            fetchLeads();
+            setShowDevMenu(false);
+            setTimeout(() => {
+              setDeleteStatus('');
+            }, 3000);
+          } else {
+            setDeleteStatus(`Error: ${result.error}`);
+          }
+        } catch (error) {
+          setDeleteStatus('Delete failed. Please try again.');
+        }
+      } else if (userInput !== null) {
+        alert('Deletion cancelled - incorrect confirmation text');
+      }
     }
   };
 
@@ -888,6 +926,12 @@ Type "DELETE ALL" to confirm:`;
                 <div className="text-sm text-gray-300">{session.user?.name}</div>
                 <div className="text-xs text-gray-400">{session.user?.email}</div>
               </div>
+              <button
+                onClick={() => router.push('/analytics')}
+                className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded font-bold text-sm transition-colors whitespace-nowrap"
+              >
+                📊 Analytics
+              </button>
               <button
                 onClick={() => router.push('/calendar')}
                 className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-bold text-sm transition-colors whitespace-nowrap"
@@ -1380,6 +1424,19 @@ Type "DELETE ALL" to confirm:`;
               />
             </div>
 
+            {/* State Filter */}
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-600 mb-1">State</label>
+              <input
+                type="text"
+                placeholder="e.g. AZ"
+                value={filters.state}
+                onChange={(e) => handleFilterChange('state', e.target.value.toUpperCase())}
+                maxLength={2}
+                className="px-3 py-2 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none w-20 uppercase"
+              />
+            </div>
+
             {/* Zip Code Filter */}
             <div className="flex flex-col">
               <label className="text-sm font-medium text-gray-600 mb-1">Zip Code</label>
@@ -1422,6 +1479,22 @@ Type "DELETE ALL" to confirm:`;
                 Clear Filters
               </button>
             </div>
+
+            {/* Bulk Delete Filtered Leads Button */}
+            {(filters.status || filters.lead_type || filters.city || filters.state || filters.zip_code || filters.age_min || filters.age_max) && filteredLeads.length > 0 && (
+              <div className="flex flex-col justify-end">
+                <button
+                  onClick={() => {
+                    if (confirm(`Are you sure you want to delete ${filteredLeads.length} filtered lead(s)? This action cannot be undone.`)) {
+                      handleBulkDelete(filteredLeads.map(lead => lead.id!));
+                    }
+                  }}
+                  className="px-4 py-2 bg-black text-white rounded text-sm hover:bg-gray-800 transition-colors font-bold border-2 border-red-600"
+                >
+                  Delete {filteredLeads.length} Leads
+                </button>
+              </div>
+            )}
 
             {/* Results Count */}
             <div className="flex flex-col justify-end">

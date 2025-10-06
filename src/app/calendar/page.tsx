@@ -645,10 +645,10 @@ export default function CalendarPage() {
         {/* Calendar Grid */}
         <div className="bg-white border-2 border-red-600 rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
+            <table className="w-full border-collapse table-fixed">
               <thead>
                 <tr className="bg-black text-white">
-                  <th className="p-3 text-left border-r border-gray-600 w-20">Time</th>
+                  <th className="p-3 text-left border-r border-gray-600" style={{ width: '80px' }}>Time</th>
                   {weekDays.map(day => (
                     <th key={day.toISOString()} className="p-3 text-center border-r border-gray-600">
                       <div className="font-bold">{day.toLocaleDateString('en-US', { weekday: 'short' })}</div>

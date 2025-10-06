@@ -7,10 +7,10 @@ import * as Papa from 'papaparse';
 // Column mapping for different vendor formats
 const COLUMN_MAPPINGS = {
   // First Name variations
-  first_name: ['first_name', 'firstname', 'fname', 'given_name'],
+  first_name: ['first_name', 'firstname', 'fname', 'given_name', 'FirstName'],
 
   // Last Name variations
-  last_name: ['last_name', 'lastname', 'lname', 'surname', 'family_name'],
+  last_name: ['last_name', 'lastname', 'lname', 'surname', 'family_name', 'LastName'],
   
   // Name (when combined) - will need splitting
   full_name: ['name', 'full_name', 'fullname', 'contact_name', 'lead_name'],
@@ -19,7 +19,7 @@ const COLUMN_MAPPINGS = {
   email: ['email', 'email_address', 'e_mail', 'contact_email'],
   
   // Phone variations
-  phone: ['phone', 'phone_number', 'primary_phone', 'home_phone', 'contact_phone', 'telephone', 'cell', 'other_phone_1', 'mobile', 'work'],
+  phone: ['phone', 'phone_number', 'phonenumber', 'primary_phone', 'home_phone', 'contact_phone', 'telephone', 'cell', 'other_phone_1', 'mobile', 'work'],
   phone_2: ['phone_2', 'phone2', 'secondary_phone', 'work_phone', 'other_phone_2', 'home'],
   
   // Address variations
@@ -246,9 +246,41 @@ function processCSVData(results: any, totalSpent: number, userId: number) {
       }
 
       // Handle birth date and age
-      const birthDateField = findColumnValue(row, COLUMN_MAPPINGS.date_of_birth);
-      const { dateOfBirth, calculatedAge: birthCalculatedAge } = parseBirthDate(birthDateField);
-      COLUMN_MAPPINGS.date_of_birth.forEach(key => { if (row[key] !== undefined) usedKeys.add(key); });
+      // Check for Melissa Medicare format (AgeByMonth and AgeByYear)
+      let dateOfBirth = '';
+      let birthCalculatedAge = null;
+
+      const ageByMonth = findColumnValue(row, ['agebymonth', 'age_by_month', 'AgeByMonth']);
+      const ageByYear = findColumnValue(row, ['agebyyear', 'age_by_year', 'AgeByYear']);
+
+      if (ageByMonth && ageByYear) {
+        // Melissa format: construct date from month and year
+        const month = ageByMonth.padStart(2, '0');
+        const year = ageByYear;
+        // Use 15th as default day of month
+        dateOfBirth = `${month}/15/${year}`;
+
+        // Calculate age from constructed birth date
+        const today = new Date();
+        const birthDate = new Date(parseInt(year), parseInt(month) - 1, 15);
+        birthCalculatedAge = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          birthCalculatedAge--;
+        }
+
+        // Mark as used
+        ['agebymonth', 'age_by_month', 'AgeByMonth', 'agebyyear', 'age_by_year', 'AgeByYear'].forEach(key => {
+          if (row[key] !== undefined) usedKeys.add(key);
+        });
+      } else {
+        // Standard birth date handling
+        const birthDateField = findColumnValue(row, COLUMN_MAPPINGS.date_of_birth);
+        const parsed = parseBirthDate(birthDateField);
+        dateOfBirth = parsed.dateOfBirth;
+        birthCalculatedAge = parsed.calculatedAge;
+        COLUMN_MAPPINGS.date_of_birth.forEach(key => { if (row[key] !== undefined) usedKeys.add(key); });
+      }
       
       // Use provided age or calculated age from birth date
       const ageField = findColumnValue(row, COLUMN_MAPPINGS.age);

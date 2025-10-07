@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 
 interface AnalyticsData {
   personal: {
-    totalCalls: number;
+    totalDials: number;
     totalContacts: number;
     totalAppointments: number;
     appointmentsSeen: number;
@@ -25,7 +25,7 @@ interface AnalyticsData {
   team?: {
     userId: number;
     userName: string;
-    totalCalls: number;
+    totalDials: number;
     totalContacts: number;
     totalAppointments: number;
     totalSales: number;
@@ -33,17 +33,17 @@ interface AnalyticsData {
   }[];
   timeSeriesData: {
     date: string;
-    calls: number;
+    dials: number;
     contacts: number;
     appointments: number;
     sales: number;
   }[];
   aggregateInsights?: {
-    timeOfDay: { hour: number; calls: number; contacts: number; appointments: number }[];
-    sourcePerformance: { source: string; totalLeads: number; contacted: number; appointments: number; sales: number; avgCost: number; totalRevenue: number }[];
-    geoPerformance: { state: string; totalLeads: number; contacted: number; appointments: number; sales: number }[];
+    timeOfDay: { hour: number; dials: number; contacts: number; appointments: number }[];
+    sourcePerformance: { source: string; totalLeads: number; contacted: number; appointments: number; disconnected: number; sales: number; avgCost: number; totalRevenue: number }[];
+    geoPerformance: { city: string; zip_code: string; state: string; totalLeads: number; contacted: number; appointments: number; sales: number }[];
     dialingPatterns: { attempts: number; leads: number; contacted: number; appointments: number }[];
-    dayOfWeek: { dayOfWeek: number; calls: number; contacts: number; appointments: number }[];
+    dayOfWeek: { dayOfWeek: number; dials: number; contacts: number; appointments: number }[];
     temperaturePerformance: { lead_temperature: string; totalLeads: number; appointments: number; sales: number }[];
   };
 }
@@ -149,8 +149,8 @@ export default function AnalyticsPage() {
           {/* Key Metrics Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div className="bg-blue-500 text-white p-6 rounded-lg border-4 border-blue-700">
-              <div className="text-sm font-bold uppercase opacity-90">Total Calls</div>
-              <div className="text-4xl font-black mt-2">{analytics.personal.totalCalls}</div>
+              <div className="text-sm font-bold uppercase opacity-90">Total Dials</div>
+              <div className="text-4xl font-black mt-2">{analytics.personal.totalDials}</div>
             </div>
             <div className="bg-green-500 text-white p-6 rounded-lg border-4 border-green-700">
               <div className="text-sm font-bold uppercase opacity-90">Contacts Made</div>
@@ -217,8 +217,8 @@ export default function AnalyticsPage() {
             <div className="space-y-4">
               <div className="relative">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="font-bold">Total Calls</span>
-                  <span className="text-2xl font-black">{analytics.personal.totalCalls}</span>
+                  <span className="font-bold">Total Dials</span>
+                  <span className="text-2xl font-black">{analytics.personal.totalDials}</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-8">
                   <div className="bg-blue-500 h-8 rounded-full" style={{ width: '100%' }}></div>
@@ -297,7 +297,7 @@ export default function AnalyticsPage() {
                 <thead className="bg-black text-white">
                   <tr>
                     <th className="p-3 text-left">Team Member</th>
-                    <th className="p-3 text-center">Calls</th>
+                    <th className="p-3 text-center">Dials</th>
                     <th className="p-3 text-center">Contacts</th>
                     <th className="p-3 text-center">Appointments</th>
                     <th className="p-3 text-center">Sales</th>
@@ -308,7 +308,7 @@ export default function AnalyticsPage() {
                   {analytics.team.map((member, index) => (
                     <tr key={member.userId} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
                       <td className="p-3 font-bold">{member.userName}</td>
-                      <td className="p-3 text-center">{member.totalCalls}</td>
+                      <td className="p-3 text-center">{member.totalDials}</td>
                       <td className="p-3 text-center">{member.totalContacts}</td>
                       <td className="p-3 text-center">{member.totalAppointments}</td>
                       <td className="p-3 text-center">{member.totalSales}</td>
@@ -342,6 +342,7 @@ export default function AnalyticsPage() {
                         <th className="p-3 text-center">Total Leads</th>
                         <th className="p-3 text-center">Contacted</th>
                         <th className="p-3 text-center">Appointments</th>
+                        <th className="p-3 text-center">Disconnected</th>
                         <th className="p-3 text-center">Sales</th>
                         <th className="p-3 text-center">Avg Cost</th>
                         <th className="p-3 text-center">Revenue</th>
@@ -361,6 +362,9 @@ export default function AnalyticsPage() {
                             </td>
                             <td className="p-3 text-center">
                               {source.appointments} ({source.totalLeads > 0 ? ((source.appointments / source.totalLeads) * 100).toFixed(1) : 0}%)
+                            </td>
+                            <td className="p-3 text-center text-red-600">
+                              {source.disconnected} ({source.totalLeads > 0 ? ((source.disconnected / source.totalLeads) * 100).toFixed(1) : 0}%)
                             </td>
                             <td className="p-3 text-center">
                               {source.sales} ({source.totalLeads > 0 ? ((source.sales / source.totalLeads) * 100).toFixed(1) : 0}%)
@@ -388,7 +392,7 @@ export default function AnalyticsPage() {
                     {analytics.aggregateInsights.timeOfDay.map((hour) => {
                       const maxContacts = Math.max(...analytics.aggregateInsights!.timeOfDay.map(h => h.contacts));
                       const height = maxContacts > 0 ? (hour.contacts / maxContacts) * 100 : 0;
-                      const contactRate = hour.calls > 0 ? (hour.contacts / hour.calls) * 100 : 0;
+                      const contactRate = hour.dials > 0 ? (hour.contacts / hour.dials) * 100 : 0;
 
                       return (
                         <div key={hour.hour} className="flex-1 flex flex-col justify-end items-center group relative">
@@ -399,7 +403,7 @@ export default function AnalyticsPage() {
                           >
                             <div className="hidden group-hover:block absolute bottom-full mb-2 bg-black text-white text-xs p-2 rounded whitespace-nowrap">
                               {hour.hour % 12 || 12}:00 {hour.hour >= 12 ? 'PM' : 'AM'}<br/>
-                              Calls: {hour.calls}<br/>
+                              Dials: {hour.dials}<br/>
                               Contacts: {hour.contacts}<br/>
                               Rate: {contactRate.toFixed(1)}%
                             </div>
@@ -420,15 +424,15 @@ export default function AnalyticsPage() {
                 <div className="bg-white border-2 border-gray-300 rounded-lg p-6">
                   <div className="grid grid-cols-7 gap-4">
                     {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((dayName, index) => {
-                      const dayData = analytics.aggregateInsights!.dayOfWeek.find(d => d.dayOfWeek === index) || { calls: 0, contacts: 0, appointments: 0 };
-                      const contactRate = dayData.calls > 0 ? (dayData.contacts / dayData.calls) * 100 : 0;
+                      const dayData = analytics.aggregateInsights!.dayOfWeek.find(d => d.dayOfWeek === index) || { dials: 0, contacts: 0, appointments: 0 };
+                      const contactRate = dayData.dials > 0 ? (dayData.contacts / dayData.dials) * 100 : 0;
 
                       return (
                         <div key={index} className="text-center">
                           <div className="font-bold mb-2">{dayName}</div>
                           <div className="bg-gray-100 p-4 rounded border-2 border-gray-300">
-                            <div className="text-2xl font-black text-blue-600">{dayData.calls}</div>
-                            <div className="text-xs text-gray-600">calls</div>
+                            <div className="text-2xl font-black text-blue-600">{dayData.dials}</div>
+                            <div className="text-xs text-gray-600">dials</div>
                             <div className="text-lg font-bold text-green-600 mt-2">{contactRate.toFixed(0)}%</div>
                             <div className="text-xs text-gray-600">contact rate</div>
                           </div>
@@ -443,11 +447,13 @@ export default function AnalyticsPage() {
             {/* Geographic Performance */}
             {analytics.aggregateInsights.geoPerformance.length > 0 && (
               <div className="mb-8">
-                <h3 className="text-2xl font-bold mb-4">Top Performing States</h3>
+                <h3 className="text-2xl font-bold mb-4">Top Performing Locations</h3>
                 <div className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden">
                   <table className="w-full">
                     <thead className="bg-black text-white">
                       <tr>
+                        <th className="p-3 text-left">City</th>
+                        <th className="p-3 text-left">Zip</th>
                         <th className="p-3 text-left">State</th>
                         <th className="p-3 text-center">Total Leads</th>
                         <th className="p-3 text-center">Contact Rate</th>
@@ -456,18 +462,20 @@ export default function AnalyticsPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {analytics.aggregateInsights.geoPerformance.map((state, index) => (
+                      {analytics.aggregateInsights.geoPerformance.map((location, index) => (
                         <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                          <td className="p-3 font-bold">{state.state}</td>
-                          <td className="p-3 text-center">{state.totalLeads}</td>
+                          <td className="p-3 font-bold">{location.city}</td>
+                          <td className="p-3">{location.zip_code}</td>
+                          <td className="p-3">{location.state}</td>
+                          <td className="p-3 text-center">{location.totalLeads}</td>
                           <td className="p-3 text-center">
-                            {state.totalLeads > 0 ? ((state.contacted / state.totalLeads) * 100).toFixed(1) : 0}%
+                            {location.totalLeads > 0 ? ((location.contacted / location.totalLeads) * 100).toFixed(1) : 0}%
                           </td>
                           <td className="p-3 text-center">
-                            {state.totalLeads > 0 ? ((state.appointments / state.totalLeads) * 100).toFixed(1) : 0}%
+                            {location.totalLeads > 0 ? ((location.appointments / location.totalLeads) * 100).toFixed(1) : 0}%
                           </td>
                           <td className="p-3 text-center font-bold text-green-600">
-                            {state.totalLeads > 0 ? ((state.sales / state.totalLeads) * 100).toFixed(1) : 0}%
+                            {location.totalLeads > 0 ? ((location.sales / location.totalLeads) * 100).toFixed(1) : 0}%
                           </td>
                         </tr>
                       ))}
@@ -566,7 +574,7 @@ export default function AnalyticsPage() {
               <div className="flex gap-2 min-w-max">
                 {analytics.timeSeriesData.map((day, index) => {
                   const maxValue = Math.max(
-                    ...analytics.timeSeriesData.map(d => Math.max(d.calls, d.contacts, d.appointments, d.sales))
+                    ...analytics.timeSeriesData.map(d => Math.max(d.dials, d.contacts, d.appointments, d.sales))
                   );
                   return (
                     <div key={index} className="flex-1 min-w-[80px]">
@@ -574,11 +582,11 @@ export default function AnalyticsPage() {
                         {new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       </div>
                       <div className="h-40 flex flex-col justify-end gap-1">
-                        {day.calls > 0 && (
+                        {day.dials > 0 && (
                           <div
                             className="bg-blue-500 rounded"
-                            style={{ height: `${(day.calls / maxValue) * 100}%` }}
-                            title={`Calls: ${day.calls}`}
+                            style={{ height: `${(day.dials / maxValue) * 100}%` }}
+                            title={`Dials: ${day.dials}`}
                           ></div>
                         )}
                         {day.contacts > 0 && (
@@ -604,7 +612,7 @@ export default function AnalyticsPage() {
                         )}
                       </div>
                       <div className="text-xs text-center mt-2 space-y-1">
-                        <div className="text-blue-600">{day.calls}</div>
+                        <div className="text-blue-600">{day.dials}</div>
                       </div>
                     </div>
                   );
@@ -613,7 +621,7 @@ export default function AnalyticsPage() {
               <div className="flex gap-4 justify-center mt-4 text-xs">
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-blue-500 rounded"></div>
-                  <span>Calls</span>
+                  <span>Dials</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-green-500 rounded"></div>

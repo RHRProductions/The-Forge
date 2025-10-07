@@ -194,7 +194,7 @@ function detectLeadType(row: any, source: string, campaign: string = '', notes: 
   return 'other';
 }
 
-function processCSVData(results: any, totalSpent: number, userId: number) {
+function processCSVData(results: any, totalSpent: number, userId: number, vendorName: string, leadTemperature: string = 'cold') {
   const db = getDatabase();
   const insertStmt = db.prepare(`
     INSERT INTO leads (
@@ -202,8 +202,8 @@ function processCSVData(results: any, totalSpent: number, userId: number) {
       address, city, state, zip_code, date_of_birth, age, gender,
       marital_status, occupation, income, household_size, status,
       contact_method, lead_type, cost_per_lead, sales_amount, notes, source,
-      lead_score, last_contact_date, next_follow_up, owner_id, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      lead_score, lead_temperature, last_contact_date, next_follow_up, owner_id, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
   `);
 
   // Prepare duplicate check statement
@@ -308,8 +308,9 @@ function processCSVData(results: any, totalSpent: number, userId: number) {
       }
       COLUMN_MAPPINGS.notes.forEach(key => { if (row[key] !== undefined) usedKeys.add(key); });
 
-      // Extract source field or use campaign
-      const source = findColumnValue(row, COLUMN_MAPPINGS.source) || 'csv_upload';
+      // Use vendor name as source (provided during upload)
+      const source = vendorName;
+      // Mark CSV source column as used if present
       COLUMN_MAPPINGS.source.forEach(key => { if (row[key] !== undefined) usedKeys.add(key); });
 
       // Mark all other mapped fields as used
@@ -362,7 +363,7 @@ function processCSVData(results: any, totalSpent: number, userId: number) {
 
       insertStmt.run(
         formatName(firstName),
-        formatName(lastName), 
+        formatName(lastName),
         findColumnValue(row, COLUMN_MAPPINGS.email),
         formatPhoneNumber(findColumnValue(row, COLUMN_MAPPINGS.phone)),
         formatPhoneNumber(findColumnValue(row, COLUMN_MAPPINGS.phone_2)),
@@ -386,6 +387,7 @@ function processCSVData(results: any, totalSpent: number, userId: number) {
         notes,
         source,
         parseInt(findColumnValue(row, COLUMN_MAPPINGS.lead_score)) || 0,
+        leadTemperature,
         findColumnValue(row, ['last_contact_date', 'got_on']),
         findColumnValue(row, ['next_follow_up']),
         userId
@@ -418,6 +420,8 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const totalSpent = parseFloat(formData.get('totalSpent') as string) || 0;
+    const vendorName = (formData.get('vendorName') as string) || 'Unknown Vendor';
+    const leadTemperature = (formData.get('leadTemperature') as string) || 'cold';
     const userId = parseInt((session.user as any).id);
 
     if (!file) {
@@ -496,7 +500,7 @@ export async function POST(request: NextRequest) {
 
         console.log('Using Lead Hero format with injected headers - Headers:', results.meta?.fields);
 
-        const response = processCSVData(results, totalSpent, userId);
+        const response = processCSVData(results, totalSpent, userId, vendorName, leadTemperature);
         return NextResponse.json(response);
       }
 
@@ -528,9 +532,9 @@ export async function POST(request: NextRequest) {
       }
       
       console.log('Using standard CSV parsing - Headers:', results.meta?.fields);
-      
+
       // Use existing parsing logic for standard CSVs
-      const response = processCSVData(results, totalSpent);
+      const response = processCSVData(results, totalSpent, userId, vendorName, leadTemperature);
       return NextResponse.json(response);
     }
     
@@ -561,7 +565,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Process the cleaned Lead Hero CSV data
-    const response = processCSVData(results, totalSpent);
+    const response = processCSVData(results, totalSpent, userId, vendorName, leadTemperature);
     return NextResponse.json(response);
 
   } catch (error) {

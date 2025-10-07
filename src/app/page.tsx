@@ -425,12 +425,15 @@ export default function Home() {
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [uploadStatus, setUploadStatus] = useState<string>('');
   const [totalSpent, setTotalSpent] = useState<number>(0);
+  const [vendorName, setVendorName] = useState<string>('');
+  const [leadTemperature, setLeadTemperature] = useState<'cold' | 'warm' | 'hot'>('cold');
   const [showLeadDetail, setShowLeadDetail] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [currentLeadIndex, setCurrentLeadIndex] = useState<number>(0);
   const [pendingChanges, setPendingChanges] = useState<Partial<Lead> | null>(null);
   const [deleteStatus, setDeleteStatus] = useState<string>('');
   const [showDevMenu, setShowDevMenu] = useState(false);
+  const [showBulkDeleteButton, setShowBulkDeleteButton] = useState(false);
   const [filters, setFilters] = useState({
     status: '',
     lead_type: '',
@@ -739,26 +742,30 @@ export default function Home() {
   const handleCSVUpload = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    
-    // Add total spent to the form data
+
+    // Add total spent, vendor name, and lead temperature to the form data
     formData.append('totalSpent', totalSpent.toString());
-    
+    formData.append('vendorName', vendorName);
+    formData.append('leadTemperature', leadTemperature);
+
     try {
       setUploadStatus('Uploading...');
       const response = await fetch('/api/leads/upload', {
         method: 'POST',
         body: formData,
       });
-      
+
       const result = await response.json();
-      
+
       if (response.ok) {
-        setUploadStatus(`Successfully imported ${result.successCount} leads! Cost per lead: $${result.costPerLead?.toFixed(2) || '0.00'}`);
+        setUploadStatus(`Successfully imported ${result.successCount} leads from ${vendorName}! Cost per lead: $${result.costPerLead?.toFixed(2) || '0.00'}`);
         fetchLeads();
         setTimeout(() => {
           setUploadStatus('');
           setShowUploadForm(false);
           setTotalSpent(0);
+          setVendorName('');
+          setLeadTemperature('cold');
         }, 4000);
       } else {
         setUploadStatus(`Error: ${result.error}`);
@@ -1303,6 +1310,41 @@ Type "DELETE ALL" to confirm:`;
                 />
               </div>
               <div>
+                <label htmlFor="vendor-name" className="block text-sm font-medium text-gray-700 mb-2">
+                  Vendor Name
+                </label>
+                <input
+                  type="text"
+                  id="vendor-name"
+                  value={vendorName}
+                  onChange={(e) => setVendorName(e.target.value)}
+                  className="block w-full p-3 border border-gray-300 rounded focus:border-black focus:outline-none"
+                  placeholder="e.g., Melissa Medicare, Lead Hero, etc."
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  This will be used to track the source of these leads
+                </p>
+              </div>
+              <div>
+                <label htmlFor="lead-temperature" className="block text-sm font-medium text-gray-700 mb-2">
+                  Lead Temperature
+                </label>
+                <select
+                  id="lead-temperature"
+                  value={leadTemperature}
+                  onChange={(e) => setLeadTemperature(e.target.value as 'cold' | 'warm' | 'hot')}
+                  className="block w-full p-3 border border-gray-300 rounded focus:border-black focus:outline-none"
+                >
+                  <option value="cold">❄️ Cold - New/Uncontacted Leads</option>
+                  <option value="warm">☀️ Warm - Interested/Follow-up Needed</option>
+                  <option value="hot">🔥 Hot - Ready to Set Appointment</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Select the default temperature for all leads in this upload
+                </p>
+              </div>
+              <div>
                 <label htmlFor="total-spent" className="block text-sm font-medium text-gray-700 mb-2">
                   Total Amount Spent on These Leads
                 </label>
@@ -1480,19 +1522,40 @@ Type "DELETE ALL" to confirm:`;
               </button>
             </div>
 
-            {/* Bulk Delete Filtered Leads Button */}
-            {(filters.status || filters.lead_type || filters.city || filters.state || filters.zip_code || filters.age_min || filters.age_max) && filteredLeads.length > 0 && (
+            {/* Bulk Delete Filtered Leads Button - Hidden by default, Agents/Admins only */}
+            {(session.user as any).role !== 'setter' && (filters.status || filters.lead_type || filters.city || filters.state || filters.zip_code || filters.age_min || filters.age_max) && filteredLeads.length > 0 && (
               <div className="flex flex-col justify-end">
-                <button
-                  onClick={() => {
-                    if (confirm(`Are you sure you want to delete ${filteredLeads.length} filtered lead(s)? This action cannot be undone.`)) {
-                      handleBulkDelete(filteredLeads.map(lead => lead.id!));
-                    }
-                  }}
-                  className="px-4 py-2 bg-black text-white rounded text-sm hover:bg-gray-800 transition-colors font-bold border-2 border-red-600"
-                >
-                  Delete {filteredLeads.length} Leads
-                </button>
+                {!showBulkDeleteButton ? (
+                  <button
+                    onClick={() => setShowBulkDeleteButton(true)}
+                    className="text-xs text-gray-500 hover:text-gray-700 underline cursor-pointer"
+                  >
+                    Show delete option
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        const userInput = prompt(`⚠️ WARNING: You are about to delete ${filteredLeads.length} filtered lead(s).\n\nThis action CANNOT be undone.\n\nType "DELETE" to confirm:`);
+                        if (userInput === 'DELETE') {
+                          handleBulkDelete(filteredLeads.map(lead => lead.id!));
+                          setShowBulkDeleteButton(false);
+                        } else if (userInput !== null) {
+                          alert('Deletion cancelled. You must type "DELETE" exactly to confirm.');
+                        }
+                      }}
+                      className="px-3 py-1.5 bg-red-600 text-white rounded text-xs hover:bg-red-700 transition-colors font-bold"
+                    >
+                      Delete {filteredLeads.length} Leads
+                    </button>
+                    <button
+                      onClick={() => setShowBulkDeleteButton(false)}
+                      className="text-xs text-gray-500 hover:text-gray-700"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 

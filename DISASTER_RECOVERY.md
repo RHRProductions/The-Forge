@@ -25,10 +25,25 @@ On **October 9, 2025**, we experienced a critical data loss incident:
 
 ### Backup Schedule
 
-Production database is backed up automatically:
+Production data is backed up automatically:
 - **Frequency**: Daily at 2:00 AM EST
+- **What's Backed Up**: Complete database + all uploaded images
+- **Format**: Compressed .tar.gz archives
 - **Retention**: 7 days of backups
 - **Location**: `/var/www/the-forge/backups/`
+
+### What's Included in Backups
+
+**Database (forge.db):**
+- All leads with complete contact information
+- All activities, notes, policies, appointments
+- User accounts and authentication data
+- All application settings
+
+**Images (/public/uploads/):**
+- User-uploaded documents (IDs, applications, etc.)
+- Policy documents and attachments
+- All other uploaded files
 
 ### Manual Backup
 
@@ -39,7 +54,15 @@ cd /var/www/the-forge
 ./scripts/backup-database.sh
 ```
 
-This creates a timestamped backup: `backups/forge_backup_YYYYMMDD_HHMMSS.db`
+Output will show:
+```
+Backing up database...
+Backing up uploaded images...
+  Images backed up: X
+Creating compressed archive...
+✓ Backup created successfully: /var/www/the-forge/backups/forge_backup_YYYYMMDD_HHMMSS.tar.gz
+  Size: X.XM
+```
 
 ### Backup Verification
 
@@ -48,7 +71,9 @@ Check existing backups:
 ls -lh /var/www/the-forge/backups/
 ```
 
-You should see backups from the last 7 days.
+You should see:
+- `forge_backup_*.tar.gz` - Complete backups (database + images)
+- `forge_backup_*.db` - Legacy database-only backups (if any remain)
 
 ## Disaster Recovery Procedures
 
@@ -66,10 +91,24 @@ You should see backups from the last 7 days.
    ./scripts/restore-database.sh
    ```
 
+   This will show:
+   - Complete backups (database + images): `.tar.gz` files
+   - Legacy database-only backups: `.db` files
+
 3. **Restore from the most recent backup**:
    ```bash
+   # For complete backup (database + images) - RECOMMENDED
+   ./scripts/restore-database.sh /var/www/the-forge/backups/forge_backup_YYYYMMDD_HHMMSS.tar.gz
+
+   # For legacy database-only backup
    ./scripts/restore-database.sh /var/www/the-forge/backups/forge_backup_YYYYMMDD_HHMMSS.db
    ```
+
+   The script will:
+   - Create a safety backup of current data before restoring
+   - Extract and restore database
+   - Extract and restore images (if .tar.gz format)
+   - Show confirmation of what was restored
 
 4. **Restart the application**:
    ```bash
@@ -170,8 +209,12 @@ This means the database is still tracked in git. Follow these steps:
 - [ ] Database files are in `.gitignore`
 - [ ] Database is NOT tracked by git (`git ls-files data/forge.db` returns nothing)
 - [ ] Daily automated backups are running (check `/var/www/the-forge/backups/`)
+- [ ] Backups include both database AND images (.tar.gz format)
 - [ ] Manual backup created before deployments
 - [ ] Backup restoration procedure has been tested
+- [ ] SSL certificate is valid and auto-renewing (`certbot certificates`)
+- [ ] Accessing site via https://the4rge.com (not IP address)
+- [ ] DigitalOcean weekly snapshots enabled
 
 ## DigitalOcean Droplet Backups
 

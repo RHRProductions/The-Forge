@@ -317,8 +317,15 @@ Lead Id,Received Date,First Name,Last Name,Status,Lead Partner,Lead Type,Lead Ow
 
 **Automated Backups:**
 - Runs daily at 2:00 AM EST via cron job
+- Backs up: Database + uploaded images
+- Format: Compressed .tar.gz archives
 - Keeps 7 days of backups
 - Location: `/var/www/the-forge/backups/`
+
+**What's Backed Up:**
+- ✅ Complete SQLite database (all leads, activities, policies, users, etc.)
+- ✅ All uploaded images from `/public/uploads/`
+- ✅ Compressed into single archive for efficiency
 
 **Manual Backup:**
 ```bash
@@ -329,7 +336,11 @@ cd /var/www/the-forge
 **Restore from Backup:**
 ```bash
 cd /var/www/the-forge
-./scripts/restore-database.sh /var/www/the-forge/backups/forge_backup_YYYYMMDD_HHMMSS.db
+# List available backups
+./scripts/restore-database.sh
+
+# Restore specific backup (database + images)
+./scripts/restore-database.sh /var/www/the-forge/backups/forge_backup_YYYYMMDD_HHMMSS.tar.gz
 pm2 restart the-forge
 ```
 
@@ -337,6 +348,10 @@ pm2 restart the-forge
 ```bash
 ls -lh /var/www/the-forge/backups/
 ```
+
+**Backup Files:**
+- `forge_backup_*.tar.gz` - Complete backups (database + images)
+- `forge_backup_*.db` - Legacy database-only backups (still supported)
 
 ### Data Loss Prevention
 
@@ -358,15 +373,73 @@ On **October 9, 2025**, we experienced a critical data loss incident where produ
 
 ---
 
+## Security & Data Protection
+
+### HTTPS Encryption
+- **Domain:** https://the4rge.com
+- **SSL Certificate:** Let's Encrypt (free, auto-renews every 90 days)
+- **Encryption:** All data transmitted between users and server is encrypted
+- **Certificate Management:** Certbot handles automatic renewals
+- **Check SSL Status:** `certbot certificates`
+
+### Authentication
+- **System:** NextAuth v5
+- **Password Hashing:** bcrypt
+- **Session Management:** JWT tokens
+- **Environment Variable:** `NEXTAUTH_URL=https://the4rge.com`
+- **Auth Secret:** Stored in `/var/www/the-forge/.env.local`
+
+### Data Protection
+**PII (Personally Identifiable Information) Collected:**
+- Names, addresses, phone numbers, emails
+- Date of birth, age, gender, marital status
+- Medicare/insurance information
+- Uploaded documents/images (IDs, applications, etc.)
+
+**Protection Measures:**
+- ✅ HTTPS encryption for all data transmission
+- ✅ Authentication required for all access
+- ✅ Daily backups (database + images)
+- ✅ Weekly server snapshots
+- ✅ Database excluded from version control
+- ✅ Nginx reverse proxy with security headers
+
+**Current Security Status:**
+- ✅ **Excellent:** Data in transit (HTTPS)
+- ✅ **Excellent:** Backup redundancy (daily + weekly)
+- ✅ **Good:** Access control (authentication)
+- ⚠️ **Consider:** IP whitelisting for admin access
+- ⚠️ **Consider:** 2FA/multi-factor authentication
+- ⚠️ **Consider:** Rate limiting for brute force protection
+
+### Files Excluded from Git (Security)
+The following files are NEVER committed to version control:
+- `data/forge.db` - Production database
+- `data/*.db-shm`, `data/*.db-wal` - Database lock files
+- `/backups/*` - All backup archives
+- `.env.local` - Environment variables and secrets
+- `/public/uploads/*` - User-uploaded images and documents
+
+### Backup Your Environment Variables
+Store these securely (password manager, secure note):
+```bash
+# On production server
+cat /var/www/the-forge/.env.local
+```
+Copy and save this output in a secure location. You'll need it if you have to rebuild the server.
+
+---
+
 ## Deployment Information
 
 ### Production Server
 - **Provider:** DigitalOcean
 - **IP Address:** 143.244.185.41
-- **Port:** 3000
-- **URL:** http://143.244.185.41:3000 (always include :3000)
+- **Domain:** https://the4rge.com (HTTPS enabled with SSL certificate)
+- **Legacy IP Access:** http://143.244.185.41:3000 (still works but use domain)
 - **OS:** Ubuntu 22.04 LTS
 - **Process Manager:** PM2 (configured for auto-restart on server reboot)
+- **Web Server:** Nginx (reverse proxy with SSL termination)
 
 ### Deployment Process
 
@@ -421,12 +494,14 @@ On **October 9, 2025**, we experienced a critical data loss incident where produ
 - PM2 must be restarted with `--update-env` flag to pick up changes
 
 ### Important Notes
+- **Primary URL:** https://the4rge.com (HTTPS encrypted, use this for all access)
 - **Database Location:** `/var/www/the-forge/data/forge.db`
 - **⚠️ CRITICAL: Database is NOT tracked in git** - Production data stays on server, never syncs via git
-- **Daily Automated Backups:** Database backed up every day at 2:00 AM EST (7-day retention)
-- **See DISASTER_RECOVERY.md** for backup procedures and data recovery protocols
+- **Daily Automated Backups:** Database + images backed up at 2:00 AM EST (7-day retention, .tar.gz archives)
+- **Weekly Server Snapshots:** DigitalOcean droplet backups enabled (4-week retention)
+- **See DISASTER_RECOVERY.md** for complete backup procedures and data recovery protocols
+- **SSL Certificate:** Auto-renews via Certbot (Let's Encrypt)
 - **ESLint/TypeScript disabled in production** - For faster builds (set in next.config.ts)
-- **Always access via :3000** - Nginx reverse proxy exists but causes NextAuth session issues
 - **Do not use Turbopack flag in production builds** - Will crash due to memory limits
 
 ---
@@ -596,18 +671,39 @@ On **October 9, 2025**, we experienced a critical data loss incident where produ
   - Total Sales now calculates from commission sum
   - Policy edit/delete functionality in calendar view
   - Mobile-responsive policy management
+  - All features deployed and working on production
+
 - **Critical Incident:** Data loss during deployment
   - Production database overwritten by local dev database via git pull
   - Lost several days of production data (leads, appointments, policies)
   - Root cause: Database was tracked in git before being added to .gitignore
+
 - **Implemented:** Comprehensive backup and safety system
-  - Removed database from git tracking permanently
-  - Enhanced .gitignore with explicit exclusions
-  - Created automated daily backup script (7-day retention)
-  - Created manual backup/restore scripts
+  - Removed database from git tracking permanently (local + production)
+  - Enhanced .gitignore with explicit database/backup exclusions
+  - Created automated daily backup script (database + images, 7-day retention)
+  - Backups now create .tar.gz archives with database AND uploaded images
+  - Created manual backup/restore scripts with safety features
   - Documented disaster recovery procedures (DISASTER_RECOVERY.md)
   - Updated deployment process to require pre-deployment backups
-- **Fixed:** All commission tracking features verified working locally
+  - Fixed package.json Turbopack issue in git
+
+- **Security Enhancements:**
+  - Acquired domain: the4rge.com
+  - Configured DNS with Bluehost
+  - Installed SSL certificate with Let's Encrypt (free, auto-renews)
+  - Enabled HTTPS encryption for all traffic
+  - Updated NextAuth to use https://the4rge.com
+  - Configured Nginx reverse proxy with SSL termination
+  - Enabled DigitalOcean weekly droplet snapshots (4-week retention)
+  - All PII data now encrypted in transit
+
+- **Documentation:**
+  - Created comprehensive security documentation
+  - Updated all deployment procedures
+  - Added environment variable backup instructions
+  - Documented data protection measures
+  - Updated disaster recovery with image backup info
 
 ---
 

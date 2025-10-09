@@ -9,8 +9,16 @@ export function getDatabase(): Database.Database {
   }
 
   const dbPath = path.join(process.cwd(), 'data', 'forge.db');
-  
+
   db = new Database(dbPath);
+
+  // Enable performance optimizations
+  db.pragma('journal_mode = WAL'); // Write-Ahead Logging for better concurrency
+  db.pragma('synchronous = NORMAL'); // Faster writes
+  db.pragma('cache_size = -64000'); // 64MB cache
+  db.pragma('temp_store = MEMORY'); // Temporary tables in memory
+  db.pragma('mmap_size = 30000000000'); // Memory-mapped I/O for faster reads
+
   initializeDatabase();
   return db;
 }
@@ -228,6 +236,9 @@ function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_leads_state ON leads(state);
     CREATE INDEX IF NOT EXISTS idx_leads_owner_id ON leads(owner_id);
     CREATE INDEX IF NOT EXISTS idx_leads_worked_by_id ON leads(worked_by_id);
+    CREATE INDEX IF NOT EXISTS idx_leads_source ON leads(source);
+    CREATE INDEX IF NOT EXISTS idx_leads_temperature_followup ON leads(lead_temperature, next_follow_up);
+    CREATE INDEX IF NOT EXISTS idx_leads_status_temperature ON leads(status, lead_temperature);
 
     CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
     CREATE INDEX IF NOT EXISTS idx_users_agent_id ON users(agent_id);
@@ -235,10 +246,12 @@ function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_lead_notes_lead_id ON lead_notes(lead_id);
     CREATE INDEX IF NOT EXISTS idx_lead_images_lead_id ON lead_images(lead_id);
     CREATE INDEX IF NOT EXISTS idx_lead_policies_lead_id ON lead_policies(lead_id);
+    CREATE INDEX IF NOT EXISTS idx_lead_policies_created_at ON lead_policies(created_at);
     CREATE INDEX IF NOT EXISTS idx_lead_activities_lead_id ON lead_activities(lead_id);
     CREATE INDEX IF NOT EXISTS idx_lead_activities_type ON lead_activities(activity_type);
     CREATE INDEX IF NOT EXISTS idx_lead_activities_created_at ON lead_activities(created_at);
     CREATE INDEX IF NOT EXISTS idx_lead_activities_created_by ON lead_activities(created_by_user_id);
+    CREATE INDEX IF NOT EXISTS idx_lead_activities_outcome ON lead_activities(outcome);
 
     CREATE INDEX IF NOT EXISTS idx_calendar_events_agent_id ON calendar_events(agent_id);
     CREATE INDEX IF NOT EXISTS idx_calendar_events_lead_id ON calendar_events(lead_id);

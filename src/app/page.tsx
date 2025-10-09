@@ -32,9 +32,11 @@ function FollowUpReminders({
     followUpDate.setHours(0, 0, 0, 0);
     return followUpDate < today;
   }).sort((a, b) => {
-    // Sort by temperature (hot first) then by date
-    if (a.lead_temperature === b.lead_temperature) {
-      return new Date(a.next_follow_up!).getTime() - new Date(b.next_follow_up!).getTime();
+    // Sort by date first (soonest first), then by temperature (hot before warm)
+    const dateA = new Date(a.next_follow_up!).getTime();
+    const dateB = new Date(b.next_follow_up!).getTime();
+    if (dateA !== dateB) {
+      return dateA - dateB;
     }
     return a.lead_temperature === 'hot' ? -1 : 1;
   });
@@ -52,8 +54,11 @@ function FollowUpReminders({
     sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
     return followUpDate > today && followUpDate <= sevenDaysFromNow;
   }).sort((a, b) => {
-    if (a.lead_temperature === b.lead_temperature) {
-      return new Date(a.next_follow_up!).getTime() - new Date(b.next_follow_up!).getTime();
+    // Sort by date first (soonest first), then by temperature (hot before warm)
+    const dateA = new Date(a.next_follow_up!).getTime();
+    const dateB = new Date(b.next_follow_up!).getTime();
+    if (dateA !== dateB) {
+      return dateA - dateB;
     }
     return a.lead_temperature === 'hot' ? -1 : 1;
   });

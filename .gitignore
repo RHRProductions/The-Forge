@@ -41,9 +41,20 @@ yarn-error.log*
 next-env.d.ts
 
 # database and user data (DO NOT commit production data)
+# Database files - NEVER commit these
 /data/*.db
 /data/*.db-shm
 /data/*.db-wal
+data/forge.db
+data/forge.db-shm
+data/forge.db-wal
+
+# Backup files
+/backups/
+*.backup
+*.sql
+
+# User uploaded data
 *.csv
 /public/uploads/*
 !/public/uploads/.gitkeep

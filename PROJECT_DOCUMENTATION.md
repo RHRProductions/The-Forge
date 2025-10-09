@@ -303,6 +303,61 @@ Lead Id,Received Date,First Name,Last Name,Status,Lead Partner,Lead Type,Lead Ow
 
 ---
 
+## Database Backup & Safety
+
+### ⚠️ Critical Database Safety Rules
+
+1. **NEVER commit the database to git** - The database is excluded from version control
+2. **ALWAYS create a backup before deploying** - Use `./scripts/backup-database.sh`
+3. **Production and local databases are completely separate** - They never sync via git
+4. **Automated backups run daily** - 2:00 AM EST, 7-day retention
+5. **See DISASTER_RECOVERY.md** for full recovery procedures
+
+### Backup System
+
+**Automated Backups:**
+- Runs daily at 2:00 AM EST via cron job
+- Keeps 7 days of backups
+- Location: `/var/www/the-forge/backups/`
+
+**Manual Backup:**
+```bash
+cd /var/www/the-forge
+./scripts/backup-database.sh
+```
+
+**Restore from Backup:**
+```bash
+cd /var/www/the-forge
+./scripts/restore-database.sh /var/www/the-forge/backups/forge_backup_YYYYMMDD_HHMMSS.db
+pm2 restart the-forge
+```
+
+**Check Existing Backups:**
+```bash
+ls -lh /var/www/the-forge/backups/
+```
+
+### Data Loss Prevention
+
+On **October 9, 2025**, we experienced a critical data loss incident where production data was overwritten by the local development database during a git pull. This happened because the database was previously tracked in git.
+
+**Safeguards Now in Place:**
+1. Database removed from git tracking (both local and production)
+2. Enhanced `.gitignore` with explicit database exclusions
+3. Daily automated backups with 7-day retention
+4. Manual backup script for pre-deployment backups
+5. Restore script for quick recovery
+6. Comprehensive disaster recovery documentation
+
+**See DISASTER_RECOVERY.md for:**
+- Complete recovery procedures
+- Backup/restore testing protocols
+- Prevention checklists
+- Emergency contact information
+
+---
+
 ## Deployment Information
 
 ### Production Server
@@ -333,7 +388,15 @@ Lead Id,Received Date,First Name,Last Name,Status,Lead Partner,Lead Type,Lead Ow
    ```bash
    ssh root@143.244.185.41
    cd /var/www/the-forge
-   git pull
+
+   # ALWAYS create a backup before deploying
+   ./scripts/backup-database.sh
+
+   # Pull latest changes
+   git pull origin master
+
+   # Build and restart
+   npm install
    npm run build
    pm2 restart the-forge --update-env
    pm2 save
@@ -359,7 +422,9 @@ Lead Id,Received Date,First Name,Last Name,Status,Lead Partner,Lead Type,Lead Ow
 
 ### Important Notes
 - **Database Location:** `/var/www/the-forge/data/forge.db`
-- **Production data stays on server** - Don't overwrite with local database
+- **⚠️ CRITICAL: Database is NOT tracked in git** - Production data stays on server, never syncs via git
+- **Daily Automated Backups:** Database backed up every day at 2:00 AM EST (7-day retention)
+- **See DISASTER_RECOVERY.md** for backup procedures and data recovery protocols
 - **ESLint/TypeScript disabled in production** - For faster builds (set in next.config.ts)
 - **Always access via :3000** - Nginx reverse proxy exists but causes NextAuth session issues
 - **Do not use Turbopack flag in production builds** - Will crash due to memory limits
@@ -524,6 +589,25 @@ Lead Id,Received Date,First Name,Last Name,Status,Lead Partner,Lead Type,Lead Ow
   - Simplified deployment and authentication
 - **Updated:** Deployment process with `--update-env` flag
 - **Created:** Comprehensive troubleshooting guide
+
+### Session 7: Commission Tracking & Data Safety (October 9, 2025)
+- **Added:** Commission tracking system
+  - `commission_amount` field on policies
+  - Total Sales now calculates from commission sum
+  - Policy edit/delete functionality in calendar view
+  - Mobile-responsive policy management
+- **Critical Incident:** Data loss during deployment
+  - Production database overwritten by local dev database via git pull
+  - Lost several days of production data (leads, appointments, policies)
+  - Root cause: Database was tracked in git before being added to .gitignore
+- **Implemented:** Comprehensive backup and safety system
+  - Removed database from git tracking permanently
+  - Enhanced .gitignore with explicit exclusions
+  - Created automated daily backup script (7-day retention)
+  - Created manual backup/restore scripts
+  - Documented disaster recovery procedures (DISASTER_RECOVERY.md)
+  - Updated deployment process to require pre-deployment backups
+- **Fixed:** All commission tracking features verified working locally
 
 ---
 
@@ -744,4 +828,4 @@ rm /var/www/package-lock.json
 
 ---
 
-*Last Updated: October 7, 2025*
+*Last Updated: October 9, 2025*

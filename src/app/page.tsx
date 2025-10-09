@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Lead, LeadStatus, ContactMethod, LeadType } from '../../types/lead';
@@ -408,7 +408,7 @@ function ResizableMovableModal({
   );
 }
 
-export default function Home() {
+function HomeContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -3436,5 +3436,14 @@ function PoliciesSection({ leadId }: { leadId: number }) {
         </div>
       )}
     </div>
+  );
+}
+
+// Wrap in Suspense to handle useSearchParams
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center"><div className="text-white text-xl">Loading...</div></div>}>
+      <HomeContent />
+    </Suspense>
   );
 }

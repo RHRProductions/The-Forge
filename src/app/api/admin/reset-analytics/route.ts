@@ -28,10 +28,11 @@ export async function POST() {
         SET contact_attempt_count = 0
       `).run();
 
-      // 4. Clear next_follow_up dates (user will set manually as needed)
+      // 4. Set leads without warm/hot temperature to 'cold'
       db.prepare(`
         UPDATE leads
-        SET next_follow_up = NULL
+        SET lead_temperature = 'cold'
+        WHERE lead_temperature IS NULL OR lead_temperature NOT IN ('warm', 'hot')
       `).run();
 
       // Commit the transaction

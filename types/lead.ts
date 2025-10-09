@@ -137,4 +137,5 @@ export type LeadType =
 
 export type LeadTemperature =
   | 'hot'
-  | 'warm';
+  | 'warm'
+  | 'cold';

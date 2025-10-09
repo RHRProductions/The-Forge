@@ -150,10 +150,14 @@ export default function SettingsPage() {
 • All call/text/email activities
 • All policy/sales records
 • All contact attempt counts
-• All follow-up dates
 
-This will reset your analytics to 0 but keep:
-✓ Your leads
+This will also:
+• Set leads without warm/hot temperature to 'cold'
+• Preserve your follow-up dates
+• Keep warm/hot leads as warm/hot
+
+This will keep:
+✓ Your leads and their categorization
 ✓ Calendar appointments
 ✓ User accounts
 

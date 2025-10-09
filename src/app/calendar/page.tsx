@@ -280,6 +280,52 @@ export default function CalendarPage() {
       });
 
       if (activityResponse.ok) {
+        // If presentation was made, check if there are any policies
+        if (activityFormData.activity_type === 'appointment') {
+          // Fetch policies for this lead
+          const policiesResponse = await fetch(`/api/leads/${selectedEvent.lead_id}/policies`);
+          if (policiesResponse.ok) {
+            const policies = await policiesResponse.json();
+
+            // If no policies exist, this was a presentation without a sale
+            if (policies.length === 0) {
+              // Update lead to hot temperature and follow_up_needed status
+              await fetch(`/api/leads/${selectedEvent.lead_id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  lead_temperature: 'hot',
+                  status: 'follow_up_needed',
+                }),
+              });
+
+              // Create follow-up appointment 7 days from now
+              const followUpDate = new Date();
+              followUpDate.setDate(followUpDate.getDate() + 7);
+              followUpDate.setHours(10, 0, 0, 0); // Default to 10 AM
+
+              const followUpEnd = new Date(followUpDate);
+              followUpEnd.setHours(11, 0, 0, 0); // 1 hour appointment
+
+              await fetch('/api/calendar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  lead_id: selectedEvent.lead_id,
+                  title: 'Follow-up Appointment',
+                  description: 'Follow-up from presentation',
+                  start_time: followUpDate.toISOString(),
+                  end_time: followUpEnd.toISOString(),
+                  event_type: 'appointment',
+                }),
+              });
+
+              alert('Lead set to HOT. Follow-up appointment created for 7 days out.');
+              fetchEvents(); // Refresh calendar to show new appointment
+            }
+          }
+        }
+
         // Also add to lead notes with timestamp
         const activityTypeLabel = activityFormData.activity_type === 'note' ? 'Note' :
                                   activityFormData.activity_type === 'appointment' ? 'Presentation Made' :

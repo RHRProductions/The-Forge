@@ -3,7 +3,7 @@ import { getDatabase } from '../../../../lib/database/connection';
 import { Lead } from '../../../../types/lead';
 import { auth } from '../../../../auth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
 
@@ -15,39 +15,81 @@ export async function GET() {
     const userId = parseInt((session.user as any).id);
     const userRole = (session.user as any).role;
 
+    // Get pagination parameters from query string
+    const searchParams = request.nextUrl.searchParams;
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '100');
+    const offset = (page - 1) * limit;
+
     let leads;
+    let totalCount;
 
     if (userRole === 'admin') {
-      // Admins see all leads
-      leads = db.prepare('SELECT * FROM leads ORDER BY created_at DESC').all();
+      // Get total count
+      const countResult = db.prepare('SELECT COUNT(*) as count FROM leads').get() as any;
+      totalCount = countResult.count;
+
+      // Get paginated leads
+      leads = db.prepare('SELECT * FROM leads ORDER BY created_at DESC LIMIT ? OFFSET ?').all(limit, offset);
     } else if (userRole === 'agent') {
-      // Agents see their own leads + leads from their setters
+      // Get total count
+      const countResult = db.prepare(`
+        SELECT COUNT(DISTINCT l.id) as count FROM leads l
+        LEFT JOIN users u ON l.owner_id = u.id
+        WHERE l.owner_id = ? OR u.agent_id = ?
+      `).get(userId, userId) as any;
+      totalCount = countResult.count;
+
+      // Get paginated leads
       leads = db.prepare(`
         SELECT l.* FROM leads l
         LEFT JOIN users u ON l.owner_id = u.id
         WHERE l.owner_id = ? OR u.agent_id = ?
         ORDER BY l.created_at DESC
-      `).all(userId, userId);
+        LIMIT ? OFFSET ?
+      `).all(userId, userId, limit, offset);
     } else {
-      // Setters see their agent's full lead list (agent's leads + other setters' leads)
-      // First, get the setter's agent_id
+      // Setters see their agent's full lead list
       const user = db.prepare('SELECT agent_id FROM users WHERE id = ?').get(userId) as any;
 
       if (user?.agent_id) {
-        // If setter has an agent, show all leads owned by that agent + all leads from other setters assigned to that agent
+        // Get total count
+        const countResult = db.prepare(`
+          SELECT COUNT(DISTINCT l.id) as count FROM leads l
+          LEFT JOIN users u ON l.owner_id = u.id
+          WHERE l.owner_id = ? OR u.agent_id = ?
+        `).get(user.agent_id, user.agent_id) as any;
+        totalCount = countResult.count;
+
+        // Get paginated leads
         leads = db.prepare(`
           SELECT l.* FROM leads l
           LEFT JOIN users u ON l.owner_id = u.id
           WHERE l.owner_id = ? OR u.agent_id = ?
           ORDER BY l.created_at DESC
-        `).all(user.agent_id, user.agent_id);
+          LIMIT ? OFFSET ?
+        `).all(user.agent_id, user.agent_id, limit, offset);
       } else {
-        // If setter has no agent, show only their own leads
-        leads = db.prepare('SELECT * FROM leads WHERE owner_id = ? ORDER BY created_at DESC').all(userId);
+        // Get total count
+        const countResult = db.prepare('SELECT COUNT(*) as count FROM leads WHERE owner_id = ?').get(userId) as any;
+        totalCount = countResult.count;
+
+        // Get paginated leads
+        leads = db.prepare('SELECT * FROM leads WHERE owner_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?').all(userId, limit, offset);
       }
     }
 
-    return NextResponse.json(leads);
+    return NextResponse.json({
+      leads,
+      pagination: {
+        page,
+        limit,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limit),
+        hasNextPage: page < Math.ceil(totalCount / limit),
+        hasPrevPage: page > 1
+      }
+    });
   } catch (error) {
     console.error('Error fetching leads:', error);
     return NextResponse.json({ error: 'Failed to fetch leads' }, { status: 500 });

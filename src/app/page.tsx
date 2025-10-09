@@ -430,6 +430,9 @@ function HomeContent() {
   }, [status, router]);
 
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -489,11 +492,16 @@ function HomeContent() {
   useEffect(() => {
     fetchLeads();
     fetchSalesRevenue();
-  }, []);
+  }, [currentPage]);
 
   useEffect(() => {
     applyFilters();
   }, [leads, filters]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters]);
 
   // Auto-open lead modal if leadId is in URL (from calendar navigation)
   useEffect(() => {
@@ -524,10 +532,12 @@ function HomeContent() {
 
   const fetchLeads = async () => {
     try {
-      const response = await fetch('/api/leads');
+      const response = await fetch(`/api/leads?page=${currentPage}&limit=100`);
       if (response.ok) {
         const data = await response.json();
-        setLeads(data);
+        setLeads(data.leads);
+        setTotalPages(data.pagination.totalPages);
+        setTotalCount(data.pagination.totalCount);
       }
     } catch (error) {
       console.error('Error fetching leads:', error);
@@ -651,6 +661,7 @@ function HomeContent() {
       });
 
       if (response.ok) {
+        setCurrentPage(1); // Reset to first page
         fetchLeads();
         resetForm();
       }
@@ -798,6 +809,7 @@ function HomeContent() {
 
       if (response.ok) {
         setUploadStatus(`Successfully imported ${result.successCount} leads from ${vendorName}! Cost per lead: $${result.costPerLead?.toFixed(2) || '0.00'}`);
+        setCurrentPage(1); // Reset to first page
         fetchLeads();
         setTimeout(() => {
           setUploadStatus('');
@@ -1598,11 +1610,32 @@ Type "DELETE ALL" to confirm:`;
               </div>
             )}
 
-            {/* Results Count */}
-            <div className="flex flex-col justify-end">
+            {/* Results Count and Pagination */}
+            <div className="flex items-center gap-4">
               <div className="text-sm text-gray-600">
-                Showing {filteredLeads.length} of {leads.length} leads
+                Showing {((currentPage - 1) * 100) + 1}-{Math.min(currentPage * 100, totalCount)} of {totalCount} leads
               </div>
+              {totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed rounded text-sm font-medium transition-colors"
+                  >
+                    ← Previous
+                  </button>
+                  <span className="text-sm text-gray-600">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed rounded text-sm font-medium transition-colors"
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

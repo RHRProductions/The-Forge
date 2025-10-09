@@ -289,44 +289,26 @@ export default function CalendarPage() {
 
             // If no policies exist, this was a presentation without a sale
             if (policies.length === 0) {
-              // Update lead to hot temperature and follow_up_needed status
-              await fetch(`/api/leads/${selectedEvent.lead_id}`, {
+              // Set follow-up date to 7 days from now
+              const followUpDate = new Date();
+              followUpDate.setDate(followUpDate.getDate() + 7);
+
+              // Update lead to hot temperature, follow_up_needed status, and set follow-up date
+              const updateResponse = await fetch(`/api/leads/${selectedEvent.lead_id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   lead_temperature: 'hot',
                   status: 'follow_up_needed',
+                  next_follow_up: followUpDate.toISOString().split('T')[0], // YYYY-MM-DD format
                 }),
               });
 
-              // Create follow-up appointment 7 days from now
-              const followUpDate = new Date();
-              followUpDate.setDate(followUpDate.getDate() + 7);
-              followUpDate.setHours(10, 0, 0, 0); // Default to 10 AM
-
-              const followUpEnd = new Date(followUpDate);
-              followUpEnd.setHours(11, 0, 0, 0); // 1 hour appointment
-
-              const calendarResponse = await fetch('/api/calendar', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  agent_id: selectedEvent.agent_id,
-                  lead_id: selectedEvent.lead_id,
-                  title: 'Follow-up Appointment',
-                  description: 'Follow-up from presentation',
-                  start_time: followUpDate.toISOString(),
-                  end_time: followUpEnd.toISOString(),
-                  event_type: 'appointment',
-                }),
-              });
-
-              if (calendarResponse.ok) {
-                alert('Lead set to HOT. Follow-up appointment created for 7 days out.');
-                fetchEvents(); // Refresh calendar to show new appointment
+              if (updateResponse.ok) {
+                alert('Lead set to HOT with follow-up reminder for 7 days out.');
               } else {
-                console.error('Failed to create follow-up appointment:', await calendarResponse.text());
-                alert('Lead updated to HOT, but failed to create follow-up appointment. Please create manually.');
+                console.error('Failed to update lead:', await updateResponse.text());
+                alert('Failed to update lead. Please try again.');
               }
             }
           }

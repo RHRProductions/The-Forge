@@ -120,11 +120,14 @@ function FollowUpReminders({
   );
 
   return (
-    <div className="bg-gray-50 border-2 border-red-600 rounded p-3 sm:p-4 max-h-96 sm:max-h-[calc(100vh-8rem)] overflow-y-auto">
-      <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
-        <span>🎯</span>
-        Follow-Up Reminders
-      </h3>
+    <div className="bg-gray-50 border-2 border-red-600 rounded">
+      <div className="p-3 sm:p-4 pb-2">
+        <h3 className="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
+          <span>🎯</span>
+          Follow-Up Reminders
+        </h3>
+      </div>
+      <div className="px-3 sm:px-4 pb-3 sm:pb-4 max-h-96 overflow-y-auto">
 
       {followUpLeads.length === 0 ? (
         <div className="text-center py-8 text-gray-500 text-sm">
@@ -178,6 +181,7 @@ function FollowUpReminders({
           )}
         </div>
       )}
+      </div>
     </div>
   );
 }

@@ -1629,7 +1629,7 @@ Type "DELETE ALL" to confirm:`;
                   <button
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className="px-3 py-1 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed rounded text-sm font-medium transition-colors"
+                    className="px-3 py-1 bg-black text-white hover:bg-gray-800 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed rounded text-sm font-bold transition-colors"
                   >
                     ← Previous
                   </button>
@@ -1639,7 +1639,7 @@ Type "DELETE ALL" to confirm:`;
                   <button
                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
-                    className="px-3 py-1 bg-gray-200 hover:bg-gray-300 disabled:bg-gray-100 disabled:cursor-not-allowed rounded text-sm font-medium transition-colors"
+                    className="px-3 py-1 bg-black text-white hover:bg-gray-800 disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed rounded text-sm font-bold transition-colors"
                   >
                     Next →
                   </button>

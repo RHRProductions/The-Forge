@@ -976,12 +976,20 @@ Type "DELETE ALL" to confirm:`;
                 📅 Calendar
               </button>
               {(session.user as any).role === 'admin' && (
-                <button
-                  onClick={() => router.push('/settings')}
-                  className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded font-bold text-sm transition-colors whitespace-nowrap"
-                >
-                  ⚙️ Settings
-                </button>
+                <>
+                  <button
+                    onClick={() => router.push('/admin/bulk-source-update')}
+                    className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded font-bold text-sm transition-colors whitespace-nowrap"
+                  >
+                    📊 Bulk Source Update
+                  </button>
+                  <button
+                    onClick={() => router.push('/settings')}
+                    className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded font-bold text-sm transition-colors whitespace-nowrap"
+                  >
+                    ⚙️ Settings
+                  </button>
+                </>
               )}
               <button
                 onClick={() => signOut({ callbackUrl: '/login' })}
@@ -2089,6 +2097,16 @@ function LeadDetailForm({
                 <option value="life">Life Insurance</option>
                 <option value="client">Client</option>
               </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Lead Source</label>
+              <input
+                type="text"
+                value={formData.source}
+                onChange={(e) => handleFormChange('source', e.target.value)}
+                placeholder="e.g., Melissa Medicare, Integrity Life"
+                className="w-full p-2 border border-gray-300 rounded focus:border-red-600 focus:outline-none"
+              />
             </div>
             {(session.user as any).role !== 'setter' && (
               <>

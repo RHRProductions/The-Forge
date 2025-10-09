@@ -132,7 +132,7 @@ function FollowUpReminders({
           Follow-Up Reminders
         </h3>
       </div>
-      <div className="px-3 sm:px-4 pb-3 sm:pb-4 h-96 overflow-y-auto">
+      <div className="px-3 sm:px-4 pb-3 sm:pb-4 h-32 overflow-y-auto">
 
       {followUpLeads.length === 0 ? (
         <div className="text-center py-8 text-gray-500 text-sm">

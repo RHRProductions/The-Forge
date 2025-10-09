@@ -2324,6 +2324,25 @@ function ActivitiesSection({ leadId, lead, onLeadUpdate, session }: { leadId: nu
         setShowActivityForm(false);
         await fetchActivities();
 
+        // Check if user should be reminded to try texting
+        const activitiesResponse = await fetch(`/api/leads/${leadId}/activities`);
+        if (activitiesResponse.ok) {
+          const allActivities = await activitiesResponse.json();
+
+          // Calculate total dials and text attempts
+          const totalDials = allActivities
+            .filter((act: any) => act.activity_type === 'call')
+            .reduce((sum: number, act: any) => sum + (act.dial_count || 0), 0);
+
+          const textAttempts = allActivities
+            .filter((act: any) => act.activity_type === 'text').length;
+
+          // Remind user to try texting if they've made 6+ dials with no texts
+          if (totalDials >= 6 && textAttempts === 0) {
+            alert('💡 Tip: You\'ve made 6+ calls without an answer. Consider trying to text this prospect instead!');
+          }
+        }
+
         // Fetch updated lead data to refresh the status
         console.log('Fetching updated lead data for leadId:', leadId);
         const leadResponse = await fetch(`/api/leads/${leadId}`);

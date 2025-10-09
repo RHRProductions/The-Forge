@@ -570,73 +570,97 @@ export default function AnalyticsPage() {
         <div className="mb-8">
           <h2 className="text-2xl font-bold mb-4">Daily Activity</h2>
           <div className="bg-white border-2 border-gray-300 rounded-lg p-6">
-            <div className="overflow-x-auto">
-              <div className="flex gap-2 min-w-max">
-                {analytics.timeSeriesData.map((day, index) => {
-                  const maxValue = Math.max(
-                    ...analytics.timeSeriesData.map(d => Math.max(d.dials, d.contacts, d.appointments, d.sales))
-                  );
-                  return (
-                    <div key={index} className="flex-1 min-w-[80px]">
-                      <div className="text-xs text-center mb-2 font-bold">
-                        {new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </div>
-                      <div className="h-40 flex flex-col justify-end gap-1">
-                        {day.dials > 0 && (
-                          <div
-                            className="bg-blue-500 rounded"
-                            style={{ height: `${(day.dials / maxValue) * 100}%` }}
-                            title={`Dials: ${day.dials}`}
-                          ></div>
-                        )}
-                        {day.contacts > 0 && (
-                          <div
-                            className="bg-green-500 rounded"
-                            style={{ height: `${(day.contacts / maxValue) * 100}%` }}
-                            title={`Contacts: ${day.contacts}`}
-                          ></div>
-                        )}
-                        {day.appointments > 0 && (
-                          <div
-                            className="bg-purple-500 rounded"
-                            style={{ height: `${(day.appointments / maxValue) * 100}%` }}
-                            title={`Appointments: ${day.appointments}`}
-                          ></div>
-                        )}
-                        {day.sales > 0 && (
-                          <div
-                            className="bg-red-500 rounded"
-                            style={{ height: `${(day.sales / maxValue) * 100}%` }}
-                            title={`Sales: ${day.sales}`}
-                          ></div>
-                        )}
-                      </div>
-                      <div className="text-xs text-center mt-2 space-y-1">
-                        <div className="text-blue-600">{day.dials}</div>
-                      </div>
+            {(() => {
+              const hasAnyData = analytics.timeSeriesData.some(d => d.dials > 0 || d.contacts > 0 || d.appointments > 0 || d.sales > 0);
+
+              if (!hasAnyData) {
+                return (
+                  <div className="text-center py-12 text-gray-500">
+                    <div className="text-4xl mb-4">📊</div>
+                    <p className="text-lg font-semibold mb-2">No activity data yet</p>
+                    <p className="text-sm">Start logging calls, contacts, appointments, and sales to see your daily activity chart!</p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="overflow-x-auto">
+                  <div className="flex gap-2 min-w-max">
+                    {analytics.timeSeriesData.map((day, index) => {
+                      const maxValue = Math.max(
+                        ...analytics.timeSeriesData.map(d => Math.max(d.dials, d.contacts, d.appointments, d.sales))
+                      );
+                      return (
+                        <div key={index} className="flex-1 min-w-[80px]">
+                          <div className="text-xs text-center mb-2 font-bold">
+                            {new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </div>
+                          <div className="h-40 flex flex-col justify-end gap-1 bg-gray-50 rounded relative">
+                            {(day.dials > 0 || day.contacts > 0 || day.appointments > 0 || day.sales > 0) ? (
+                              <>
+                                {day.dials > 0 && (
+                                  <div
+                                    className="bg-blue-500 rounded"
+                                    style={{ height: `${(day.dials / maxValue) * 100}%` }}
+                                    title={`Dials: ${day.dials}`}
+                                  ></div>
+                                )}
+                                {day.contacts > 0 && (
+                                  <div
+                                    className="bg-green-500 rounded"
+                                    style={{ height: `${(day.contacts / maxValue) * 100}%` }}
+                                    title={`Contacts: ${day.contacts}`}
+                                  ></div>
+                                )}
+                                {day.appointments > 0 && (
+                                  <div
+                                    className="bg-purple-500 rounded"
+                                    style={{ height: `${(day.appointments / maxValue) * 100}%` }}
+                                    title={`Appointments: ${day.appointments}`}
+                                  ></div>
+                                )}
+                                {day.sales > 0 && (
+                                  <div
+                                    className="bg-red-500 rounded"
+                                    style={{ height: `${(day.sales / maxValue) * 100}%` }}
+                                    title={`Sales: ${day.sales}`}
+                                  ></div>
+                                )}
+                              </>
+                            ) : (
+                              <div className="absolute inset-0 flex items-end justify-center pb-1 text-gray-300 text-xs">-</div>
+                            )}
+                          </div>
+                          <div className="text-xs text-center mt-2 space-y-1">
+                            {(day.dials > 0 || day.contacts > 0 || day.appointments > 0 || day.sales > 0) && (
+                              <div className="text-blue-600 font-semibold">{day.dials}</div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="flex gap-4 justify-center mt-4 text-xs">
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 bg-blue-500 rounded"></div>
+                      <span>Dials</span>
                     </div>
-                  );
-                })}
-              </div>
-              <div className="flex gap-4 justify-center mt-4 text-xs">
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-blue-500 rounded"></div>
-                  <span>Dials</span>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 bg-green-500 rounded"></div>
+                      <span>Contacts</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 bg-purple-500 rounded"></div>
+                      <span>Appointments</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 bg-red-500 rounded"></div>
+                      <span>Sales</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-green-500 rounded"></div>
-                  <span>Contacts</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-purple-500 rounded"></div>
-                  <span>Appointments</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-red-500 rounded"></div>
-                  <span>Sales</span>
-                </div>
-              </div>
-            </div>
+              );
+            })()}
           </div>
         </div>
       </div>

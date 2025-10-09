@@ -1382,7 +1382,7 @@ export default function CalendarPage() {
                                     handleDelete(event.id);
                                   }
                                 }}
-                                className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 bg-red-600 hover:bg-red-700 text-white rounded px-1 text-xs transition-opacity"
+                                className="hidden sm:block absolute top-1 right-1 opacity-0 group-hover:opacity-100 bg-red-600 hover:bg-red-700 text-white rounded px-1 text-xs transition-opacity"
                                 title="Delete appointment"
                               >
                                 ✕

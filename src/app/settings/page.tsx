@@ -144,6 +144,55 @@ export default function SettingsPage() {
     setError('');
   };
 
+  const handleResetAnalytics = async () => {
+    const confirmMessage = `⚠️ WARNING: This will permanently delete ALL analytics data:
+
+• All call/text/email activities
+• All policy/sales records
+• All contact attempt counts
+• All follow-up dates
+
+This will reset your analytics to 0 but keep:
+✓ Your leads
+✓ Calendar appointments
+✓ User accounts
+
+This action CANNOT be undone.
+
+Type "RESET" to confirm:`;
+
+    const userConfirmation = prompt(confirmMessage);
+
+    if (userConfirmation !== 'RESET') {
+      if (userConfirmation !== null) {
+        alert('Reset cancelled. You must type "RESET" exactly to confirm.');
+      }
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await fetch('/api/admin/reset-analytics', {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`✅ Analytics reset successfully!\n\n${result.details.activitiesDeleted} activities deleted\n${result.details.policiesDeleted} policies deleted\nAll leads reset to 0 contact attempts`);
+        // Optionally redirect to dashboard
+        router.push('/');
+      } else {
+        const error = await response.json();
+        alert(`Failed to reset analytics: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Error resetting analytics:', error);
+      alert('An error occurred while resetting analytics. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (status === 'loading') {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -179,7 +228,7 @@ export default function SettingsPage() {
       <div className="max-w-7xl mx-auto p-6">
         {/* Action Buttons */}
         {!showAddForm && (
-          <div className="mb-6 flex gap-3">
+          <div className="mb-6 flex gap-3 flex-wrap">
             <button
               onClick={() => setShowAddForm(true)}
               className="bg-black text-white px-6 py-3 rounded font-bold hover:bg-gray-800 transition-colors"
@@ -191,6 +240,13 @@ export default function SettingsPage() {
               className="bg-purple-600 text-white px-6 py-3 rounded font-bold hover:bg-purple-700 transition-colors"
             >
               📊 Bulk Source Update
+            </button>
+            <button
+              onClick={handleResetAnalytics}
+              disabled={loading}
+              className="bg-red-600 text-white px-6 py-3 rounded font-bold hover:bg-red-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              🔄 Reset Analytics Data
             </button>
           </div>
         )}

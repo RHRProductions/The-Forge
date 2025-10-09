@@ -38,9 +38,9 @@ export async function GET(request: NextRequest) {
         COUNT(CASE WHEN la.outcome = 'scheduled' THEN 1 END) as totalAppointments,
         COUNT(CASE WHEN la.activity_type = 'appointment' AND la.outcome IN ('completed', 'showed', 'seen') THEN 1 END) as appointmentsSeen,
         COUNT(DISTINCT lp.id) as totalSales,
-        COALESCE(SUM(lp.premium_amount), 0) as totalRevenue
+        COALESCE(SUM(lp.commission_amount), 0) as totalRevenue
       FROM lead_activities la
-      LEFT JOIN lead_policies lp ON la.lead_id = lp.lead_id AND lp.status = 'active'
+      LEFT JOIN lead_policies lp ON la.lead_id = lp.lead_id
       WHERE la.created_by_user_id = ? ${dateFilter}
     `).get(userId) as any;
 
@@ -55,8 +55,7 @@ export async function GET(request: NextRequest) {
     const firstVisitSales = db.prepare(`
       SELECT COUNT(DISTINCT lp.lead_id) as count
       FROM lead_policies lp
-      WHERE lp.status = 'active'
-        AND lp.lead_id IN (
+      WHERE lp.lead_id IN (
           SELECT DISTINCT la.lead_id
           FROM lead_activities la
           WHERE la.created_by_user_id = ?
@@ -111,9 +110,9 @@ export async function GET(request: NextRequest) {
             COUNT(CASE WHEN la.activity_type = 'call' AND la.outcome IN ('answered', 'scheduled') THEN 1 END) as totalContacts,
             COUNT(CASE WHEN la.outcome = 'scheduled' THEN 1 END) as totalAppointments,
             COUNT(DISTINCT lp.id) as totalSales,
-            COALESCE(SUM(lp.premium_amount), 0) as totalRevenue
+            COALESCE(SUM(lp.commission_amount), 0) as totalRevenue
           FROM lead_activities la
-          LEFT JOIN lead_policies lp ON la.lead_id = lp.lead_id AND lp.status = 'active'
+          LEFT JOIN lead_policies lp ON la.lead_id = lp.lead_id
           WHERE la.created_by_user_id = ? ${dateFilter}
         `).get(member.id) as any;
 
@@ -155,10 +154,10 @@ export async function GET(request: NextRequest) {
           COUNT(DISTINCT CASE WHEN la.outcome = 'disconnected' THEN l.id END) as disconnected,
           COUNT(DISTINCT lp.lead_id) as sales,
           AVG(l.cost_per_lead) as avgCost,
-          COALESCE(SUM(lp.premium_amount), 0) as totalRevenue
+          COALESCE(SUM(lp.commission_amount), 0) as totalRevenue
         FROM leads l
         LEFT JOIN lead_activities la ON l.id = la.lead_id
-        LEFT JOIN lead_policies lp ON l.id = lp.lead_id AND lp.status = 'active'
+        LEFT JOIN lead_policies lp ON l.id = lp.lead_id
         WHERE l.source IS NOT NULL AND l.source != '' ${dateFilter.replace('la.created_at', 'l.created_at')}
         GROUP BY l.source
         ORDER BY totalLeads DESC
@@ -176,7 +175,7 @@ export async function GET(request: NextRequest) {
           COUNT(DISTINCT lp.lead_id) as sales
         FROM leads l
         LEFT JOIN lead_activities la ON l.id = la.lead_id
-        LEFT JOIN lead_policies lp ON l.id = lp.lead_id AND lp.status = 'active'
+        LEFT JOIN lead_policies lp ON l.id = lp.lead_id
         WHERE l.city IS NOT NULL AND l.city != '' ${dateFilter.replace('la.created_at', 'l.created_at')}
         GROUP BY l.city, l.zip_code, l.state
         HAVING totalLeads >= 3
@@ -221,7 +220,7 @@ export async function GET(request: NextRequest) {
           COUNT(DISTINCT lp.lead_id) as sales
         FROM leads l
         LEFT JOIN lead_activities la ON l.id = la.lead_id
-        LEFT JOIN lead_policies lp ON l.id = lp.lead_id AND lp.status = 'active'
+        LEFT JOIN lead_policies lp ON l.id = lp.lead_id
         WHERE l.lead_temperature IS NOT NULL ${dateFilter.replace('la.created_at', 'l.created_at')}
         GROUP BY l.lead_temperature
       `).all() as any[];
@@ -246,7 +245,7 @@ export async function GET(request: NextRequest) {
           COUNT(CASE WHEN la.outcome = 'scheduled' THEN 1 END) as appointments,
           COUNT(DISTINCT lp.id) as sales
         FROM lead_activities la
-        LEFT JOIN lead_policies lp ON la.lead_id = lp.lead_id AND lp.status = 'active' AND date(lp.created_at) = date('now', '-' || ? || ' days')
+        LEFT JOIN lead_policies lp ON la.lead_id = lp.lead_id AND date(lp.created_at) = date('now', '-' || ? || ' days')
         WHERE la.created_by_user_id = ?
           AND date(la.created_at) = date('now', '-' || ? || ' days')
       `).get(i, userId, i) as any;

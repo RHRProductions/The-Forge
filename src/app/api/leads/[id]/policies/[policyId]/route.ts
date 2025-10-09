@@ -68,15 +68,16 @@ export async function PUT(
     }
 
     const policyData = await request.json();
-    const { 
-      policy_type, 
-      policy_number, 
-      coverage_amount, 
-      premium_amount, 
-      start_date, 
-      end_date, 
-      status, 
-      notes 
+    const {
+      policy_type,
+      policy_number,
+      coverage_amount,
+      premium_amount,
+      commission_amount,
+      start_date,
+      end_date,
+      status,
+      notes
     } = policyData;
     
     if (!policy_type || typeof policy_type !== 'string' || policy_type.trim().length === 0) {
@@ -96,6 +97,7 @@ export async function PUT(
         policy_type = ?,
         coverage_amount = ?,
         premium_amount = ?,
+        commission_amount = ?,
         start_date = ?,
         end_date = ?,
         status = ?,
@@ -106,6 +108,7 @@ export async function PUT(
       policy_type.trim(),
       coverage_amount || null,
       premium_amount || null,
+      commission_amount || null,
       start_date || null,
       end_date || null,
       status || 'pending',

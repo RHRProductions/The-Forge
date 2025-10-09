@@ -1,36 +1,205 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# The Forge
+
+> "Where Cold Leads Turn to Gold Leads"
+
+A comprehensive CRM system built specifically for insurance lead management.
+
+![Next.js](https://img.shields.io/badge/Next.js-15.5.2-black)
+![React](https://img.shields.io/badge/React-19-blue)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
+![License](https://img.shields.io/badge/license-Private-red)
+
+---
+
+## Quick Links
+
+📚 **[PROJECT_DOCUMENTATION.md](./PROJECT_DOCUMENTATION.md)** - Complete technical documentation
+🚀 **[DEPLOYMENT_NOTES.md](./DEPLOYMENT_NOTES.md)** - Deployment guide & troubleshooting
+📋 **[CHANGELOG.md](./CHANGELOG.md)** - Version history & release notes
+📝 **[SESSION_NOTES.md](./SESSION_NOTES.md)** - Development session logs
+
+---
+
+## What is The Forge?
+
+The Forge is a custom-built CRM designed for insurance agents to manage leads efficiently, track ROI, and convert prospects into clients. It specializes in:
+
+- **Medicare T65 Leads** - Turning 65, supplements, advantage plans
+- **Life Insurance Leads** - Final expense, term life, whole life
+- **Client Management** - Existing policyholders and renewals
+
+---
+
+## Key Features
+
+✅ Lead Management (CRUD operations)
+✅ CSV Upload from Multiple Vendors
+✅ Activity Tracking (calls, texts, emails)
+✅ Lead Temperature (Hot/Warm/Cold)
+✅ Follow-Up Reminders
+✅ Multi-User Authentication
+✅ Calendar & Appointments
+✅ Analytics Dashboard
+✅ ROI Tracking
+
+---
+
+## Tech Stack
+
+- **Frontend:** Next.js 15.5.2, React 19, TypeScript, Tailwind CSS
+- **Backend:** Next.js API Routes, SQLite (better-sqlite3)
+- **Authentication:** NextAuth v5
+- **Deployment:** DigitalOcean VPS, PM2, Nginx
+- **Version Control:** Git, GitHub
+
+---
 
 ## Getting Started
 
-First, run the development server:
+### Local Development
 
 ```bash
+# Install dependencies
+npm install
+
+# Run development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# Open http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Production Deployment
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**See [DEPLOYMENT_NOTES.md](./DEPLOYMENT_NOTES.md) for complete deployment guide.**
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Quick version:
+```bash
+ssh root@143.244.185.41
+cd /var/www/the-forge
+git pull
+npm run build
+pm2 restart the-forge --update-env
+pm2 save
+```
 
-## Learn More
+**Production URL:** http://143.244.185.41:3000
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Documentation
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Document | Purpose |
+|----------|---------|
+| [PROJECT_DOCUMENTATION.md](./PROJECT_DOCUMENTATION.md) | Complete technical documentation, database schema, API routes, features |
+| [DEPLOYMENT_NOTES.md](./DEPLOYMENT_NOTES.md) | Deployment procedures, troubleshooting, production settings |
+| [CHANGELOG.md](./CHANGELOG.md) | Version history, release notes, what changed when |
+| [SESSION_NOTES.md](./SESSION_NOTES.md) | Development logs, problems encountered, solutions implemented |
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Project Structure
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+the-forge/
+├── src/
+│   ├── app/              # Next.js app router pages
+│   │   ├── page.tsx      # Main dashboard
+│   │   ├── login/        # Authentication
+│   │   ├── analytics/    # Analytics dashboard
+│   │   ├── calendar/     # Calendar view
+│   │   └── api/          # API routes
+│   └── components/       # React components
+├── lib/
+│   ├── database/         # Database connection & schema
+│   └── utils.ts          # Utility functions
+├── types/
+│   └── lead.ts          # TypeScript type definitions
+├── data/
+│   └── forge.db         # SQLite database
+└── public/              # Static assets
+```
+
+---
+
+## Common Commands
+
+```bash
+# Development
+npm run dev              # Start dev server with Turbopack
+
+# Production
+npm run build           # Build for production (no Turbopack)
+npm start              # Start production server
+
+# Utilities
+npm run lint           # Run ESLint
+```
+
+---
+
+## Quick Troubleshooting
+
+### Build Fails on Server
+**Error:** SIGKILL during build
+**Fix:** Turbopack disabled in production (already fixed)
+
+### Can't Login
+**Issue:** Only works on :3000, not through Nginx
+**Fix:** Always use http://143.244.185.41:3000
+
+### Site Down After Reboot
+**Fix:**
+```bash
+ssh root@143.244.185.41
+pm2 restart the-forge
+```
+
+**See [DEPLOYMENT_NOTES.md](./DEPLOYMENT_NOTES.md) for more troubleshooting.**
+
+---
+
+## Database
+
+**Location:** `/var/www/the-forge/data/forge.db` (production)
+
+**Main Tables:**
+- `leads` - Lead information
+- `lead_activities` - Activity history
+- `lead_notes` - Timestamped notes
+- `lead_images` - File attachments
+- `lead_policies` - Insurance policies
+- `users` - Authentication & authorization
+- `calendar_events` - Appointments
+
+---
+
+## Contributing
+
+This is a private project for Marc Spagnuolo's insurance business.
+
+---
+
+## Version
+
+**Current Version:** 0.2.0
+**Last Updated:** October 7, 2025
+
+See [CHANGELOG.md](./CHANGELOG.md) for version history.
+
+---
+
+## Support
+
+**Owner:** Marc Spagnuolo
+**Developer:** Claude (Anthropic AI Assistant)
+**Repository:** https://github.com/RHRProductions/The-Forge
+
+---
+
+## License
+
+Private - All Rights Reserved
+
+---
+
+*Built with Next.js 15, React 19, and TypeScript*

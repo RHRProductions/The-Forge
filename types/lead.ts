@@ -76,6 +76,7 @@ export interface LeadPolicy {
   policy_type: string;
   coverage_amount?: number;
   premium_amount?: number;
+  commission_amount?: number;
   start_date?: string;
   end_date?: string;
   status: 'active' | 'pending' | 'cancelled' | 'expired';

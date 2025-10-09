@@ -37,15 +37,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     const policyData = await request.json();
-    const { 
-      policy_type, 
-      policy_number, 
-      coverage_amount, 
-      premium_amount, 
-      start_date, 
-      end_date, 
-      status, 
-      notes 
+    const {
+      policy_type,
+      policy_number,
+      coverage_amount,
+      premium_amount,
+      commission_amount,
+      start_date,
+      end_date,
+      status,
+      notes
     } = policyData;
     
     if (!policy_type || typeof policy_type !== 'string' || policy_type.trim().length === 0) {
@@ -61,15 +62,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const db = getDatabase();
     const insertResult = db.prepare(`
       INSERT INTO lead_policies (
-        lead_id, policy_number, policy_type, coverage_amount, 
-        premium_amount, start_date, end_date, status, notes
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        lead_id, policy_number, policy_type, coverage_amount,
+        premium_amount, commission_amount, start_date, end_date, status, notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       leadId,
       policy_number || null,
       policy_type.trim(),
       coverage_amount || null,
       premium_amount || null,
+      commission_amount || null,
       start_date || null,
       end_date || null,
       status || 'pending',

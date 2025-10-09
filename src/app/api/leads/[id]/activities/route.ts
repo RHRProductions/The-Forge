@@ -46,9 +46,11 @@ export async function POST(
     const isContactActivity = contactActivities.includes(activity.activity_type);
     const newAttemptNumber = isContactActivity ? (lead?.contact_attempt_count || 0) + 1 : null;
 
-    // Calculate new total dials
+    // Calculate new total dials - ONLY for contact activities (not appointment, note, sale)
+    // Also check dial_count - if it's explicitly 0, don't add to total
     const currentTotalDials = lead?.total_dials || 0;
-    const newTotalDials = currentTotalDials + (activity.dial_count || 1);
+    const dialCountToAdd = activity.dial_count !== undefined ? activity.dial_count : 1;
+    const newTotalDials = (isContactActivity && dialCountToAdd > 0) ? currentTotalDials + dialCountToAdd : currentTotalDials;
 
     // Insert the activity
     const result = db.prepare(
@@ -64,7 +66,7 @@ export async function POST(
       activity.lead_temperature_after || null,
       activity.next_follow_up_date || null,
       newAttemptNumber,
-      activity.dial_count || 1,
+      dialCountToAdd,  // Use the calculated dial count (0 for appointments)
       newTotalDials,
       userId
     );
@@ -78,8 +80,10 @@ export async function POST(
       updates.push(`contact_attempt_count = ${newAttemptNumber}`);
     }
 
-    // Update total dials count
-    updates.push(`total_dials = ${newTotalDials}`);
+    // Update total dials count (only if it changed)
+    if (newTotalDials !== currentTotalDials) {
+      updates.push(`total_dials = ${newTotalDials}`);
+    }
 
     // Auto-update lead status to "no_answer" when outcome is "no_answer"
     if (activity.outcome === 'no_answer') {

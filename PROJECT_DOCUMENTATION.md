@@ -10,6 +10,7 @@
 7. [Lead Temperature & Follow-ups](#lead-temperature--follow-ups)
 8. [Deployment Information](#deployment-information)
 9. [Key Files & Their Purpose](#key-files--their-purpose)
+10. [Troubleshooting Guide](#troubleshooting-guide)
 
 ---
 
@@ -308,13 +309,17 @@ Lead Id,Received Date,First Name,Last Name,Status,Lead Partner,Lead Type,Lead Ow
 - **Provider:** DigitalOcean
 - **IP Address:** 143.244.185.41
 - **Port:** 3000
-- **URL:** http://143.244.185.41:3000
+- **URL:** http://143.244.185.41:3000 (always include :3000)
 - **OS:** Ubuntu 22.04 LTS
+- **Process Manager:** PM2 (configured for auto-restart on server reboot)
 
 ### Deployment Process
+
+**Standard Deployment (from local machine):**
+
 1. **Local Development:**
    ```bash
-   npm run dev  # Run development server
+   npm run dev  # Run development server (uses Turbopack for speed)
    ```
 
 2. **Push to GitHub:**
@@ -330,13 +335,34 @@ Lead Id,Received Date,First Name,Last Name,Status,Lead Partner,Lead Type,Lead Ow
    cd /var/www/the-forge
    git pull
    npm run build
-   pm2 restart the-forge
+   pm2 restart the-forge --update-env
+   pm2 save
    ```
+
+### Critical Production Configuration
+
+**Build Configuration:**
+- **Turbopack is DISABLED for production builds** (package.json: `"build": "next build"`)
+- **Reason:** VPS has limited memory (957MB) - Turbopack causes Out-Of-Memory crashes
+- **Development still uses Turbopack** for faster compilation
+- **Both produce identical production builds**
+
+**PM2 Auto-Startup:**
+- PM2 is configured to auto-start on server reboot
+- Process list is saved via `pm2 save`
+- If server restarts, The Forge will automatically come back online
+
+**Environment Variables:**
+- Located in `/var/www/the-forge/.env.local`
+- Contains `AUTH_SECRET` and `NEXTAUTH_URL`
+- PM2 must be restarted with `--update-env` flag to pick up changes
 
 ### Important Notes
 - **Database Location:** `/var/www/the-forge/data/forge.db`
 - **Production data stays on server** - Don't overwrite with local database
 - **ESLint/TypeScript disabled in production** - For faster builds (set in next.config.ts)
+- **Always access via :3000** - Nginx reverse proxy exists but causes NextAuth session issues
+- **Do not use Turbopack flag in production builds** - Will crash due to memory limits
 
 ---
 
@@ -474,6 +500,31 @@ Lead Id,Received Date,First Name,Last Name,Status,Lead Partner,Lead Type,Lead Ow
 - Real-time status updates (no refresh needed)
 - GET endpoint for single lead fetch
 
+### Session 5: Multi-User & Authentication (October 2025)
+- NextAuth v5 authentication system
+- Multi-user support (admin/agent/setter roles)
+- Calendar with drag-drop appointments
+- Analytics dashboard
+- Password reset functionality
+- State filtering
+- Bulk delete improvements
+- Melissa Medicare CSV format support
+
+### Session 6: Production Stability & Deployment Fixes (October 7, 2025)
+- **Fixed:** Turbopack memory crash on production builds
+  - Disabled Turbopack for production (`npm run build`)
+  - Kept Turbopack for development speed
+  - Prevents SIGKILL Out-Of-Memory errors on VPS
+- **Fixed:** Multiple lockfile warning by removing `/var/www/package-lock.json`
+- **Configured:** PM2 auto-startup on server reboot
+  - Added systemd service for automatic recovery
+  - Process list saved for resurrection after crashes
+- **Documented:** Decision to use `:3000` port permanently
+  - NextAuth session issues with Nginx reverse proxy
+  - Simplified deployment and authentication
+- **Updated:** Deployment process with `--update-env` flag
+- **Created:** Comprehensive troubleshooting guide
+
 ---
 
 ## Future Enhancements (Planned)
@@ -532,6 +583,151 @@ Lead Id,Received Date,First Name,Last Name,Status,Lead Partner,Lead Type,Lead Ow
 
 ---
 
+## Troubleshooting Guide
+
+### Common Issues and Solutions
+
+#### Issue: Build fails with "SIGKILL" error
+**Symptoms:**
+- `npm run build` crashes with "Next.js build worker exited with code: null and signal: SIGKILL"
+- Build hangs at "Creating an optimized production build..."
+
+**Cause:** Out of memory - Turbopack uses too much RAM for the VPS (957MB available)
+
+**Solution:**
+1. Edit `package.json` line 7
+2. Change `"build": "next build --turbopack"` to `"build": "next build"`
+3. Run `npm run build` again
+4. This is already fixed in current production configuration
+
+**Date Fixed:** October 7, 2025
+
+---
+
+#### Issue: Can't log in after deployment
+**Symptoms:**
+- Login works at `http://143.244.185.41:3000`
+- Login fails at `http://143.244.185.41` (through Nginx)
+- Error logs show: `[auth][error] CredentialsSignin`
+
+**Cause:** NextAuth v5 has issues with the Nginx reverse proxy configuration despite `trustHost: true` being set
+
+**Solution:**
+- **Always use `http://143.244.185.41:3000`** (include the :3000 port)
+- Bookmark this address to avoid confusion
+- Nginx is configured and running but should not be used for authentication
+
+**Decision Made:** October 7, 2025 - Use :3000 permanently instead of troubleshooting reverse proxy
+
+---
+
+#### Issue: Site is down after server reboot
+**Symptoms:**
+- Can't access `http://143.244.185.41:3000`
+- Connection timeout or refused
+
+**Cause:** PM2 not configured to auto-start, or process crashed
+
+**Solution:**
+1. SSH into server: `ssh root@143.244.185.41`
+2. Check PM2 status: `pm2 status`
+3. If stopped: `pm2 restart the-forge`
+4. If not listed: `cd /var/www/the-forge && pm2 start npm --name "the-forge" -- start`
+5. Save configuration: `pm2 save`
+
+**Prevention:**
+- PM2 auto-startup is now configured (as of October 7, 2025)
+- Process list saved, will auto-resurrect after reboot
+
+---
+
+#### Issue: Environment variables not loading
+**Symptoms:**
+- Auth errors
+- Features not working as expected
+- Different behavior in production vs. local
+
+**Cause:** PM2 caches environment variables, doesn't reload .env.local automatically
+
+**Solution:**
+```bash
+pm2 restart the-forge --update-env
+```
+
+**Always use `--update-env` flag when restarting after deployment**
+
+---
+
+#### Issue: Multiple lockfile warning during build
+**Symptoms:**
+- Warning about `/var/www/package-lock.json` and `/var/www/the-forge/package-lock.json`
+- Build still works but shows warning
+
+**Cause:** Stray `package-lock.json` in parent directory
+
+**Solution:**
+```bash
+rm /var/www/package-lock.json
+```
+
+**Date Fixed:** October 7, 2025
+
+---
+
+#### Issue: PM2 shows high restart count (↺ 800+)
+**Symptoms:**
+- `pm2 status` shows restart count in hundreds
+- App seems to work but restarts frequently
+
+**Investigation Needed:**
+- Check logs: `pm2 logs the-forge --err --lines 100`
+- Look for crash patterns or memory issues
+- Monitor with: `pm2 monit`
+
+**Status:** Identified October 7, 2025 - needs further investigation
+
+---
+
+### Emergency Recovery
+
+**If The Forge is completely down:**
+
+1. **Check if server is running:**
+   ```bash
+   ssh root@143.244.185.41
+   ```
+
+2. **Check PM2 status:**
+   ```bash
+   pm2 status
+   ```
+
+3. **Restart the application:**
+   ```bash
+   cd /var/www/the-forge
+   pm2 restart the-forge --update-env
+   ```
+
+4. **Check logs for errors:**
+   ```bash
+   pm2 logs the-forge --lines 50
+   ```
+
+5. **If build is corrupted, rebuild:**
+   ```bash
+   cd /var/www/the-forge
+   git status  # Make sure you're on master and up to date
+   rm -rf .next
+   npm run build
+   pm2 restart the-forge --update-env
+   ```
+
+6. **Verify site is accessible:**
+   - Visit: http://143.244.185.41:3000
+   - Try logging in
+
+---
+
 ## Support & Resources
 
 ### Documentation
@@ -548,4 +744,4 @@ Lead Id,Received Date,First Name,Last Name,Status,Lead Partner,Lead Type,Lead Ow
 
 ---
 
-*Last Updated: October 4, 2025*
+*Last Updated: October 7, 2025*

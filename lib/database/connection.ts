@@ -115,6 +115,7 @@ function initializeDatabase() {
       policy_type TEXT NOT NULL,
       coverage_amount REAL,
       premium_amount REAL,
+      commission_amount REAL,
       start_date TEXT,
       end_date TEXT,
       status TEXT DEFAULT 'pending',
@@ -186,6 +187,13 @@ function initializeDatabase() {
   // Add contact_attempt_number column to lead_activities table
   try {
     db.exec(`ALTER TABLE lead_activities ADD COLUMN contact_attempt_number INTEGER;`);
+  } catch (error) {
+    // Column already exists, ignore error
+  }
+
+  // Add commission_amount column to lead_policies table
+  try {
+    db.exec(`ALTER TABLE lead_policies ADD COLUMN commission_amount REAL;`);
   } catch (error) {
     // Column already exists, ignore error
   }

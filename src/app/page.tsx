@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useSession, signOut } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Lead, LeadStatus, ContactMethod, LeadType } from '../../types/lead';
 import { formatPhoneNumber, formatName, formatLocation, formatDateForInput, calculateAge } from '../../lib/utils';
 import { TimestampedNote, LeadImage, LeadPolicy, LeadActivity, ActivityType, ActivityOutcome, LeadTemperature } from '../../types/lead';
@@ -120,8 +120,8 @@ function FollowUpReminders({
   );
 
   return (
-    <div className="bg-gray-50 border-2 border-red-600 rounded p-4 sticky top-6 max-h-[calc(100vh-8rem)] overflow-y-auto">
-      <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+    <div className="bg-gray-50 border-2 border-red-600 rounded p-3 sm:p-4 max-h-96 sm:max-h-[calc(100vh-8rem)] overflow-y-auto">
+      <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
         <span>🎯</span>
         Follow-Up Reminders
       </h3>
@@ -411,6 +411,7 @@ function ResizableMovableModal({
 export default function Home() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -445,6 +446,7 @@ export default function Home() {
     search: ''
   });
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
+  const [actualSalesRevenue, setActualSalesRevenue] = useState<number>(0);
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -477,11 +479,27 @@ export default function Home() {
 
   useEffect(() => {
     fetchLeads();
+    fetchSalesRevenue();
   }, []);
 
   useEffect(() => {
     applyFilters();
   }, [leads, filters]);
+
+  // Auto-open lead modal if leadId is in URL (from calendar navigation)
+  useEffect(() => {
+    const leadIdParam = searchParams.get('leadId');
+    if (leadIdParam && leads.length > 0) {
+      const leadId = parseInt(leadIdParam);
+      const lead = leads.find(l => l.id === leadId);
+      if (lead) {
+        setSelectedLead(lead);
+        setShowLeadDetail(true);
+        // Clear the URL parameter after opening
+        router.replace('/');
+      }
+    }
+  }, [searchParams, leads, router]);
 
   // Developer menu keyboard shortcut (Ctrl+Shift+D)
   useEffect(() => {
@@ -504,6 +522,18 @@ export default function Home() {
       }
     } catch (error) {
       console.error('Error fetching leads:', error);
+    }
+  };
+
+  const fetchSalesRevenue = async () => {
+    try {
+      const response = await fetch('/api/sales-summary');
+      if (response.ok) {
+        const data = await response.json();
+        setActualSalesRevenue(data.totalRevenue || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching sales revenue:', error);
     }
   };
 
@@ -899,7 +929,7 @@ Type "DELETE ALL" to confirm:`;
 
   const totalLeads = leads.length;
   const totalCost = leads.reduce((sum, lead) => sum + lead.cost_per_lead, 0);
-  const totalSales = leads.reduce((sum, lead) => sum + lead.sales_amount, 0);
+  const totalSales = actualSalesRevenue; // Use actual commission totals from policies
   const roi = totalCost > 0 ? ((totalSales - totalCost) / totalCost * 100).toFixed(1) : '0';
 
   // Show loading while checking auth
@@ -993,17 +1023,17 @@ Type "DELETE ALL" to confirm:`;
       </div>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold">Lead Management</h2>
-          <div className="flex gap-4">
+      <main className="max-w-7xl mx-auto p-3 sm:p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
+          <h2 className="text-xl sm:text-2xl font-bold">Lead Management</h2>
+          <div className="flex flex-wrap gap-2 sm:gap-4">
             {(session.user as any).role !== 'setter' && (
               <button
                 onClick={() => {
                   setShowUploadForm(!showUploadForm);
                   setShowAddForm(false);
                 }}
-                className="bg-black text-white px-6 py-2 rounded hover:bg-gray-800 transition-colors"
+                className="bg-black text-white px-3 sm:px-6 py-2 rounded hover:bg-gray-800 transition-colors text-sm sm:text-base"
               >
                 {showUploadForm ? 'Cancel Upload' : 'Upload CSV'}
               </button>
@@ -1013,7 +1043,7 @@ Type "DELETE ALL" to confirm:`;
                 setShowAddForm(!showAddForm);
                 setShowUploadForm(false);
               }}
-              className="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700 transition-colors"
+              className="bg-red-600 text-white px-3 sm:px-6 py-2 rounded hover:bg-red-700 transition-colors text-sm sm:text-base"
             >
               {showAddForm ? 'Cancel' : 'Add Lead'}
             </button>
@@ -1402,9 +1432,9 @@ Type "DELETE ALL" to confirm:`;
         )}
 
         {/* Filter Controls */}
-        <div className="bg-gray-50 border-2 border-red-600 rounded p-4 mb-4">
-          <div className="flex flex-wrap gap-4 items-center">
-            <h3 className="text-lg font-semibold text-gray-800 mr-4">Filter Leads:</h3>
+        <div className="bg-gray-50 border-2 border-red-600 rounded p-3 sm:p-4 mb-4">
+          <div className="flex flex-wrap gap-3 sm:gap-4 items-center">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-800 w-full sm:w-auto sm:mr-4">Filter Leads:</h3>
 
             {/* Search Bar */}
             <div className="flex flex-col">
@@ -1583,12 +1613,12 @@ Type "DELETE ALL" to confirm:`;
             <table className="w-full">
               <thead className="bg-black text-white">
                 <tr>
-                  <th className="p-4 text-left">Name</th>
-                  <th className="p-4 text-left">Phone</th>
-                  <th className="p-4 text-left">Address</th>
-                  <th className="p-4 text-left">DOB</th>
-                  <th className="p-4 text-left">Status</th>
-                  <th className="p-4 text-left">Actions</th>
+                  <th className="p-2 sm:p-4 text-left text-sm sm:text-base">Name</th>
+                  <th className="p-2 sm:p-4 text-left text-sm sm:text-base">Phone</th>
+                  <th className="p-2 sm:p-4 text-left text-sm sm:text-base">Address</th>
+                  <th className="p-2 sm:p-4 text-left text-sm sm:text-base">DOB</th>
+                  <th className="p-2 sm:p-4 text-left text-sm sm:text-base">Status</th>
+                  <th className="p-2 sm:p-4 text-left text-sm sm:text-base">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -1600,39 +1630,39 @@ Type "DELETE ALL" to confirm:`;
                   </tr>
                 ) : (
                   filteredLeads.map((lead) => (
-                    <tr 
-                      key={lead.id} 
+                    <tr
+                      key={lead.id}
                       className="border-b hover:bg-gray-50 cursor-pointer"
                       onDoubleClick={() => handleLeadDoubleClick(lead)}
                     >
-                      <td className="p-4">
+                      <td className="p-2 sm:p-4">
                         <div>
-                          <div className="font-medium">{formatName(lead.first_name)} {formatName(lead.last_name)}</div>
-                          <div className="text-sm text-black">{lead.company}</div>
+                          <div className="font-medium text-xs sm:text-base">{formatName(lead.first_name)} {formatName(lead.last_name)}</div>
+                          <div className="text-xs sm:text-sm text-black">{lead.company}</div>
                         </div>
                       </td>
-                      <td className="p-4">
-                        <div className="text-sm">
+                      <td className="p-2 sm:p-4">
+                        <div className="text-xs sm:text-sm">
                           <div className="font-medium">{formatPhoneNumber(lead.phone)}</div>
                           {lead.phone_2 && <div className="text-black">{formatPhoneNumber(lead.phone_2)}</div>}
                           <div className="text-xs text-black">{lead.email}</div>
                         </div>
                       </td>
-                      <td className="p-4">
-                        <div className="text-sm">
+                      <td className="p-2 sm:p-4">
+                        <div className="text-xs sm:text-sm">
                           <div>{lead.address}</div>
                           <div className="text-black">{formatLocation(lead.city)}, {formatLocation(lead.state)} {lead.zip_code}</div>
                         </div>
                       </td>
-                      <td className="p-4">
-                        <div className="text-sm">
+                      <td className="p-2 sm:p-4">
+                        <div className="text-xs sm:text-sm">
                           {lead.date_of_birth && (
                             <div>{new Date(lead.date_of_birth).toLocaleDateString()}</div>
                           )}
                           {lead.age && <div className="text-xs text-black">Age: {lead.age}</div>}
                         </div>
                       </td>
-                      <td className="p-4">
+                      <td className="p-2 sm:p-4">
                         <div className="space-y-1">
                           <span className={`px-2 py-1 rounded text-xs font-medium ${
                             lead.status === 'new' ? 'bg-blue-100 text-blue-800' :
@@ -1658,13 +1688,13 @@ Type "DELETE ALL" to confirm:`;
                           </span>
                         </div>
                       </td>
-                      <td className="p-4 text-sm">{lead.contact_method?.replace('_', ' ') || '-'}</td>
-                      <td className="p-4">
+                      <td className="p-2 sm:p-4 text-xs sm:text-sm">{lead.contact_method?.replace('_', ' ') || '-'}</td>
+                      <td className="p-2 sm:p-4">
                         {(session.user as any).role !== 'setter' && (
                           <div className="flex gap-2">
                             <button
                               onClick={() => handleDelete(lead.id!)}
-                              className="text-red-600 hover:text-red-800 text-sm font-medium"
+                              className="text-red-600 hover:text-red-800 text-xs sm:text-sm font-medium"
                             >
                               Delete
                             </button>
@@ -2981,6 +3011,7 @@ function PoliciesSection({ leadId }: { leadId: number }) {
     policy_number: '',
     coverage_amount: '',
     premium_amount: '',
+    commission_amount: '',
     start_date: '',
     end_date: '',
     status: 'pending' as const,
@@ -2991,6 +3022,7 @@ function PoliciesSection({ leadId }: { leadId: number }) {
     policy_number: '',
     coverage_amount: '',
     premium_amount: '',
+    commission_amount: '',
     start_date: '',
     end_date: '',
     status: 'pending' as const,
@@ -3023,7 +3055,8 @@ function PoliciesSection({ leadId }: { leadId: number }) {
         body: JSON.stringify({
           ...newPolicy,
           coverage_amount: newPolicy.coverage_amount ? parseFloat(newPolicy.coverage_amount) : undefined,
-          premium_amount: newPolicy.premium_amount ? parseFloat(newPolicy.premium_amount) : undefined
+          premium_amount: newPolicy.premium_amount ? parseFloat(newPolicy.premium_amount) : undefined,
+          commission_amount: newPolicy.commission_amount ? parseFloat(newPolicy.commission_amount) : undefined
         })
       });
       
@@ -3033,6 +3066,7 @@ function PoliciesSection({ leadId }: { leadId: number }) {
           policy_number: '',
           coverage_amount: '',
           premium_amount: '',
+          commission_amount: '',
           start_date: '',
           end_date: '',
           status: 'pending',
@@ -3067,6 +3101,7 @@ function PoliciesSection({ leadId }: { leadId: number }) {
       policy_number: policy.policy_number || '',
       coverage_amount: policy.coverage_amount?.toString() || '',
       premium_amount: policy.premium_amount?.toString() || '',
+      commission_amount: policy.commission_amount?.toString() || '',
       start_date: policy.start_date || '',
       end_date: policy.end_date || '',
       status: policy.status,
@@ -3084,10 +3119,11 @@ function PoliciesSection({ leadId }: { leadId: number }) {
         body: JSON.stringify({
           ...editPolicy,
           coverage_amount: editPolicy.coverage_amount ? parseFloat(editPolicy.coverage_amount) : undefined,
-          premium_amount: editPolicy.premium_amount ? parseFloat(editPolicy.premium_amount) : undefined
+          premium_amount: editPolicy.premium_amount ? parseFloat(editPolicy.premium_amount) : undefined,
+          commission_amount: editPolicy.commission_amount ? parseFloat(editPolicy.commission_amount) : undefined
         })
       });
-      
+
       if (response.ok) {
         setEditingPolicy(null);
         setEditPolicy({
@@ -3095,6 +3131,7 @@ function PoliciesSection({ leadId }: { leadId: number }) {
           policy_number: '',
           coverage_amount: '',
           premium_amount: '',
+          commission_amount: '',
           start_date: '',
           end_date: '',
           status: 'pending',
@@ -3168,6 +3205,17 @@ function PoliciesSection({ leadId }: { leadId: number }) {
               onChange={(e) => setNewPolicy({...newPolicy, premium_amount: e.target.value})}
               className="p-2 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none"
             />
+          </div>
+          <div>
+            <input
+              type="number"
+              step="0.01"
+              placeholder="Est. Commission Earned"
+              value={newPolicy.commission_amount}
+              onChange={(e) => setNewPolicy({...newPolicy, commission_amount: e.target.value})}
+              className="w-full p-2 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none"
+            />
+            <p className="text-xs text-gray-500 mt-1">Policy counts as a sale. Commission affects revenue total.</p>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <input
@@ -3243,13 +3291,16 @@ function PoliciesSection({ leadId }: { leadId: number }) {
                 </div>
               </div>
               
-              {(policy.coverage_amount || policy.premium_amount) && (
+              {(policy.coverage_amount || policy.premium_amount || policy.commission_amount) && (
                 <div className="text-xs text-gray-600 mb-1">
                   {policy.coverage_amount && (
                     <span>Coverage: ${policy.coverage_amount.toLocaleString()} </span>
                   )}
                   {policy.premium_amount && (
-                    <span>Premium: ${policy.premium_amount.toLocaleString()}</span>
+                    <span>Premium: ${policy.premium_amount.toLocaleString()} </span>
+                  )}
+                  {policy.commission_amount && (
+                    <span className="font-bold text-green-600">Commission: ${policy.commission_amount.toLocaleString()}</span>
                   )}
                 </div>
               )}
@@ -3320,6 +3371,17 @@ function PoliciesSection({ leadId }: { leadId: number }) {
                   onChange={(e) => setEditPolicy({...editPolicy, premium_amount: e.target.value})}
                   className="p-3 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none"
                 />
+              </div>
+              <div>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="Est. Commission Earned"
+                  value={editPolicy.commission_amount}
+                  onChange={(e) => setEditPolicy({...editPolicy, commission_amount: e.target.value})}
+                  className="w-full p-3 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none"
+                />
+                <p className="text-xs text-gray-500 mt-1">Policy counts as a sale. Commission affects revenue total.</p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <input

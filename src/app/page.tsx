@@ -976,20 +976,12 @@ Type "DELETE ALL" to confirm:`;
                 📅 Calendar
               </button>
               {(session.user as any).role === 'admin' && (
-                <>
-                  <button
-                    onClick={() => router.push('/admin/bulk-source-update')}
-                    className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded font-bold text-sm transition-colors whitespace-nowrap"
-                  >
-                    📊 Bulk Source Update
-                  </button>
-                  <button
-                    onClick={() => router.push('/settings')}
-                    className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded font-bold text-sm transition-colors whitespace-nowrap"
-                  >
-                    ⚙️ Settings
-                  </button>
-                </>
+                <button
+                  onClick={() => router.push('/settings')}
+                  className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded font-bold text-sm transition-colors whitespace-nowrap"
+                >
+                  ⚙️ Settings
+                </button>
               )}
               <button
                 onClick={() => signOut({ callbackUrl: '/login' })}

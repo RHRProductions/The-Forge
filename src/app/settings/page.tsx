@@ -177,14 +177,20 @@ export default function SettingsPage() {
       </header>
 
       <div className="max-w-7xl mx-auto p-6">
-        {/* Add User Button */}
+        {/* Action Buttons */}
         {!showAddForm && (
-          <div className="mb-6">
+          <div className="mb-6 flex gap-3">
             <button
               onClick={() => setShowAddForm(true)}
               className="bg-black text-white px-6 py-3 rounded font-bold hover:bg-gray-800 transition-colors"
             >
               + Add New User
+            </button>
+            <button
+              onClick={() => router.push('/admin/bulk-source-update')}
+              className="bg-purple-600 text-white px-6 py-3 rounded font-bold hover:bg-purple-700 transition-colors"
+            >
+              📊 Bulk Source Update
             </button>
           </div>
         )}

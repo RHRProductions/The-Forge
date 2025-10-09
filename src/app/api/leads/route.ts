@@ -79,6 +79,68 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Get total cost from ALL leads (not just current page)
+    let totalCostResult;
+    if (userRole === 'admin') {
+      totalCostResult = db.prepare('SELECT SUM(cost_per_lead) as totalCost FROM leads').get() as any;
+    } else if (userRole === 'agent') {
+      totalCostResult = db.prepare(`
+        SELECT SUM(l.cost_per_lead) as totalCost FROM leads l
+        LEFT JOIN users u ON l.owner_id = u.id
+        WHERE l.owner_id = ? OR u.agent_id = ?
+      `).get(userId, userId) as any;
+    } else {
+      const user = db.prepare('SELECT agent_id FROM users WHERE id = ?').get(userId) as any;
+      if (user?.agent_id) {
+        totalCostResult = db.prepare(`
+          SELECT SUM(l.cost_per_lead) as totalCost FROM leads l
+          LEFT JOIN users u ON l.owner_id = u.id
+          WHERE l.owner_id = ? OR u.agent_id = ?
+        `).get(user.agent_id, user.agent_id) as any;
+      } else {
+        totalCostResult = db.prepare('SELECT SUM(cost_per_lead) as totalCost FROM leads WHERE owner_id = ?').get(userId) as any;
+      }
+    }
+
+    // Get all warm/hot leads for follow-up reminders (regardless of pagination)
+    let followUpLeads;
+    if (userRole === 'admin') {
+      followUpLeads = db.prepare(`
+        SELECT * FROM leads
+        WHERE (lead_temperature = 'warm' OR lead_temperature = 'hot') AND next_follow_up IS NOT NULL
+        ORDER BY next_follow_up ASC
+      `).all();
+    } else if (userRole === 'agent') {
+      followUpLeads = db.prepare(`
+        SELECT l.* FROM leads l
+        LEFT JOIN users u ON l.owner_id = u.id
+        WHERE (l.owner_id = ? OR u.agent_id = ?)
+          AND (l.lead_temperature = 'warm' OR l.lead_temperature = 'hot')
+          AND l.next_follow_up IS NOT NULL
+        ORDER BY l.next_follow_up ASC
+      `).all(userId, userId);
+    } else {
+      const user = db.prepare('SELECT agent_id FROM users WHERE id = ?').get(userId) as any;
+      if (user?.agent_id) {
+        followUpLeads = db.prepare(`
+          SELECT l.* FROM leads l
+          LEFT JOIN users u ON l.owner_id = u.id
+          WHERE (l.owner_id = ? OR u.agent_id = ?)
+            AND (l.lead_temperature = 'warm' OR l.lead_temperature = 'hot')
+            AND l.next_follow_up IS NOT NULL
+          ORDER BY l.next_follow_up ASC
+        `).all(user.agent_id, user.agent_id);
+      } else {
+        followUpLeads = db.prepare(`
+          SELECT * FROM leads
+          WHERE owner_id = ?
+            AND (lead_temperature = 'warm' OR lead_temperature = 'hot')
+            AND next_follow_up IS NOT NULL
+          ORDER BY next_follow_up ASC
+        `).all(userId);
+      }
+    }
+
     return NextResponse.json({
       leads,
       pagination: {
@@ -88,7 +150,11 @@ export async function GET(request: NextRequest) {
         totalPages: Math.ceil(totalCount / limit),
         hasNextPage: page < Math.ceil(totalCount / limit),
         hasPrevPage: page > 1
-      }
+      },
+      stats: {
+        totalCost: totalCostResult?.totalCost || 0
+      },
+      followUpLeads: followUpLeads || []
     });
   } catch (error) {
     console.error('Error fetching leads:', error);

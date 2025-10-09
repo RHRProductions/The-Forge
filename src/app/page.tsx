@@ -430,6 +430,8 @@ function HomeContent() {
   }, [status, router]);
 
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [followUpLeads, setFollowUpLeads] = useState<Lead[]>([]);
+  const [totalCost, setTotalCost] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -536,6 +538,8 @@ function HomeContent() {
       if (response.ok) {
         const data = await response.json();
         setLeads(data.leads);
+        setFollowUpLeads(data.followUpLeads);
+        setTotalCost(data.stats.totalCost);
         setTotalPages(data.pagination.totalPages);
         setTotalCount(data.pagination.totalCount);
       }
@@ -701,6 +705,11 @@ function HomeContent() {
         // Update leads array
         setLeads(prevLeads =>
           prevLeads.map(l => l.id === leadId ? updatedLead : l)
+        );
+
+        // Remove from follow-up leads
+        setFollowUpLeads(prevLeads =>
+          prevLeads.filter(l => l.id !== leadId)
         );
 
         // Update selectedLead if it's the same lead
@@ -948,8 +957,8 @@ Type "DELETE ALL" to confirm:`;
     setSelectedLead(null);
   };
 
-  const totalLeads = leads.length;
-  const totalCost = leads.reduce((sum, lead) => sum + lead.cost_per_lead, 0);
+  const totalLeads = totalCount; // Use totalCount from API (all leads, not just current page)
+  // totalCost is now set from API response (all leads)
   const totalSales = actualSalesRevenue; // Use actual commission totals from policies
   const roi = totalCost > 0 ? ((totalSales - totalCost) / totalCost * 100).toFixed(1) : '0';
 
@@ -1643,7 +1652,7 @@ Type "DELETE ALL" to confirm:`;
         {/* Follow-Up Reminders - Full Width Above Table */}
         <div className="mb-6">
           <FollowUpReminders
-            leads={leads}
+            leads={followUpLeads}
             onLeadClick={handleLeadDoubleClick}
             onRemoveFollowUp={handleRemoveFollowUp}
           />

@@ -307,10 +307,11 @@ export default function CalendarPage() {
               const followUpEnd = new Date(followUpDate);
               followUpEnd.setHours(11, 0, 0, 0); // 1 hour appointment
 
-              await fetch('/api/calendar', {
+              const calendarResponse = await fetch('/api/calendar', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                  agent_id: selectedEvent.agent_id,
                   lead_id: selectedEvent.lead_id,
                   title: 'Follow-up Appointment',
                   description: 'Follow-up from presentation',
@@ -320,8 +321,13 @@ export default function CalendarPage() {
                 }),
               });
 
-              alert('Lead set to HOT. Follow-up appointment created for 7 days out.');
-              fetchEvents(); // Refresh calendar to show new appointment
+              if (calendarResponse.ok) {
+                alert('Lead set to HOT. Follow-up appointment created for 7 days out.');
+                fetchEvents(); // Refresh calendar to show new appointment
+              } else {
+                console.error('Failed to create follow-up appointment:', await calendarResponse.text());
+                alert('Lead updated to HOT, but failed to create follow-up appointment. Please create manually.');
+              }
             }
           }
         }

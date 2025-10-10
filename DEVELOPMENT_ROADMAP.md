@@ -1,7 +1,8 @@
 # The Forge - Development Roadmap & Strategic Plan
 
-**Last Updated:** October 10, 2025
+**Last Updated:** October 10, 2025 - 7:00 PM
 **Purpose:** Strategic planning document for platform expansion and AI integration
+**Current Focus:** Email Feature (This Weekend) → Content Marketing (Week 2)
 
 ---
 
@@ -30,6 +31,39 @@
 2. **Increase Show Rates** - Reduce no-shows through intelligent reminders and engagement
 3. **Increase Revenue** - Optimize every step of the sales funnel with data-driven insights
 4. **Scale Operations** - Support multiple agents with competitive gamification
+
+---
+
+## 🎯 CURRENT DEVELOPMENT FOCUS
+
+### Immediate Priority: Appointment Pipeline Growth
+**Goal:** Get to 60 appointments/month (15/week minimum)
+
+**Phase 1: Email Feature** 🔨 Starting This Weekend
+- **Timeline:** 1 hour coding, half day real time
+- **Impact:** 10-20 additional appointments/month from existing leads
+- **Fills:** 17-33% of monthly appointment goal
+- **Start Date:** This weekend
+- **Status:** Ready to build
+
+**Phase 2: Content Marketing Automation** 📅 Week 2
+- **Timeline:** 4-5 hours coding, 3-5 days real time
+- **Impact:** 50-200 warm inbound leads/month (at 6 months)
+- **Fills:** 100%+ of monthly appointment goal with WARM leads
+- **Start Date:** Following week after email launch
+- **Status:** Planned
+
+**The Strategy:**
+1. Build email this weekend → Immediate 10-20 appointments/month
+2. Build content marketing next week → Plant seeds for warm inbound pipeline
+3. Months 2-4: Content marketing matures, warm leads start flowing
+4. Month 6+: Sustainable pipeline of 100+ warm leads/month, less dependence on purchased leads
+
+**Why This Order:**
+- Email gives immediate results while content marketing ramps up
+- Content marketing creates long-term sustainable pipeline
+- Both together = short-term relief + long-term growth
+- Way cheaper per lead ($1-5 vs $10-30) once content marketing matures
 
 ---
 

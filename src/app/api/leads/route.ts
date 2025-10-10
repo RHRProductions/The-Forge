@@ -21,61 +21,135 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '100');
     const offset = (page - 1) * limit;
 
+    // Get filter parameters
+    const search = searchParams.get('search') || '';
+    const status = searchParams.get('status') || '';
+    const leadType = searchParams.get('lead_type') || '';
+    const city = searchParams.get('city') || '';
+    const state = searchParams.get('state') || '';
+    const zipCode = searchParams.get('zip_code') || '';
+    const source = searchParams.get('source') || '';
+    const temperature = searchParams.get('temperature') || '';
+
+    // Build WHERE clause for filters
+    const buildWhereClause = (baseWhere: string = '1=1') => {
+      let where = baseWhere;
+      const params: any[] = [];
+
+      if (search) {
+        const searchLower = search.toLowerCase();
+        const searchDigits = search.replace(/\D/g, '');
+
+        if (searchDigits.length > 0) {
+          where += ` AND (LOWER(first_name || ' ' || last_name) LIKE ? OR phone LIKE ? OR phone_2 LIKE ?)`;
+          params.push(`%${searchLower}%`, `%${searchDigits}%`, `%${searchDigits}%`);
+        } else {
+          where += ` AND LOWER(first_name || ' ' || last_name) LIKE ?`;
+          params.push(`%${searchLower}%`);
+        }
+      }
+
+      if (status) {
+        where += ` AND status = ?`;
+        params.push(status);
+      }
+
+      if (leadType) {
+        where += ` AND lead_type = ?`;
+        params.push(leadType);
+      }
+
+      if (city) {
+        where += ` AND LOWER(city) LIKE ?`;
+        params.push(`%${city.toLowerCase()}%`);
+      }
+
+      if (state) {
+        where += ` AND UPPER(state) = ?`;
+        params.push(state.toUpperCase());
+      }
+
+      if (zipCode) {
+        where += ` AND zip_code LIKE ?`;
+        params.push(`%${zipCode}%`);
+      }
+
+      if (source) {
+        where += ` AND LOWER(source) LIKE ?`;
+        params.push(`%${source.toLowerCase()}%`);
+      }
+
+      if (temperature) {
+        where += ` AND lead_temperature = ?`;
+        params.push(temperature);
+      }
+
+      return { where, params };
+    };
+
     let leads;
     let totalCount;
 
     if (userRole === 'admin') {
-      // Get total count
-      const countResult = db.prepare('SELECT COUNT(*) as count FROM leads').get() as any;
+      const { where, params } = buildWhereClause();
+
+      // Get total count with filters
+      const countResult = db.prepare(`SELECT COUNT(*) as count FROM leads WHERE ${where}`).get(...params) as any;
       totalCount = countResult.count;
 
-      // Get paginated leads
-      leads = db.prepare('SELECT * FROM leads ORDER BY created_at DESC LIMIT ? OFFSET ?').all(limit, offset);
+      // Get paginated leads with filters
+      leads = db.prepare(`SELECT * FROM leads WHERE ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`).all(...params, limit, offset);
     } else if (userRole === 'agent') {
-      // Get total count
+      const { where, params } = buildWhereClause('(l.owner_id = ? OR u.agent_id = ?)');
+
+      // Get total count with filters
       const countResult = db.prepare(`
         SELECT COUNT(DISTINCT l.id) as count FROM leads l
         LEFT JOIN users u ON l.owner_id = u.id
-        WHERE l.owner_id = ? OR u.agent_id = ?
-      `).get(userId, userId) as any;
+        WHERE ${where}
+      `).get(userId, userId, ...params) as any;
       totalCount = countResult.count;
 
-      // Get paginated leads
+      // Get paginated leads with filters
       leads = db.prepare(`
         SELECT l.* FROM leads l
         LEFT JOIN users u ON l.owner_id = u.id
-        WHERE l.owner_id = ? OR u.agent_id = ?
+        WHERE ${where}
         ORDER BY l.created_at DESC
         LIMIT ? OFFSET ?
-      `).all(userId, userId, limit, offset);
+      `).all(userId, userId, ...params, limit, offset);
     } else {
       // Setters see their agent's full lead list
       const user = db.prepare('SELECT agent_id FROM users WHERE id = ?').get(userId) as any;
 
       if (user?.agent_id) {
-        // Get total count
+        const { where, params } = buildWhereClause('(l.owner_id = ? OR u.agent_id = ?)');
+
+        // Get total count with filters
         const countResult = db.prepare(`
           SELECT COUNT(DISTINCT l.id) as count FROM leads l
           LEFT JOIN users u ON l.owner_id = u.id
-          WHERE l.owner_id = ? OR u.agent_id = ?
-        `).get(user.agent_id, user.agent_id) as any;
+          WHERE ${where}
+        `).get(user.agent_id, user.agent_id, ...params) as any;
         totalCount = countResult.count;
 
-        // Get paginated leads
+        // Get paginated leads with filters
         leads = db.prepare(`
           SELECT l.* FROM leads l
           LEFT JOIN users u ON l.owner_id = u.id
-          WHERE l.owner_id = ? OR u.agent_id = ?
+          WHERE ${where}
           ORDER BY l.created_at DESC
           LIMIT ? OFFSET ?
-        `).all(user.agent_id, user.agent_id, limit, offset);
+        `).all(user.agent_id, user.agent_id, ...params, limit, offset);
       } else {
-        // Get total count
-        const countResult = db.prepare('SELECT COUNT(*) as count FROM leads WHERE owner_id = ?').get(userId) as any;
+        const { where, params } = buildWhereClause('owner_id = ?');
+
+        // Get total count with filters
+        const countResult = db.prepare(`SELECT COUNT(*) as count FROM leads WHERE ${where}`).get(userId, ...params) as any;
         totalCount = countResult.count;
 
-        // Get paginated leads
-        leads = db.prepare('SELECT * FROM leads WHERE owner_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?').all(userId, limit, offset);
+        // Get paginated leads with filters
+        leads = db.prepare(`SELECT * FROM leads WHERE ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`).all(userId, ...params, limit, offset);
       }
     }
 

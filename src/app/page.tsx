@@ -457,6 +457,8 @@ function HomeContent() {
     zip_code: '',
     age_min: '',
     age_max: '',
+    source: '',
+    temperature: '',
     search: ''
   });
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
@@ -494,14 +496,15 @@ function HomeContent() {
   useEffect(() => {
     fetchLeads();
     fetchSalesRevenue();
-  }, [currentPage]);
+  }, [currentPage, filters]); // Re-fetch when page OR filters change
 
+  // Reset to page 1 when filters change (but not on initial load)
+  const isFirstRender = useRef(true);
   useEffect(() => {
-    applyFilters();
-  }, [leads, filters]);
-
-  // Reset to page 1 when filters change
-  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     setCurrentPage(1);
   }, [filters]);
 
@@ -534,10 +537,27 @@ function HomeContent() {
 
   const fetchLeads = async () => {
     try {
-      const response = await fetch(`/api/leads?page=${currentPage}&limit=100`);
+      // Build query params with filters
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: '100'
+      });
+
+      // Add active filters
+      if (filters.search) params.append('search', filters.search);
+      if (filters.status) params.append('status', filters.status);
+      if (filters.lead_type) params.append('lead_type', filters.lead_type);
+      if (filters.city) params.append('city', filters.city);
+      if (filters.state) params.append('state', filters.state);
+      if (filters.zip_code) params.append('zip_code', filters.zip_code);
+      if (filters.source) params.append('source', filters.source);
+      if (filters.temperature) params.append('temperature', filters.temperature);
+
+      const response = await fetch(`/api/leads?${params.toString()}`);
       if (response.ok) {
         const data = await response.json();
         setLeads(data.leads);
+        setFilteredLeads(data.leads); // Set filteredLeads to the server-filtered results
         setFollowUpLeads(data.followUpLeads);
         setTotalCost(data.stats.totalCost);
         setTotalPages(data.pagination.totalPages);
@@ -560,80 +580,8 @@ function HomeContent() {
     }
   };
 
-  const applyFilters = () => {
-    let filtered = leads;
-
-    // Search filter - searches name and phone
-    if (filters.search) {
-      const searchTerm = filters.search.toLowerCase().trim();
-      const searchDigits = filters.search.replace(/\D/g, ''); // Remove non-digits for phone search
-
-      filtered = filtered.filter(lead => {
-        const fullName = `${lead.first_name} ${lead.last_name}`.toLowerCase();
-
-        // Always check name match
-        const nameMatch = fullName.includes(searchTerm);
-
-        // Only check phone if there are digits to search for
-        let phoneMatch = false;
-        let phone2Match = false;
-
-        if (searchDigits.length > 0) {
-          const phone = lead.phone.replace(/\D/g, '');
-          const phone2 = lead.phone_2?.replace(/\D/g, '') || '';
-          phoneMatch = phone.includes(searchDigits);
-          phone2Match = phone2.includes(searchDigits);
-        }
-
-        return nameMatch || phoneMatch || phone2Match;
-      });
-    }
-
-    // Filter by status
-    if (filters.status) {
-      filtered = filtered.filter(lead => lead.status === filters.status);
-    }
-
-    // Filter by lead type
-    if (filters.lead_type) {
-      filtered = filtered.filter(lead => lead.lead_type === filters.lead_type);
-    }
-
-    // Filter by city
-    if (filters.city) {
-      filtered = filtered.filter(lead =>
-        lead.city.toLowerCase().includes(filters.city.toLowerCase())
-      );
-    }
-
-    // Filter by state
-    if (filters.state) {
-      filtered = filtered.filter(lead =>
-        lead.state?.toUpperCase() === filters.state.toUpperCase()
-      );
-    }
-
-    // Filter by zip code
-    if (filters.zip_code) {
-      filtered = filtered.filter(lead =>
-        lead.zip_code.includes(filters.zip_code)
-      );
-    }
-
-    // Filter by age range
-    if (filters.age_min) {
-      filtered = filtered.filter(lead =>
-        lead.age && lead.age >= parseInt(filters.age_min)
-      );
-    }
-    if (filters.age_max) {
-      filtered = filtered.filter(lead =>
-        lead.age && lead.age <= parseInt(filters.age_max)
-      );
-    }
-
-    setFilteredLeads(filtered);
-  };
+  // Filtering is now done server-side in the API
+  // filteredLeads is set directly from the API response in fetchLeads()
 
   const handleFilterChange = (field: keyof typeof filters, value: string) => {
     setFilters(prev => ({ ...prev, [field]: value }));

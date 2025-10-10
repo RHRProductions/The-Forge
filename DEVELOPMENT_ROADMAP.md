@@ -356,6 +356,163 @@ function generateInsights(userId, timeframe = "last_30_days") {
 
 ---
 
+### Feature 2.2.5: Real AI-Powered Insights (OpenAI/Claude API)
+
+**Status:** BACKBURNER - Consider for future implementation
+
+**Business Value:**
+Generate natural language insights from aggregate data using real AI (GPT-4 or Claude)
+
+**What It Does:**
+Instead of rule-based SQL insights, use AI to:
+- Analyze aggregate patterns across all metrics
+- Identify non-obvious correlations and trends
+- Generate conversational, actionable recommendations
+- Provide personalized coaching based on performance data
+- Detect anomalies and opportunities humans might miss
+
+**Example Output:**
+```
+💡 AI Insight: "Your contact rate drops 23% on Thursdays compared to Tuesdays.
+However, Thursday contacts are 15% more likely to book appointments. Consider
+focusing on quality over quantity on Thursdays - your warm leads respond better."
+
+📊 Pattern Detected: "Leads from Melissa Medicare who don't book within the first
+3 days rarely convert (4% vs 45% average). Recommend aggressive follow-up within
+72 hours or move to nurture campaign."
+
+⚡ Opportunity: "Your show rate for 10am appointments is 85% vs 68% average.
+You have availability - try booking more appointments at 10am this week."
+```
+
+**Data Sent to AI (Aggregate Only - No PII):**
+```json
+{
+  "timeframe": "Last 30 days",
+  "stats": {
+    "totalCalls": 150,
+    "contactRate": 35,
+    "appointmentRate": 12,
+    "showRate": 78,
+    "closeRate": 45,
+    "avgRevenuePerSale": 850
+  },
+  "patterns": {
+    "bestCallTime": "2pm-3pm (45% contact rate)",
+    "bestDay": "Tuesday (40% contact rate)",
+    "topSource": "Facebook Ads (ROI: 320%)",
+    "worstSource": "Cold Lists (ROI: -15%)"
+  },
+  "currentIssues": [
+    "12 warm leads not contacted in 7+ days",
+    "Only contacted 30% of new leads within 24h"
+  ]
+}
+```
+
+**Cost Limiting Strategies:**
+1. **1-hour caching** - Store insights in database, refresh max once per hour
+2. **Manual refresh only** - Button with rate limiting, not auto-generated
+3. **Daily cap** - Max 20 AI generations per day across all users
+4. **Aggregate data only** - Never send PII or individual lead details
+
+**Cost Estimate:**
+- GPT-4: ~$0.01-0.03 per insight generation (small prompt)
+- With 1-hour caching + 10 users: ~$0.30/day = ~$9/month
+- With 6-hour caching: ~$1.50/month
+- With daily cap (20/day): ~$15/month max
+
+**Implementation:**
+```typescript
+// /api/insights/ai route
+async function generateAIInsights(aggregateData) {
+  // Check cache first
+  const cached = await getCachedInsights();
+  if (cached && cached.generatedAt > Date.now() - 3600000) {
+    return cached;
+  }
+
+  // Call OpenAI API
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'gpt-4',
+      messages: [{
+        role: 'system',
+        content: 'You are a Medicare sales performance analyst. Analyze data and provide 3-5 actionable insights.'
+      }, {
+        role: 'user',
+        content: JSON.stringify(aggregateData)
+      }]
+    })
+  });
+
+  const insights = await response.json();
+
+  // Cache for 1 hour
+  await cacheInsights(insights);
+
+  return insights;
+}
+```
+
+**Database Schema:**
+```sql
+CREATE TABLE ai_insights_cache (
+  id INTEGER PRIMARY KEY,
+  user_id INTEGER,
+  insights JSON,
+  aggregate_data JSON,
+  generated_at DATETIME,
+  api_cost REAL,
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE ai_usage_tracking (
+  id INTEGER PRIMARY KEY,
+  user_id INTEGER,
+  generation_date DATE,
+  generation_count INTEGER,
+  total_cost REAL,
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+```
+
+**UI Changes:**
+- Add "🤖 Generate AI Insights" button (instead of auto-refresh)
+- Show "Last generated: 45 minutes ago"
+- Rate limit message: "Insights recently refreshed. Please wait X minutes."
+- Display conversational AI-generated insights alongside rule-based insights
+
+**Phase 1: MVP (2 weeks)**
+- [ ] OpenAI API integration
+- [ ] 1-hour caching system
+- [ ] Manual refresh button with rate limiting
+- [ ] Basic prompt engineering
+- [ ] Cost tracking
+
+**Phase 2: Advanced (1 week)**
+- [ ] Daily usage caps
+- [ ] Better prompt templates
+- [ ] Multiple insight categories
+- [ ] Admin dashboard for API usage monitoring
+
+**Implementation Time:** 3 weeks
+**Monthly Cost:** $5-15 depending on usage
+**Priority:** BACKBURNER - Implement after rule-based insights prove valuable
+
+**Notes:**
+- User requested to back-burner this (Oct 9, 2025)
+- Current SQL-based insights are working well
+- Revisit when there's budget for AI API costs
+- Consider when scaling to 20+ users where cost is amortized
+
+---
+
 ### Feature 2.3: AI Call Script Generator
 
 **Business Value:**
@@ -1217,6 +1374,83 @@ help you compare Medicare Advantage, Supplement, and Part D plans...</p>
 
 ---
 
+## Quick Win Ideas (2-6 Hours Each)
+
+**Status:** Ideas saved for future implementation (Oct 9, 2025)
+
+These are high-value, low-effort features that can be implemented quickly:
+
+### 1. **Export to CSV** ⏱️ 2-3 hours
+Download leads, activities, or analytics as CSV files
+- Export filtered leads to spreadsheet
+- Share data with team/accountant
+- Backup your data easily
+- Import into other tools
+- **Value:** Data portability, reporting, backups
+
+### 2. **Duplicate Lead Detection** ⏱️ 2-3 hours
+Stop buying the same lead twice
+- Warns when adding/importing duplicate phone/email
+- Shows existing lead details
+- Option to merge or skip
+- Saves money on duplicate purchases
+- **Value:** Prevent wasted money on duplicate leads
+
+### 3. **Bulk Actions on Leads** ⏱️ 4-5 hours
+Select multiple leads and act on them at once
+- Bulk update source/temperature
+- Bulk delete
+- Bulk assign to agent
+- Bulk export
+- **Value:** Massive time savings when managing hundreds of leads
+
+### 4. **Quick Search/Advanced Filters** ⏱️ 3-4 hours
+Find leads faster with better search
+- Search by name, phone, email, address
+- Filter by multiple criteria at once
+- Save common filter combinations
+- "Show me hot leads in Phoenix aged 65+"
+- **Value:** Find the right leads 10x faster
+
+### 5. **Lead Assignment Tool** ⏱️ 2-3 hours *(Admin feature)*
+Quickly distribute leads to agents
+- "Assign next 50 leads to Sarah"
+- Round-robin distribution
+- Assign by territory/zip code
+- Reassign leads from one agent to another
+- **Value:** Fair lead distribution, better territory management
+
+### 6. **Activity Quick Log** ⏱️ 3-4 hours
+Log calls faster with templates
+- "No Answer" button (1 click instead of 5)
+- "Left Voicemail" template
+- "Appointment Set" quick action
+- Save 30 seconds per call = 25 min/day on 50 calls
+- **Value:** Log activities 3x faster
+
+### 7. **Mobile Optimization** ⏱️ 4-6 hours
+Make it work better on phones
+- Better mobile lead cards
+- Tap-to-call improvements
+- Mobile-friendly forms
+- Swipe gestures
+- **Value:** Work from anywhere, call from phone
+
+### 8. **Dashboard Widgets/Customization** ⏱️ 3-4 hours
+Let users show/hide sections
+- Collapse Follow-Up Reminders
+- Hide stats you don't use
+- Rearrange sections
+- Personal preferences saved
+- **Value:** Cleaner UI, faster page load
+
+**Top Recommendations (by ROI):**
+1. Duplicate Detection - Saves real money immediately
+2. Export to CSV - Super useful for reporting
+3. Quick Search - Daily productivity boost
+
+---
+
 ## Implementation Priority & Timeline
 
 ### Phase 1: Quick Wins (Next 1-2 Months)
@@ -1224,8 +1458,9 @@ help you compare Medicare Advantage, Supplement, and Part D plans...</p>
 
 1. ✅ **Pagination** (DONE)
 2. ✅ **Performance optimization** (DONE)
-3. **AI Insights - Basic** (2 weeks)
+3. ✅ **Data Insights - Basic** (DONE - moved to Analytics page)
    - Best time to call analysis
+   - Best day of week analysis
    - Source performance comparison
    - Stale lead alerts
 4. **Basic Leaderboard** (1 week)

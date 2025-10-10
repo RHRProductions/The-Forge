@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import AIInsights from '../../components/AIInsights';
 
 interface AnalyticsData {
   personal: {
@@ -140,6 +141,11 @@ export default function AnalyticsPage() {
           >
             All Time
           </button>
+        </div>
+
+        {/* AI Insights Panel */}
+        <div className="mb-6">
+          <AIInsights />
         </div>
 
         {/* Personal Metrics */}

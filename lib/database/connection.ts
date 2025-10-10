@@ -226,6 +226,43 @@ function initializeDatabase() {
     );
   `);
 
+  // Create clients table for client management
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS clients (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      lead_id INTEGER,
+      first_name TEXT NOT NULL,
+      last_name TEXT NOT NULL,
+      email TEXT,
+      phone TEXT,
+      phone_2 TEXT,
+      date_of_birth TEXT,
+      address TEXT,
+      city TEXT,
+      state TEXT,
+      zip_code TEXT,
+      client_since DATE,
+      products TEXT,
+      notes TEXT,
+      created_by_user_id INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (lead_id) REFERENCES leads(id),
+      FOREIGN KEY (created_by_user_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS client_activities (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      client_id INTEGER NOT NULL,
+      activity_type TEXT NOT NULL,
+      notes TEXT,
+      created_by_user_id INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
+      FOREIGN KEY (created_by_user_id) REFERENCES users(id)
+    );
+  `);
+
   // Create indexes
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
@@ -256,6 +293,13 @@ function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_calendar_events_agent_id ON calendar_events(agent_id);
     CREATE INDEX IF NOT EXISTS idx_calendar_events_lead_id ON calendar_events(lead_id);
     CREATE INDEX IF NOT EXISTS idx_calendar_events_start_time ON calendar_events(start_time);
+
+    CREATE INDEX IF NOT EXISTS idx_clients_created_by ON clients(created_by_user_id);
+    CREATE INDEX IF NOT EXISTS idx_clients_lead_id ON clients(lead_id);
+    CREATE INDEX IF NOT EXISTS idx_clients_name ON clients(last_name, first_name);
+
+    CREATE INDEX IF NOT EXISTS idx_client_activities_client_id ON client_activities(client_id);
+    CREATE INDEX IF NOT EXISTS idx_client_activities_created_at ON client_activities(created_at);
   `);
 }
 

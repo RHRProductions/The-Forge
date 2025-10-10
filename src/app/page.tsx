@@ -1000,6 +1000,12 @@ Type "DELETE ALL" to confirm:`;
                 📊 Analytics
               </button>
               <button
+                onClick={() => router.push('/clients')}
+                className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded font-bold text-sm transition-colors whitespace-nowrap"
+              >
+                👥 Clients
+              </button>
+              <button
                 onClick={() => router.push('/calendar')}
                 className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-bold text-sm transition-colors whitespace-nowrap"
               >

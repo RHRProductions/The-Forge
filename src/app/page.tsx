@@ -447,6 +447,7 @@ function HomeContent() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [currentLeadIndex, setCurrentLeadIndex] = useState<number>(0);
   const [pendingChanges, setPendingChanges] = useState<Partial<Lead> | null>(null);
+  const [showNavMenu, setShowNavMenu] = useState(false);
   const [deleteStatus, setDeleteStatus] = useState<string>('');
   const [showDevMenu, setShowDevMenu] = useState(false);
   const [showBulkDeleteButton, setShowBulkDeleteButton] = useState(false);
@@ -508,6 +509,19 @@ function HomeContent() {
     }
     setCurrentPage(1);
   }, [filters]);
+
+  // Close navigation menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (showNavMenu && !target.closest('.nav-dropdown')) {
+        setShowNavMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showNavMenu]);
 
   // Auto-open lead modal if leadId is in URL (from calendar navigation)
   useEffect(() => {
@@ -943,38 +957,75 @@ Type "DELETE ALL" to confirm:`;
                 <div className="text-sm text-gray-300">{session.user?.name}</div>
                 <div className="text-xs text-gray-400">{session.user?.email}</div>
               </div>
-              <button
-                onClick={() => router.push('/analytics')}
-                className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded font-bold text-sm transition-colors whitespace-nowrap"
-              >
-                📊 Analytics
-              </button>
-              <button
-                onClick={() => router.push('/clients')}
-                className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded font-bold text-sm transition-colors whitespace-nowrap"
-              >
-                👥 Clients
-              </button>
-              <button
-                onClick={() => router.push('/pending-policies')}
-                className="bg-yellow-600 hover:bg-yellow-700 px-4 py-2 rounded font-bold text-sm transition-colors whitespace-nowrap"
-              >
-                ⏳ Pending
-              </button>
-              <button
-                onClick={() => router.push('/calendar')}
-                className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-bold text-sm transition-colors whitespace-nowrap"
-              >
-                📅 Calendar
-              </button>
-              {(session.user as any).role === 'admin' && (
+
+              {/* Navigation Dropdown */}
+              <div className="relative nav-dropdown">
                 <button
-                  onClick={() => router.push('/settings')}
-                  className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded font-bold text-sm transition-colors whitespace-nowrap"
+                  onClick={() => setShowNavMenu(!showNavMenu)}
+                  className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded font-bold text-sm transition-colors whitespace-nowrap flex items-center gap-2"
                 >
-                  ⚙️ Settings
+                  📱 Menu
+                  <span className="text-xs">{showNavMenu ? '▲' : '▼'}</span>
                 </button>
-              )}
+
+                {showNavMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border-2 border-black z-50">
+                    <div className="py-2">
+                      <button
+                        onClick={() => {
+                          router.push('/analytics');
+                          setShowNavMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-black font-semibold transition-colors flex items-center gap-2"
+                      >
+                        📊 Analytics
+                      </button>
+                      <button
+                        onClick={() => {
+                          router.push('/clients');
+                          setShowNavMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-black font-semibold transition-colors flex items-center gap-2"
+                      >
+                        👥 Clients
+                      </button>
+                      <button
+                        onClick={() => {
+                          router.push('/pending-policies');
+                          setShowNavMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-black font-semibold transition-colors flex items-center gap-2"
+                      >
+                        ⏳ Pending Policies
+                      </button>
+                      <button
+                        onClick={() => {
+                          router.push('/calendar');
+                          setShowNavMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-black font-semibold transition-colors flex items-center gap-2"
+                      >
+                        📅 Calendar
+                      </button>
+                      {(session.user as any).role === 'admin' && (
+                        <>
+                          <div className="border-t border-gray-200 my-2"></div>
+                          <button
+                            onClick={() => {
+                              router.push('/settings');
+                              setShowNavMenu(false);
+                            }}
+                            className="w-full text-left px-4 py-2 hover:bg-gray-100 text-black font-semibold transition-colors flex items-center gap-2"
+                          >
+                            ⚙️ Settings
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <button
                 onClick={() => signOut({ callbackUrl: '/login' })}
                 className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded font-bold text-sm transition-colors whitespace-nowrap"

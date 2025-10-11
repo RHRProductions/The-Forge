@@ -55,6 +55,7 @@ export default function AnalyticsPage() {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [timeFilter, setTimeFilter] = useState<'week' | 'month' | 'all'>('month');
+  const [showInsights, setShowInsights] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -145,7 +146,16 @@ export default function AnalyticsPage() {
 
         {/* AI Insights Panel */}
         <div className="mb-6">
-          <AIInsights />
+          {!showInsights ? (
+            <button
+              onClick={() => setShowInsights(true)}
+              className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-6 py-4 rounded-lg font-bold text-lg transition-all shadow-lg hover:shadow-xl"
+            >
+              💡 Show Data Insights
+            </button>
+          ) : (
+            <AIInsights />
+          )}
         </div>
 
         {/* Personal Metrics */}

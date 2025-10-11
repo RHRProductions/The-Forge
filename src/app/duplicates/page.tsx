@@ -30,6 +30,10 @@ export default function DuplicatesPage() {
   const [duplicateGroups, setDuplicateGroups] = useState<DuplicateGroup[]>([]);
   const [totalDuplicates, setTotalDuplicates] = useState(0);
   const [expandedGroups, setExpandedGroups] = useState<Set<number>>(new Set());
+  const [showMergeModal, setShowMergeModal] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<DuplicateGroup | null>(null);
+  const [primaryLeadId, setPrimaryLeadId] = useState<number | null>(null);
+  const [merging, setMerging] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -67,6 +71,69 @@ export default function DuplicatesPage() {
       newExpanded.add(index);
     }
     setExpandedGroups(newExpanded);
+  };
+
+  const openMergeModal = (group: DuplicateGroup) => {
+    setSelectedGroup(group);
+    setPrimaryLeadId(group.leads[0].id); // Default to oldest lead
+    setShowMergeModal(true);
+  };
+
+  const handleMerge = async () => {
+    if (!selectedGroup || !primaryLeadId) return;
+
+    setMerging(true);
+    try {
+      const mergeLeadIds = selectedGroup.leads
+        .filter(lead => lead.id !== primaryLeadId)
+        .map(lead => lead.id);
+
+      const response = await fetch('/api/leads/merge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          keepLeadId: primaryLeadId,
+          mergeLeadIds
+        })
+      });
+
+      if (response.ok) {
+        setShowMergeModal(false);
+        setSelectedGroup(null);
+        setPrimaryLeadId(null);
+        // Refresh duplicates list
+        await findDuplicates();
+      } else {
+        alert('Failed to merge leads');
+      }
+    } catch (error) {
+      console.error('Error merging leads:', error);
+      alert('Error merging leads');
+    } finally {
+      setMerging(false);
+    }
+  };
+
+  const handleDeleteLead = async (leadId: number) => {
+    if (!confirm('Are you sure you want to delete this lead? This cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/leads/${leadId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        // Refresh duplicates list
+        await findDuplicates();
+      } else {
+        alert('Failed to delete lead');
+      }
+    } catch (error) {
+      console.error('Error deleting lead:', error);
+      alert('Error deleting lead');
+    }
   };
 
   const formatPhoneNumber = (phone: string) => {
@@ -171,8 +238,17 @@ export default function DuplicatesPage() {
                       </div>
                     </div>
                   </div>
-                  <div>
+                  <div className="flex items-center gap-3">
                     {getMatchTypeBadge(group.matchType)}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openMergeModal(group);
+                      }}
+                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-bold transition-colors"
+                    >
+                      🔗 Merge
+                    </button>
                   </div>
                 </div>
 
@@ -248,6 +324,118 @@ export default function DuplicatesPage() {
           </div>
         )}
       </div>
+
+      {/* Merge Modal */}
+      {showMergeModal && selectedGroup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <h2 className="text-2xl font-bold mb-4">🔗 Merge Duplicate Leads</h2>
+
+              <div className="mb-6 p-4 bg-blue-50 border-2 border-blue-200 rounded">
+                <p className="text-sm text-blue-800">
+                  <strong>ℹ️ How merging works:</strong> Select which lead to keep as the primary record.
+                  All notes, activities, policies, and images from the other leads will be moved to the primary lead,
+                  then the duplicate leads will be deleted.
+                </p>
+              </div>
+
+              <div className="space-y-3 mb-6">
+                {selectedGroup.leads.map((lead, index) => (
+                  <div
+                    key={lead.id}
+                    className={`border-2 rounded-lg p-4 transition-colors ${
+                      primaryLeadId === lead.id
+                        ? 'border-green-600 bg-green-50'
+                        : 'border-gray-200 hover:border-gray-400'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="radio"
+                        id={`lead-${lead.id}`}
+                        name="primaryLead"
+                        checked={primaryLeadId === lead.id}
+                        onChange={() => setPrimaryLeadId(lead.id)}
+                        className="mt-1 h-5 w-5 text-green-600"
+                      />
+                      <label htmlFor={`lead-${lead.id}`} className="flex-1 cursor-pointer">
+                        <div className="font-bold text-lg mb-2">
+                          {formatName(lead.first_name)} {formatName(lead.last_name)}
+                          {index === 0 && (
+                            <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded">
+                              Oldest
+                            </span>
+                          )}
+                          {primaryLeadId === lead.id && (
+                            <span className="ml-2 px-2 py-1 bg-green-600 text-white text-xs font-semibold rounded">
+                              Primary
+                            </span>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <div className="text-gray-600">Phone</div>
+                            <div className="font-semibold">{formatPhoneNumber(lead.phone)}</div>
+                            {lead.phone_2 && (
+                              <div className="font-semibold text-gray-600">{formatPhoneNumber(lead.phone_2)}</div>
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-gray-600">Email</div>
+                            <div className="font-semibold">{lead.email || '-'}</div>
+                          </div>
+                          <div>
+                            <div className="text-gray-600">Location</div>
+                            <div className="font-semibold">
+                              {lead.city && lead.state
+                                ? `${lead.city}, ${lead.state} ${lead.zip_code || ''}`
+                                : '-'}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-gray-600">Created</div>
+                            <div className="font-semibold">
+                              {new Date(lead.created_at).toLocaleDateString()}
+                            </div>
+                          </div>
+                        </div>
+                      </label>
+                      <button
+                        onClick={() => handleDeleteLead(lead.id)}
+                        className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-sm font-bold transition-colors"
+                      >
+                        🗑️ Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => {
+                    setShowMergeModal(false);
+                    setSelectedGroup(null);
+                    setPrimaryLeadId(null);
+                  }}
+                  disabled={merging}
+                  className="px-6 py-3 bg-gray-300 hover:bg-gray-400 text-black rounded font-bold transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleMerge}
+                  disabled={merging || !primaryLeadId || selectedGroup.leads.length < 2}
+                  className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded font-bold transition-colors disabled:opacity-50"
+                >
+                  {merging ? '⏳ Merging...' : '🔗 Merge Selected'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

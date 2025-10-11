@@ -79,6 +79,12 @@ export async function POST(request: NextRequest) {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(agent_id, lead_id || null, title, description || null, start_time, end_time, event_type || 'appointment', userId);
 
+    // If this is linked to a lead and it's an appointment, update lead status
+    if (lead_id && event_type === 'appointment') {
+      db.prepare('UPDATE leads SET status = ? WHERE id = ?')
+        .run('appointment', lead_id);
+    }
+
     // Get the newly created event
     const newEvent = db.prepare('SELECT * FROM calendar_events WHERE id = ?').get(result.lastInsertRowid);
 

@@ -866,10 +866,26 @@ Type "DELETE ALL" to confirm:`;
     }
   };
 
-  const handleLeadDoubleClick = (lead: Lead) => {
+  const handleLeadDoubleClick = async (lead: Lead) => {
     const index = filteredLeads.findIndex(l => l.id === lead.id);
     setCurrentLeadIndex(index);
-    setSelectedLead(lead);
+
+    // Fetch fresh lead data from server to ensure we have the latest status
+    try {
+      const response = await fetch(`/api/leads/${lead.id}`);
+      if (response.ok) {
+        const freshLead = await response.json();
+        setSelectedLead(freshLead);
+      } else {
+        // Fallback to cached data if fetch fails
+        setSelectedLead(lead);
+      }
+    } catch (error) {
+      console.error('Error fetching fresh lead data:', error);
+      // Fallback to cached data if fetch fails
+      setSelectedLead(lead);
+    }
+
     setShowLeadDetail(true);
     setPendingChanges(null);
   };

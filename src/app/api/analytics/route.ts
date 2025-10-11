@@ -165,10 +165,10 @@ export async function GET(request: NextRequest) {
       `).all() as any[];
 
       // Geographic performance (by city and state)
-      // Normalize city names by removing state suffixes (Colorado, Co, CO, etc.)
+      // Normalize city names to "City Co" format for consistency
       const geoPerformance = db.prepare(`
         SELECT
-          TRIM(
+          (TRIM(
             REPLACE(
               REPLACE(
                 REPLACE(
@@ -182,7 +182,7 @@ export async function GET(request: NextRequest) {
               ),
               ' colorado', ''
             )
-          ) as city,
+          ) || ' Co') as city,
           l.state,
           COUNT(DISTINCT l.id) as totalLeads,
           COUNT(DISTINCT CASE WHEN la.outcome IN ('answered', 'scheduled') THEN l.id END) as contacted,

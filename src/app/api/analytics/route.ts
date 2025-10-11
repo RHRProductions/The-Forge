@@ -225,6 +225,65 @@ export async function GET(request: NextRequest) {
         GROUP BY l.lead_temperature
       `).all() as any[];
 
+      // Age group performance
+      const ageGroupPerformance = db.prepare(`
+        SELECT
+          CASE
+            WHEN l.age < 30 THEN 'Under 30'
+            WHEN l.age >= 30 AND l.age < 40 THEN '30-39'
+            WHEN l.age >= 40 AND l.age < 50 THEN '40-49'
+            WHEN l.age >= 50 AND l.age < 60 THEN '50-59'
+            WHEN l.age >= 60 AND l.age < 70 THEN '60-69'
+            WHEN l.age >= 70 THEN '70+'
+            ELSE 'Unknown'
+          END as ageGroup,
+          COUNT(DISTINCT l.id) as totalLeads,
+          COUNT(DISTINCT CASE WHEN la.outcome IN ('answered', 'scheduled') THEN l.id END) as contacted,
+          COUNT(DISTINCT CASE WHEN la.outcome = 'answered' THEN l.id END) as answeredNoAppt,
+          COUNT(DISTINCT CASE WHEN la.outcome = 'scheduled' THEN l.id END) as appointments,
+          COUNT(DISTINCT lp.lead_id) as sales
+        FROM leads l
+        LEFT JOIN lead_activities la ON l.id = la.lead_id
+        LEFT JOIN lead_policies lp ON l.id = lp.lead_id
+        WHERE l.age IS NOT NULL ${dateFilter.replace('la.created_at', 'l.created_at')}
+        GROUP BY ageGroup
+        ORDER BY MIN(l.age)
+      `).all() as any[];
+
+      // Time and day combination performance (power hours)
+      const powerHours = db.prepare(`
+        SELECT
+          CAST(strftime('%w', la.created_at) AS INTEGER) as dayOfWeek,
+          CAST(strftime('%H', la.created_at) AS INTEGER) as hour,
+          COUNT(CASE WHEN la.activity_type = 'call' THEN 1 END) as dials,
+          COUNT(CASE WHEN la.activity_type = 'call' AND la.outcome IN ('answered', 'scheduled') THEN 1 END) as contacts,
+          COUNT(CASE WHEN la.outcome = 'scheduled' THEN 1 END) as appointments
+        FROM lead_activities la
+        WHERE la.activity_type = 'call' ${dateFilter.replace('la.created_at', 'la.created_at')}
+        GROUP BY dayOfWeek, hour
+        HAVING dials >= 5
+        ORDER BY (CAST(contacts AS REAL) / dials) DESC
+        LIMIT 10
+      `).all() as any[];
+
+      // Outcome analysis - answered vs not answered, booked vs not booked
+      const outcomeAnalysis = db.prepare(`
+        SELECT
+          CASE
+            WHEN la.outcome = 'answered' THEN 'Answered - No Appointment'
+            WHEN la.outcome = 'scheduled' THEN 'Answered - Appointment Set'
+            WHEN la.outcome = 'no_answer' THEN 'No Answer'
+            WHEN la.outcome = 'disconnected' THEN 'Disconnected'
+            ELSE 'Other'
+          END as outcomeCategory,
+          COUNT(*) as count,
+          COUNT(DISTINCT la.lead_id) as uniqueLeads
+        FROM lead_activities la
+        WHERE la.activity_type = 'call' ${dateFilter.replace('la.created_at', 'la.created_at')}
+        GROUP BY outcomeCategory
+        ORDER BY count DESC
+      `).all() as any[];
+
       aggregateInsights = {
         timeOfDay: timeOfDayData,
         sourcePerformance,
@@ -232,6 +291,9 @@ export async function GET(request: NextRequest) {
         dialingPatterns,
         dayOfWeek: dayOfWeekData,
         temperaturePerformance,
+        ageGroupPerformance,
+        powerHours,
+        outcomeAnalysis,
       };
     }
 

@@ -400,38 +400,66 @@ export default function AnalyticsPage() {
             )}
 
             {/* Best Times to Call */}
-            {analytics.aggregateInsights.timeOfDay.length > 0 && (
-              <div className="mb-8">
-                <h3 className="text-2xl font-bold mb-4">Best Times to Call</h3>
+            <div className="mb-8">
+              <h3 className="text-2xl font-bold mb-4">📞 Best Times to Call</h3>
+              {analytics.aggregateInsights.timeOfDay.length > 0 ? (
                 <div className="bg-white border-2 border-gray-300 rounded-lg p-6">
+                  <div className="mb-4 text-sm text-gray-600">
+                    Contact rates by hour of day • Hover over bars for details
+                  </div>
                   <div className="flex gap-2 items-end h-64">
-                    {analytics.aggregateInsights.timeOfDay.map((hour) => {
-                      const maxContacts = Math.max(...analytics.aggregateInsights!.timeOfDay.map(h => h.contacts));
-                      const height = maxContacts > 0 ? (hour.contacts / maxContacts) * 100 : 0;
-                      const contactRate = hour.dials > 0 ? (hour.contacts / hour.dials) * 100 : 0;
+                    {Array.from({ length: 24 }, (_, i) => {
+                      const hourData = analytics.aggregateInsights!.timeOfDay.find(h => h.hour === i);
+                      const dials = hourData?.dials || 0;
+                      const contacts = hourData?.contacts || 0;
+                      const appointments = hourData?.appointments || 0;
+
+                      const maxContacts = Math.max(...analytics.aggregateInsights!.timeOfDay.map(h => h.contacts), 1);
+                      const height = contacts > 0 ? (contacts / maxContacts) * 100 : 0;
+                      const contactRate = dials > 0 ? (contacts / dials) * 100 : 0;
+                      const apptRate = contacts > 0 ? (appointments / contacts) * 100 : 0;
 
                       return (
-                        <div key={hour.hour} className="flex-1 flex flex-col justify-end items-center group relative">
+                        <div key={i} className="flex-1 flex flex-col justify-end items-center group relative">
                           <div
-                            className="w-full bg-gradient-to-t from-green-600 to-green-400 rounded-t hover:from-green-700 hover:to-green-500 transition-colors"
-                            style={{ height: `${height}%` }}
-                            title={`${hour.hour}:00 - ${hour.contacts} contacts (${contactRate.toFixed(1)}% rate)`}
+                            className={`w-full rounded-t transition-colors ${
+                              dials > 0
+                                ? 'bg-gradient-to-t from-green-600 to-green-400 hover:from-green-700 hover:to-green-500 cursor-pointer'
+                                : 'bg-gray-100'
+                            }`}
+                            style={{ height: `${Math.max(height, dials > 0 ? 5 : 0)}%` }}
+                            title={dials > 0 ? `${i}:00 - ${contacts} contacts (${contactRate.toFixed(1)}% rate)` : `${i}:00 - No data`}
                           >
-                            <div className="hidden group-hover:block absolute bottom-full mb-2 bg-black text-white text-xs p-2 rounded whitespace-nowrap">
-                              {hour.hour % 12 || 12}:00 {hour.hour >= 12 ? 'PM' : 'AM'}<br/>
-                              Dials: {hour.dials}<br/>
-                              Contacts: {hour.contacts}<br/>
-                              Rate: {contactRate.toFixed(1)}%
-                            </div>
+                            {dials > 0 && (
+                              <div className="hidden group-hover:block absolute bottom-full mb-2 bg-black text-white text-xs p-3 rounded whitespace-nowrap z-10 shadow-lg">
+                                <div className="font-bold mb-1">{i % 12 || 12}:00 {i >= 12 ? 'PM' : 'AM'}</div>
+                                <div>Dials: {dials}</div>
+                                <div>Contacts: {contacts} ({contactRate.toFixed(1)}%)</div>
+                                <div>Appointments: {appointments} {contacts > 0 && `(${apptRate.toFixed(1)}%)`}</div>
+                              </div>
+                            )}
                           </div>
-                          <div className="text-xs mt-2 font-bold">{hour.hour % 12 || 12}{hour.hour >= 12 ? 'P' : 'A'}</div>
+                          <div className={`text-xs mt-2 ${dials > 0 ? 'font-bold' : 'text-gray-400'}`}>
+                            {i % 12 || 12}{i >= 12 ? 'P' : 'A'}
+                          </div>
                         </div>
                       );
                     })}
                   </div>
+                  <div className="mt-4 text-xs text-gray-600 text-center">
+                    💡 Tip: Focus your calling during hours with the highest contact rates to maximize efficiency
+                  </div>
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="bg-white border-2 border-gray-300 rounded-lg p-8 text-center">
+                  <div className="text-4xl mb-3">📊</div>
+                  <p className="text-gray-600 mb-2">Not enough calling data yet to analyze best times</p>
+                  <p className="text-sm text-gray-500">
+                    Keep logging call activities with timestamps to see when people pick up most often!
+                  </p>
+                </div>
+              )}
+            </div>
 
             {/* Day of Week Performance */}
             {analytics.aggregateInsights.dayOfWeek.length > 0 && (
@@ -576,6 +604,149 @@ export default function AnalyticsPage() {
                       </div>
                     );
                   })}
+                </div>
+              </div>
+            )}
+
+            {/* Age Group Performance */}
+            {analytics.aggregateInsights.ageGroupPerformance && analytics.aggregateInsights.ageGroupPerformance.length > 0 && (
+              <div className="mb-8">
+                <h3 className="text-2xl font-bold mb-4">🎯 Performance by Age Group</h3>
+                <div className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden">
+                  <table className="w-full">
+                    <thead className="bg-black text-white">
+                      <tr>
+                        <th className="p-3 text-left">Age Group</th>
+                        <th className="p-3 text-center">Total Leads</th>
+                        <th className="p-3 text-center">Contact Rate</th>
+                        <th className="p-3 text-center">Answered No Appt</th>
+                        <th className="p-3 text-center">Appointment Rate</th>
+                        <th className="p-3 text-center">Close Rate</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {analytics.aggregateInsights.ageGroupPerformance.map((group:any, index:number) => {
+                        const contactRate = group.totalLeads > 0 ? (group.contacted / group.totalLeads) * 100 : 0;
+                        const apptRate = group.totalLeads > 0 ? (group.appointments / group.totalLeads) * 100 : 0;
+                        const closeRate = group.totalLeads > 0 ? (group.sales / group.totalLeads) * 100 : 0;
+                        const answeredNoApptRate = group.totalLeads > 0 ? (group.answeredNoAppt / group.totalLeads) * 100 : 0;
+
+                        return (
+                          <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                            <td className="p-3 font-bold">{group.ageGroup}</td>
+                            <td className="p-3 text-center">{group.totalLeads}</td>
+                            <td className="p-3 text-center">{contactRate.toFixed(1)}%</td>
+                            <td className="p-3 text-center text-orange-600">
+                              {group.answeredNoAppt} ({answeredNoApptRate.toFixed(1)}%)
+                            </td>
+                            <td className="p-3 text-center font-bold text-purple-600">{apptRate.toFixed(1)}%</td>
+                            <td className="p-3 text-center font-bold text-green-600">{closeRate.toFixed(1)}%</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Power Hours - Best Day/Time Combinations */}
+            {analytics.aggregateInsights.powerHours && analytics.aggregateInsights.powerHours.length > 0 && (
+              <div className="mb-8">
+                <h3 className="text-2xl font-bold mb-4">⚡ Power Hours - Best Day & Time Combinations</h3>
+                <div className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden">
+                  <table className="w-full">
+                    <thead className="bg-black text-white">
+                      <tr>
+                        <th className="p-3 text-left">Rank</th>
+                        <th className="p-3 text-left">Day & Time</th>
+                        <th className="p-3 text-center">Dials</th>
+                        <th className="p-3 text-center">Contacts</th>
+                        <th className="p-3 text-center">Contact Rate</th>
+                        <th className="p-3 text-center">Appointments</th>
+                        <th className="p-3 text-center">Appt Rate</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {analytics.aggregateInsights.powerHours.map((slot:any, index:number) => {
+                        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                        const contactRate = slot.dials > 0 ? (slot.contacts / slot.dials) * 100 : 0;
+                        const apptRate = slot.contacts > 0 ? (slot.appointments / slot.contacts) * 100 : 0;
+                        const hour12 = slot.hour % 12 || 12;
+                        const ampm = slot.hour >= 12 ? 'PM' : 'AM';
+
+                        return (
+                          <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                            <td className="p-3 font-bold text-2xl text-gray-400">#{index + 1}</td>
+                            <td className="p-3 font-bold">
+                              {dayNames[slot.dayOfWeek]} {hour12}:00 {ampm}
+                            </td>
+                            <td className="p-3 text-center">{slot.dials}</td>
+                            <td className="p-3 text-center font-bold">{slot.contacts}</td>
+                            <td className="p-3 text-center">
+                              <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full font-bold">
+                                {contactRate.toFixed(1)}%
+                              </span>
+                            </td>
+                            <td className="p-3 text-center font-bold">{slot.appointments}</td>
+                            <td className="p-3 text-center">
+                              <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full font-bold">
+                                {apptRate.toFixed(1)}%
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  <div className="bg-blue-50 p-4 border-t border-blue-200">
+                    <p className="text-sm text-blue-900">
+                      💡 <strong>Pro Tip:</strong> These are your highest-performing time slots. Schedule your most important calling sessions during these windows to maximize results!
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Outcome Analysis */}
+            {analytics.aggregateInsights.outcomeAnalysis && analytics.aggregateInsights.outcomeAnalysis.length > 0 && (
+              <div className="mb-8">
+                <h3 className="text-2xl font-bold mb-4">📊 Call Outcome Breakdown</h3>
+                <div className="bg-white border-2 border-gray-300 rounded-lg p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {analytics.aggregateInsights.outcomeAnalysis.map((outcome:any, index:number) => {
+                      const total = analytics.aggregateInsights!.outcomeAnalysis.reduce((sum:number, o:any) => sum + o.count, 0);
+                      const percentage = total > 0 ? (outcome.count / total) * 100 : 0;
+
+                      const colors:{[key:string]: {bg: string, text: string, icon: string}} = {
+                        'Answered - Appointment Set': { bg: 'bg-green-500', text: 'text-green-700', icon: '✅' },
+                        'Answered - No Appointment': { bg: 'bg-orange-500', text: 'text-orange-700', icon: '📞' },
+                        'No Answer': { bg: 'bg-gray-500', text: 'text-gray-700', icon: '❌' },
+                        'Disconnected': { bg: 'bg-red-500', text: 'text-red-700', icon: '🚫' },
+                      };
+
+                      const color = colors[outcome.outcomeCategory] || { bg: 'bg-blue-500', text: 'text-blue-700', icon: '📋' };
+
+                      return (
+                        <div key={index} className={`${color.bg} text-white p-6 rounded-lg border-4 ${color.bg.replace('bg-', 'border-')}`}>
+                          <div className="text-3xl mb-2">{color.icon}</div>
+                          <div className="text-sm font-bold uppercase opacity-90">{outcome.outcomeCategory}</div>
+                          <div className="text-4xl font-black mt-2">{outcome.count}</div>
+                          <div className="mt-2 text-sm opacity-90">
+                            {percentage.toFixed(1)}% of all calls
+                          </div>
+                          <div className="mt-1 text-xs opacity-75">
+                            {outcome.uniqueLeads} unique leads
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-6 bg-yellow-50 border-l-4 border-yellow-500 p-4">
+                    <p className="text-sm text-yellow-900">
+                      <strong>Insight:</strong> Track the "Answered - No Appointment" category to identify opportunities for improving your booking skills and script!
+                    </p>
+                  </div>
                 </div>
               </div>
             )}

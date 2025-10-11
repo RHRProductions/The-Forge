@@ -2168,6 +2168,7 @@ function LeadDetailForm({
                 <option value="follow_up_needed">Follow Up</option>
                 <option value="not_set">Not Set</option>
                 <option value="appointment_set">Appointment Set</option>
+                <option value="pending">Pending</option>
                 <option value="refund_needed">Refund Needed</option>
                 <option value="closed">Closed</option>
               </select>

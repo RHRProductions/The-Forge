@@ -36,6 +36,7 @@ export default function PendingPoliciesPage() {
   const [policies, setPolicies] = useState<PendingPolicy[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPolicy, setSelectedPolicy] = useState<PendingPolicy | null>(null);
+  const [issuingPolicy, setIssuingPolicy] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -81,6 +82,34 @@ export default function PendingPoliciesPage() {
   const formatCurrency = (amount: number) => {
     if (!amount) return '$0.00';
     return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const handleIssuePolicy = async () => {
+    if (!selectedPolicy) return;
+
+    if (!confirm(`Mark this policy as issued and create client record for ${formatName(selectedPolicy.first_name)} ${formatName(selectedPolicy.last_name)}?`)) {
+      return;
+    }
+
+    setIssuingPolicy(true);
+    try {
+      const response = await fetch(`/api/policies/${selectedPolicy.id}/issue`, {
+        method: 'POST'
+      });
+
+      if (response.ok) {
+        setSelectedPolicy(null);
+        await fetchPolicies(); // Refresh the list
+        alert('Policy issued successfully! Client record created.');
+      } else {
+        alert('Failed to issue policy');
+      }
+    } catch (error) {
+      console.error('Error issuing policy:', error);
+      alert('Error issuing policy');
+    } finally {
+      setIssuingPolicy(false);
+    }
   };
 
   if (status === 'loading' || loading) {
@@ -199,16 +228,10 @@ export default function PendingPoliciesPage() {
       {selectedPolicy && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
+            <div className="mb-6">
               <h2 className="text-2xl font-bold">
                 {formatName(selectedPolicy.first_name)} {formatName(selectedPolicy.last_name)}
               </h2>
-              <button
-                onClick={() => setSelectedPolicy(null)}
-                className="text-gray-500 hover:text-black text-2xl"
-              >
-                ×
-              </button>
             </div>
 
             {/* Contact Info */}
@@ -313,11 +336,29 @@ export default function PendingPoliciesPage() {
 
             {/* Notes */}
             {selectedPolicy.notes && (
-              <div className="bg-gray-50 rounded p-4">
+              <div className="bg-gray-50 rounded p-4 mb-6">
                 <h3 className="font-bold text-lg mb-3">Notes</h3>
                 <div className="whitespace-pre-wrap">{selectedPolicy.notes}</div>
               </div>
             )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 justify-end border-t pt-4">
+              <button
+                onClick={() => setSelectedPolicy(null)}
+                disabled={issuingPolicy}
+                className="px-6 py-3 bg-gray-300 hover:bg-gray-400 text-black rounded font-bold transition-colors disabled:opacity-50"
+              >
+                Close
+              </button>
+              <button
+                onClick={handleIssuePolicy}
+                disabled={issuingPolicy}
+                className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded font-bold transition-colors disabled:opacity-50"
+              >
+                {issuingPolicy ? '⏳ Issuing...' : '✅ Mark as Issued'}
+              </button>
+            </div>
           </div>
         </div>
       )}

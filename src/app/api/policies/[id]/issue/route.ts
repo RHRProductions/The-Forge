@@ -77,9 +77,9 @@ export async function POST(
     db.prepare('UPDATE lead_policies SET status = ? WHERE id = ?')
       .run('active', policyId);
 
-    // Update the lead's lead_type to 'client'
-    db.prepare('UPDATE leads SET lead_type = ? WHERE id = ?')
-      .run('client', policy.lead_id);
+    // Update the lead's lead_type to 'client' and status to 'issued'
+    db.prepare('UPDATE leads SET lead_type = ?, status = ? WHERE id = ?')
+      .run('client', 'issued', policy.lead_id);
 
     return NextResponse.json({
       success: true,

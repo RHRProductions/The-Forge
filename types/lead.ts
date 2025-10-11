@@ -122,6 +122,7 @@ export type LeadStatus =
   | 'not_set'
   | 'appointment_set'
   | 'pending'
+  | 'issued'
   | 'qualified'
   | 'not_qualified'
   | 'refund_needed'

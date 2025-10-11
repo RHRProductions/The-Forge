@@ -1769,6 +1769,7 @@ Type "DELETE ALL" to confirm:`;
                             lead.status === 'follow_up_needed' ? 'bg-orange-100 text-orange-800' :
                             lead.status === 'appointment_set' ? 'bg-purple-100 text-purple-800' :
                             lead.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            lead.status === 'issued' ? 'bg-green-100 text-green-800' :
                             lead.status === 'qualified' ? 'bg-green-100 text-green-800' :
                             lead.status === 'not_qualified' ? 'bg-red-100 text-red-800' :
                             lead.status === 'refund_needed' ? 'bg-red-100 text-red-800' :
@@ -2165,6 +2166,7 @@ function LeadDetailForm({
                 <option value="not_set">Not Set</option>
                 <option value="appointment_set">Appointment Set</option>
                 <option value="pending">Pending</option>
+                <option value="issued">Issued</option>
                 <option value="refund_needed">Refund Needed</option>
                 <option value="closed">Closed</option>
               </select>

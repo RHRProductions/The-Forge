@@ -956,6 +956,12 @@ Type "DELETE ALL" to confirm:`;
                 👥 Clients
               </button>
               <button
+                onClick={() => router.push('/pending-policies')}
+                className="bg-yellow-600 hover:bg-yellow-700 px-4 py-2 rounded font-bold text-sm transition-colors whitespace-nowrap"
+              >
+                ⏳ Pending
+              </button>
+              <button
                 onClick={() => router.push('/calendar')}
                 className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-bold text-sm transition-colors whitespace-nowrap"
               >

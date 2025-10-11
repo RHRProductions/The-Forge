@@ -163,6 +163,20 @@ export default function ClientsPage() {
     addActivity('call', notes || 'Called client');
   };
 
+  const formatPhoneNumber = (phone: string) => {
+    if (!phone) return '';
+    const cleaned = phone.replace(/\D/g, '');
+    if (cleaned.length === 10) {
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+    }
+    return phone;
+  };
+
+  const formatName = (name: string) => {
+    if (!name) return '';
+    return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+  };
+
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -200,9 +214,12 @@ export default function ClientsPage() {
         {/* Stats */}
         <div className="mb-6 bg-gray-100 p-4 rounded">
           <div className="text-2xl font-bold">Total Clients: {clients.length}</div>
+          <div className="text-sm text-gray-600 mt-1">
+            Active clients with issued policies
+          </div>
         </div>
 
-        {/* Client List */}
+        {/* Client Table */}
         {clients.length === 0 ? (
           <div className="text-center py-12 bg-gray-50 rounded border-2 border-dashed">
             <div className="text-6xl mb-4">👥</div>
@@ -216,49 +233,76 @@ export default function ClientsPage() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {clients.map((client) => (
-              <div
-                key={client.id}
-                onClick={() => openClientDetail(client)}
-                className="bg-white border-2 border-gray-200 rounded-lg p-4 hover:border-red-600 transition-colors cursor-pointer"
-              >
-                <div className="font-bold text-xl mb-2">
-                  {client.first_name} {client.last_name}
-                </div>
-
-                {client.phone && (
-                  <div className="text-sm mb-1">
-                    📞 {client.phone}
-                  </div>
-                )}
-
-                {client.email && (
-                  <div className="text-sm mb-1">
-                    ✉️ {client.email}
-                  </div>
-                )}
-
-                {client.city && client.state && (
-                  <div className="text-sm mb-1">
-                    📍 {client.city}, {client.state}
-                  </div>
-                )}
-
-                {client.products && (
-                  <div className="mt-3 text-sm">
-                    <div className="font-semibold">Products:</div>
-                    <div className="text-gray-700 whitespace-pre-wrap">{client.products}</div>
-                  </div>
-                )}
-
-                {client.client_since && (
-                  <div className="mt-3 text-xs text-gray-500">
-                    Client since: {new Date(client.client_since).toLocaleDateString()}
-                  </div>
-                )}
-              </div>
-            ))}
+          <div className="bg-white shadow-lg rounded-lg overflow-hidden border-4 border-black">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-black text-white">
+                  <tr>
+                    <th className="p-2 sm:p-4 text-left text-sm sm:text-base">Name</th>
+                    <th className="p-2 sm:p-4 text-left text-sm sm:text-base">Phone</th>
+                    <th className="p-2 sm:p-4 text-left text-sm sm:text-base">Address</th>
+                    <th className="p-2 sm:p-4 text-left text-sm sm:text-base">Products</th>
+                    <th className="p-2 sm:p-4 text-left text-sm sm:text-base">Client Since</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {clients.map((client) => (
+                    <tr
+                      key={client.id}
+                      className="border-b hover:bg-gray-50 cursor-pointer"
+                      onClick={() => openClientDetail(client)}
+                    >
+                      <td className="p-2 sm:p-4">
+                        <div>
+                          <div className="font-medium text-xs sm:text-base">
+                            {formatName(client.first_name)} {formatName(client.last_name)}
+                          </div>
+                          {client.email && (
+                            <div className="text-xs text-gray-500">{client.email}</div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-2 sm:p-4">
+                        <div className="text-xs sm:text-sm">
+                          <div className="font-medium">{formatPhoneNumber(client.phone)}</div>
+                          {client.phone_2 && (
+                            <div className="text-gray-500">{formatPhoneNumber(client.phone_2)}</div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-2 sm:p-4">
+                        <div className="text-xs sm:text-sm">
+                          {client.address && <div>{client.address}</div>}
+                          {client.city && client.state && (
+                            <div className="text-gray-500">
+                              {client.city}, {client.state} {client.zip_code}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-2 sm:p-4">
+                        <div className="text-xs sm:text-sm">
+                          {client.products ? (
+                            <div className="whitespace-pre-wrap">{client.products}</div>
+                          ) : (
+                            <span className="text-gray-400">No products listed</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-2 sm:p-4">
+                        <div className="text-xs sm:text-sm">
+                          {client.client_since ? (
+                            new Date(client.client_since).toLocaleDateString()
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
@@ -445,7 +489,7 @@ export default function ClientsPage() {
           <div className="bg-white rounded-lg p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold">
-                {selectedClient.first_name} {selectedClient.last_name}
+                {formatName(selectedClient.first_name)} {formatName(selectedClient.last_name)}
               </h2>
               <button
                 onClick={() => setSelectedClient(null)}
@@ -461,7 +505,13 @@ export default function ClientsPage() {
                 {selectedClient.phone && (
                   <div>
                     <div className="text-xs text-gray-500">Phone</div>
-                    <div className="font-semibold">📞 {selectedClient.phone}</div>
+                    <div className="font-semibold">📞 {formatPhoneNumber(selectedClient.phone)}</div>
+                  </div>
+                )}
+                {selectedClient.phone_2 && (
+                  <div>
+                    <div className="text-xs text-gray-500">Phone 2</div>
+                    <div className="font-semibold">📞 {formatPhoneNumber(selectedClient.phone_2)}</div>
                   </div>
                 )}
                 {selectedClient.email && (
@@ -470,10 +520,24 @@ export default function ClientsPage() {
                     <div className="font-semibold">✉️ {selectedClient.email}</div>
                   </div>
                 )}
+                {selectedClient.address && (
+                  <div>
+                    <div className="text-xs text-gray-500">Address</div>
+                    <div className="font-semibold">{selectedClient.address}</div>
+                  </div>
+                )}
                 {selectedClient.city && selectedClient.state && (
                   <div>
                     <div className="text-xs text-gray-500">Location</div>
                     <div className="font-semibold">📍 {selectedClient.city}, {selectedClient.state}</div>
+                  </div>
+                )}
+                {selectedClient.date_of_birth && (
+                  <div>
+                    <div className="text-xs text-gray-500">Date of Birth</div>
+                    <div className="font-semibold">
+                      {new Date(selectedClient.date_of_birth).toLocaleDateString()}
+                    </div>
                   </div>
                 )}
                 {selectedClient.client_since && (

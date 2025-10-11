@@ -502,7 +502,6 @@ export default function AnalyticsPage() {
                     <thead className="bg-black text-white">
                       <tr>
                         <th className="p-3 text-left">City</th>
-                        <th className="p-3 text-left">Zip</th>
                         <th className="p-3 text-left">State</th>
                         <th className="p-3 text-center">Total Leads</th>
                         <th className="p-3 text-center">Contact Rate</th>
@@ -514,7 +513,6 @@ export default function AnalyticsPage() {
                       {analytics.aggregateInsights.geoPerformance.map((location, index) => (
                         <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
                           <td className="p-3 font-bold">{location.city}</td>
-                          <td className="p-3">{location.zip_code}</td>
                           <td className="p-3">{location.state}</td>
                           <td className="p-3 text-center">{location.totalLeads}</td>
                           <td className="p-3 text-center">

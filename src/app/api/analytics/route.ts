@@ -165,9 +165,24 @@ export async function GET(request: NextRequest) {
       `).all() as any[];
 
       // Geographic performance (by city and state)
+      // Normalize city names by removing state suffixes (Colorado, Co, CO, etc.)
       const geoPerformance = db.prepare(`
         SELECT
-          l.city,
+          TRIM(
+            REPLACE(
+              REPLACE(
+                REPLACE(
+                  REPLACE(
+                    REPLACE(l.city, ' Colorado', ''),
+                    ' CO', ''
+                  ),
+                  ' Co', ''
+                ),
+                ' co', ''
+              ),
+              ' colorado', ''
+            )
+          ) as city,
           l.state,
           COUNT(DISTINCT l.id) as totalLeads,
           COUNT(DISTINCT CASE WHEN la.outcome IN ('answered', 'scheduled') THEN l.id END) as contacted,
@@ -177,7 +192,7 @@ export async function GET(request: NextRequest) {
         LEFT JOIN lead_activities la ON l.id = la.lead_id
         LEFT JOIN lead_policies lp ON l.id = lp.lead_id
         WHERE l.city IS NOT NULL AND l.city != '' ${dateFilter.replace('la.created_at', 'l.created_at')}
-        GROUP BY l.city, l.state
+        GROUP BY city, l.state
         HAVING totalLeads >= 3
         ORDER BY sales DESC, contacted DESC
         LIMIT 15

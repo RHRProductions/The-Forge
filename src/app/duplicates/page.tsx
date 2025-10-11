@@ -14,6 +14,7 @@ interface Lead {
   city: string;
   state: string;
   zip_code: string;
+  source: string;
   created_at: string;
 }
 
@@ -163,6 +164,13 @@ export default function DuplicatesPage() {
     }
   };
 
+  const formatSource = (source: string) => {
+    if (!source || source === 'manual') return 'Manual Entry';
+    return source.split('_').map(word =>
+      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+    ).join(' ');
+  };
+
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -292,6 +300,12 @@ export default function DuplicatesPage() {
                                   </div>
                                 </div>
                                 <div>
+                                  <div className="text-gray-600">Lead Vendor</div>
+                                  <div className="font-semibold text-purple-700">
+                                    {formatSource(lead.source)}
+                                  </div>
+                                </div>
+                                <div>
                                   <div className="text-gray-600">Created</div>
                                   <div className="font-semibold">
                                     {new Date(lead.created_at).toLocaleDateString()}
@@ -391,6 +405,12 @@ export default function DuplicatesPage() {
                               {lead.city && lead.state
                                 ? `${lead.city}, ${lead.state} ${lead.zip_code || ''}`
                                 : '-'}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-gray-600">Lead Vendor</div>
+                            <div className="font-semibold text-purple-700">
+                              {formatSource(lead.source)}
                             </div>
                           </div>
                           <div>

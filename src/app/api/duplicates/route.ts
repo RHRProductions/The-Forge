@@ -23,13 +23,13 @@ export async function GET(request: NextRequest) {
     let leads;
     if (userRole === 'admin') {
       leads = db.prepare(`
-        SELECT id, first_name, last_name, email, phone, phone_2, city, state, zip_code, created_at
+        SELECT id, first_name, last_name, email, phone, phone_2, city, state, zip_code, source, created_at
         FROM leads
         ORDER BY created_at DESC
       `).all();
     } else if (userRole === 'agent') {
       leads = db.prepare(`
-        SELECT l.id, l.first_name, l.last_name, l.email, l.phone, l.phone_2, l.city, l.state, l.zip_code, l.created_at
+        SELECT l.id, l.first_name, l.last_name, l.email, l.phone, l.phone_2, l.city, l.state, l.zip_code, l.source, l.created_at
         FROM leads l
         LEFT JOIN users u ON l.owner_id = u.id
         WHERE l.owner_id = ? OR u.agent_id = ?
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       const user = db.prepare('SELECT agent_id FROM users WHERE id = ?').get(userId) as any;
       if (user?.agent_id) {
         leads = db.prepare(`
-          SELECT l.id, l.first_name, l.last_name, l.email, l.phone, l.phone_2, l.city, l.state, l.zip_code, l.created_at
+          SELECT l.id, l.first_name, l.last_name, l.email, l.phone, l.phone_2, l.city, l.state, l.zip_code, l.source, l.created_at
           FROM leads l
           LEFT JOIN users u ON l.owner_id = u.id
           WHERE l.owner_id = ? OR u.agent_id = ?
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
         `).all(user.agent_id, user.agent_id);
       } else {
         leads = db.prepare(`
-          SELECT id, first_name, last_name, email, phone, phone_2, city, state, zip_code, created_at
+          SELECT id, first_name, last_name, email, phone, phone_2, city, state, zip_code, source, created_at
           FROM leads
           WHERE owner_id = ?
           ORDER BY created_at DESC

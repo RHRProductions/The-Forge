@@ -68,7 +68,11 @@ export async function GET(request: NextRequest) {
       const phone1 = cleanPhone(lead1.phone);
       const phone1_2 = cleanPhone(lead1.phone_2);
       const email1 = lead1.email?.toLowerCase().trim();
-      const name1 = `${lead1.first_name?.toLowerCase().trim()} ${lead1.last_name?.toLowerCase().trim()}`;
+
+      // Build name safely - only if first and last name exist
+      const firstName1 = lead1.first_name?.toLowerCase().trim();
+      const lastName1 = lead1.last_name?.toLowerCase().trim();
+      const name1 = (firstName1 && lastName1) ? `${firstName1} ${lastName1}` : null;
 
       for (let j = i + 1; j < leads.length; j++) {
         const lead2 = leads[j] as any;
@@ -78,21 +82,28 @@ export async function GET(request: NextRequest) {
         const phone2 = cleanPhone(lead2.phone);
         const phone2_2 = cleanPhone(lead2.phone_2);
         const email2 = lead2.email?.toLowerCase().trim();
-        const name2 = `${lead2.first_name?.toLowerCase().trim()} ${lead2.last_name?.toLowerCase().trim()}`;
+
+        // Build name safely - only if first and last name exist
+        const firstName2 = lead2.first_name?.toLowerCase().trim();
+        const lastName2 = lead2.last_name?.toLowerCase().trim();
+        const name2 = (firstName2 && lastName2) ? `${firstName2} ${lastName2}` : null;
 
         let isDuplicate = false;
 
-        // Check phone match (primary or secondary)
-        if (phone1 && phone2 && (phone1 === phone2 || phone1 === phone2_2 || phone1_2 === phone2 || phone1_2 === phone2_2)) {
+        // Check phone match (primary or secondary) - must be at least 10 digits
+        if (phone1 && phone2 && phone1.length >= 10 && phone2.length >= 10) {
+          if (phone1 === phone2 || phone1 === phone2_2 || phone1_2 === phone2 ||
+              (phone1_2 && phone2_2 && phone1_2 === phone2_2)) {
+            isDuplicate = true;
+          }
+        }
+
+        // Check email match - must have valid email format
+        if (!isDuplicate && email1 && email2 && email1.includes('@') && email2.includes('@') && email1 === email2) {
           isDuplicate = true;
         }
 
-        // Check email match
-        if (!isDuplicate && email1 && email2 && email1 === email2) {
-          isDuplicate = true;
-        }
-
-        // Check name + location match
+        // Check name + location match - both must have valid names
         if (!isDuplicate && name1 && name2 && name1 === name2) {
           if (lead1.zip_code && lead2.zip_code && lead1.zip_code === lead2.zip_code) {
             isDuplicate = true;

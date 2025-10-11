@@ -1307,11 +1307,16 @@ Type "DELETE ALL" to confirm:`;
                     <option value="new">New</option>
                     <option value="contacted">Contacted</option>
                     <option value="no_answer">No Answer</option>
-                    <option value="follow_up_needed">Follow Up</option>
+                    <option value="not_set">Not Set</option>
+                    <option value="follow_up_needed">Follow Up Needed</option>
+                    <option value="appointment_set">Appointment Set</option>
+                    <option value="pending">Pending</option>
                     <option value="qualified">Qualified</option>
                     <option value="not_qualified">Not Qualified</option>
+                    <option value="refund_needed">Refund Needed</option>
                     <option value="closed_won">Closed Won</option>
                     <option value="closed_lost">Closed Lost</option>
+                    <option value="closed">Closed</option>
                   </select>
                   <select
                     value={formData.contact_method}
@@ -1758,12 +1763,20 @@ Type "DELETE ALL" to confirm:`;
                         <div className="space-y-1">
                           <span className={`px-2 py-1 rounded text-xs font-medium ${
                             lead.status === 'new' ? 'bg-blue-100 text-blue-800' :
-                            lead.status === 'contacted' ? 'bg-yellow-100 text-yellow-800' :
+                            lead.status === 'contacted' ? 'bg-cyan-100 text-cyan-800' :
+                            lead.status === 'no_answer' ? 'bg-gray-100 text-gray-800' :
+                            lead.status === 'not_set' ? 'bg-gray-100 text-gray-800' :
+                            lead.status === 'follow_up_needed' ? 'bg-orange-100 text-orange-800' :
+                            lead.status === 'appointment_set' ? 'bg-purple-100 text-purple-800' :
+                            lead.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                             lead.status === 'qualified' ? 'bg-green-100 text-green-800' :
+                            lead.status === 'not_qualified' ? 'bg-red-100 text-red-800' :
+                            lead.status === 'refund_needed' ? 'bg-red-100 text-red-800' :
                             lead.status === 'closed_won' ? 'bg-green-100 text-green-800' :
-                            'bg-red-100 text-red-800'
+                            lead.status === 'closed_lost' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
                           }`}>
-                            {lead.status.replace('_', ' ')}
+                            {lead.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                           </span>
                           <br />
                           <span className={`px-2 py-1 rounded text-xs font-medium ${

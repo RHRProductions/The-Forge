@@ -114,13 +114,19 @@ export type ActivityOutcome =
   | 'scheduled'
   | 'disconnected';
 
-export type LeadStatus = 
+export type LeadStatus =
   | 'new'
+  | 'contacted'
   | 'no_answer'
   | 'follow_up_needed'
   | 'not_set'
   | 'appointment_set'
+  | 'pending'
+  | 'qualified'
+  | 'not_qualified'
   | 'refund_needed'
+  | 'closed_won'
+  | 'closed_lost'
   | 'closed';
 
 export type ContactMethod = 

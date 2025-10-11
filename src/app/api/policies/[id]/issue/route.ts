@@ -4,7 +4,7 @@ import { auth } from '../../../../../../auth';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await auth();
@@ -13,7 +13,8 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const policyId = parseInt(params.id);
+    const { id } = await params;
+    const policyId = parseInt(id);
     const db = getDatabase();
     const userId = parseInt((session.user as any).id);
 
@@ -73,7 +74,7 @@ export async function POST(
     }
 
     // Update policy status to 'active'
-    db.prepare('UPDATE lead_policies SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+    db.prepare('UPDATE lead_policies SET status = ? WHERE id = ?')
       .run('active', policyId);
 
     return NextResponse.json({

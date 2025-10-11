@@ -82,6 +82,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       SELECT * FROM lead_policies WHERE id = ?
     `).get(insertResult.lastInsertRowid);
 
+    // If policy status is pending, update the lead status to pending
+    if ((status || 'pending') === 'pending') {
+      db.prepare('UPDATE leads SET status = ? WHERE id = ?')
+        .run('pending', leadId);
+    }
+
     return NextResponse.json(newPolicy);
   } catch (error) {
     console.error('Error adding policy:', error);

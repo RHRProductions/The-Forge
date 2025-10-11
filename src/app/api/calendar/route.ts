@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     // If this is linked to a lead and it's an appointment, update lead status
     if (lead_id && event_type === 'appointment') {
       db.prepare('UPDATE leads SET status = ? WHERE id = ?')
-        .run('appointment', lead_id);
+        .run('appointment_set', lead_id);
     }
 
     // Get the newly created event

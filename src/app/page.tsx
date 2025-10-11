@@ -973,21 +973,12 @@ Type "DELETE ALL" to confirm:`;
                     <div className="py-2">
                       <button
                         onClick={() => {
-                          router.push('/analytics');
+                          router.push('/calendar');
                           setShowNavMenu(false);
                         }}
                         className="w-full text-left px-4 py-2 hover:bg-gray-100 text-black font-semibold transition-colors flex items-center gap-2"
                       >
-                        📊 Analytics
-                      </button>
-                      <button
-                        onClick={() => {
-                          router.push('/clients');
-                          setShowNavMenu(false);
-                        }}
-                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-black font-semibold transition-colors flex items-center gap-2"
-                      >
-                        👥 Clients
+                        📅 Calendar
                       </button>
                       <button
                         onClick={() => {
@@ -1000,12 +991,21 @@ Type "DELETE ALL" to confirm:`;
                       </button>
                       <button
                         onClick={() => {
-                          router.push('/calendar');
+                          router.push('/clients');
                           setShowNavMenu(false);
                         }}
                         className="w-full text-left px-4 py-2 hover:bg-gray-100 text-black font-semibold transition-colors flex items-center gap-2"
                       >
-                        📅 Calendar
+                        👥 Clients
+                      </button>
+                      <button
+                        onClick={() => {
+                          router.push('/analytics');
+                          setShowNavMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-black font-semibold transition-colors flex items-center gap-2"
+                      >
+                        📊 Analytics
                       </button>
                       {(session.user as any).role === 'admin' && (
                         <>

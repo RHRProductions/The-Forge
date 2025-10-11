@@ -408,19 +408,21 @@ export default function AnalyticsPage() {
                     Contact rates by hour of day • Hover over bars for details
                   </div>
                   <div className="flex gap-2 items-end h-64">
-                    {Array.from({ length: 24 }, (_, i) => {
-                      const hourData = analytics.aggregateInsights!.timeOfDay.find(h => h.hour === i);
+                    {Array.from({ length: 13 }, (_, i) => i + 8).map(hour => {
+                      const hourData = analytics.aggregateInsights!.timeOfDay.find(h => h.hour === hour);
                       const dials = hourData?.dials || 0;
                       const contacts = hourData?.contacts || 0;
                       const appointments = hourData?.appointments || 0;
 
-                      const maxContacts = Math.max(...analytics.aggregateInsights!.timeOfDay.map(h => h.contacts), 1);
+                      // Only consider hours 8am-8pm for max calculation
+                      const validHourData = analytics.aggregateInsights!.timeOfDay.filter(h => h.hour >= 8 && h.hour <= 20);
+                      const maxContacts = Math.max(...validHourData.map(h => h.contacts), 1);
                       const height = contacts > 0 ? (contacts / maxContacts) * 100 : 0;
                       const contactRate = dials > 0 ? (contacts / dials) * 100 : 0;
                       const apptRate = contacts > 0 ? (appointments / contacts) * 100 : 0;
 
                       return (
-                        <div key={i} className="flex-1 flex flex-col justify-end items-center group relative">
+                        <div key={hour} className="flex-1 flex flex-col justify-end items-center group relative">
                           <div
                             className={`w-full rounded-t transition-colors ${
                               dials > 0
@@ -428,11 +430,11 @@ export default function AnalyticsPage() {
                                 : 'bg-gray-100'
                             }`}
                             style={{ height: `${Math.max(height, dials > 0 ? 5 : 0)}%` }}
-                            title={dials > 0 ? `${i}:00 - ${contacts} contacts (${contactRate.toFixed(1)}% rate)` : `${i}:00 - No data`}
+                            title={dials > 0 ? `${hour}:00 - ${contacts} contacts (${contactRate.toFixed(1)}% rate)` : `${hour}:00 - No data`}
                           >
                             {dials > 0 && (
                               <div className="hidden group-hover:block absolute bottom-full mb-2 bg-black text-white text-xs p-3 rounded whitespace-nowrap z-10 shadow-lg">
-                                <div className="font-bold mb-1">{i % 12 || 12}:00 {i >= 12 ? 'PM' : 'AM'}</div>
+                                <div className="font-bold mb-1">{hour % 12 || 12}:00 {hour >= 12 ? 'PM' : 'AM'}</div>
                                 <div>Dials: {dials}</div>
                                 <div>Contacts: {contacts} ({contactRate.toFixed(1)}%)</div>
                                 <div>Appointments: {appointments} {contacts > 0 && `(${apptRate.toFixed(1)}%)`}</div>
@@ -440,7 +442,7 @@ export default function AnalyticsPage() {
                             )}
                           </div>
                           <div className={`text-xs mt-2 ${dials > 0 ? 'font-bold' : 'text-gray-400'}`}>
-                            {i % 12 || 12}{i >= 12 ? 'P' : 'A'}
+                            {hour % 12 || 12}{hour >= 12 ? 'P' : 'A'}
                           </div>
                         </div>
                       );

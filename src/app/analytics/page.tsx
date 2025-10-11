@@ -399,6 +399,40 @@ export default function AnalyticsPage() {
               </div>
             )}
 
+            {/* Best Times to Call */}
+            {analytics.aggregateInsights.timeOfDay.length > 0 && (
+              <div className="mb-8">
+                <h3 className="text-2xl font-bold mb-4">Best Times to Call</h3>
+                <div className="bg-white border-2 border-gray-300 rounded-lg p-6">
+                  <div className="flex gap-2 items-end h-64">
+                    {analytics.aggregateInsights.timeOfDay.map((hour) => {
+                      const maxContacts = Math.max(...analytics.aggregateInsights!.timeOfDay.map(h => h.contacts));
+                      const height = maxContacts > 0 ? (hour.contacts / maxContacts) * 100 : 0;
+                      const contactRate = hour.dials > 0 ? (hour.contacts / hour.dials) * 100 : 0;
+
+                      return (
+                        <div key={hour.hour} className="flex-1 flex flex-col justify-end items-center group relative">
+                          <div
+                            className="w-full bg-gradient-to-t from-green-600 to-green-400 rounded-t hover:from-green-700 hover:to-green-500 transition-colors"
+                            style={{ height: `${height}%` }}
+                            title={`${hour.hour}:00 - ${hour.contacts} contacts (${contactRate.toFixed(1)}% rate)`}
+                          >
+                            <div className="hidden group-hover:block absolute bottom-full mb-2 bg-black text-white text-xs p-2 rounded whitespace-nowrap">
+                              {hour.hour % 12 || 12}:00 {hour.hour >= 12 ? 'PM' : 'AM'}<br/>
+                              Dials: {hour.dials}<br/>
+                              Contacts: {hour.contacts}<br/>
+                              Rate: {contactRate.toFixed(1)}%
+                            </div>
+                          </div>
+                          <div className="text-xs mt-2 font-bold">{hour.hour % 12 || 12}{hour.hour >= 12 ? 'P' : 'A'}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Day of Week Performance */}
             {analytics.aggregateInsights.dayOfWeek.length > 0 && (
               <div className="mb-8">

@@ -876,18 +876,14 @@ Type "DELETE ALL" to confirm:`;
       if (response.ok) {
         const freshLead = await response.json();
         setSelectedLead(freshLead);
-        // Populate formData with fresh lead data
-        startEdit(freshLead);
       } else {
         // Fallback to cached data if fetch fails
         setSelectedLead(lead);
-        startEdit(lead);
       }
     } catch (error) {
       console.error('Error fetching fresh lead data:', error);
       // Fallback to cached data if fetch fails
       setSelectedLead(lead);
-      startEdit(lead);
     }
 
     setShowLeadDetail(true);

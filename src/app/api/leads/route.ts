@@ -89,9 +89,14 @@ export async function GET(request: NextRequest) {
 
     let leads;
     let totalCount;
+    let overallTotalCount;
 
     if (userRole === 'admin') {
       const { where, params } = buildWhereClause();
+
+      // Get overall total count (without filters)
+      const overallCountResult = db.prepare('SELECT COUNT(*) as count FROM leads').get() as any;
+      overallTotalCount = overallCountResult.count;
 
       // Get total count with filters
       const countResult = db.prepare(`SELECT COUNT(*) as count FROM leads WHERE ${where}`).get(...params) as any;
@@ -101,6 +106,14 @@ export async function GET(request: NextRequest) {
       leads = db.prepare(`SELECT * FROM leads WHERE ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`).all(...params, limit, offset);
     } else if (userRole === 'agent') {
       const { where, params } = buildWhereClause('(l.owner_id = ? OR u.agent_id = ?)');
+
+      // Get overall total count (without filters)
+      const overallCountResult = db.prepare(`
+        SELECT COUNT(DISTINCT l.id) as count FROM leads l
+        LEFT JOIN users u ON l.owner_id = u.id
+        WHERE l.owner_id = ? OR u.agent_id = ?
+      `).get(userId, userId) as any;
+      overallTotalCount = overallCountResult.count;
 
       // Get total count with filters
       const countResult = db.prepare(`
@@ -125,6 +138,14 @@ export async function GET(request: NextRequest) {
       if (user?.agent_id) {
         const { where, params } = buildWhereClause('(l.owner_id = ? OR u.agent_id = ?)');
 
+        // Get overall total count (without filters)
+        const overallCountResult = db.prepare(`
+          SELECT COUNT(DISTINCT l.id) as count FROM leads l
+          LEFT JOIN users u ON l.owner_id = u.id
+          WHERE l.owner_id = ? OR u.agent_id = ?
+        `).get(user.agent_id, user.agent_id) as any;
+        overallTotalCount = overallCountResult.count;
+
         // Get total count with filters
         const countResult = db.prepare(`
           SELECT COUNT(DISTINCT l.id) as count FROM leads l
@@ -143,6 +164,10 @@ export async function GET(request: NextRequest) {
         `).all(user.agent_id, user.agent_id, ...params, limit, offset);
       } else {
         const { where, params } = buildWhereClause('owner_id = ?');
+
+        // Get overall total count (without filters)
+        const overallCountResult = db.prepare('SELECT COUNT(*) as count FROM leads WHERE owner_id = ?').get(userId) as any;
+        overallTotalCount = overallCountResult.count;
 
         // Get total count with filters
         const countResult = db.prepare(`SELECT COUNT(*) as count FROM leads WHERE ${where}`).get(userId, ...params) as any;
@@ -221,6 +246,7 @@ export async function GET(request: NextRequest) {
         page,
         limit,
         totalCount,
+        overallTotalCount,
         totalPages: Math.ceil(totalCount / limit),
         hasNextPage: page < Math.ceil(totalCount / limit),
         hasPrevPage: page > 1

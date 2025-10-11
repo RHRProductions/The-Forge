@@ -435,6 +435,7 @@ function HomeContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [overallTotalCount, setOverallTotalCount] = useState(0);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -562,6 +563,7 @@ function HomeContent() {
         setTotalCost(data.stats.totalCost);
         setTotalPages(data.pagination.totalPages);
         setTotalCount(data.pagination.totalCount);
+        setOverallTotalCount(data.pagination.overallTotalCount);
       }
     } catch (error) {
       console.error('Error fetching leads:', error);
@@ -905,7 +907,7 @@ Type "DELETE ALL" to confirm:`;
     setSelectedLead(null);
   };
 
-  const totalLeads = totalCount; // Use totalCount from API (all leads, not just current page)
+  const totalLeads = overallTotalCount; // Use overallTotalCount from API (unfiltered total)
   // totalCost is now set from API response (all leads)
   const totalSales = actualSalesRevenue; // Use actual commission totals from policies
   const roi = totalCost > 0 ? ((totalSales - totalCost) / totalCost * 100).toFixed(1) : '0';

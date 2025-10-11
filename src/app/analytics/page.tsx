@@ -356,6 +356,7 @@ export default function AnalyticsPage() {
                       <tr>
                         <th className="p-3 text-left">Source</th>
                         <th className="p-3 text-center">Total Leads</th>
+                        <th className="p-3 text-center">Dials</th>
                         <th className="p-3 text-center">Contacted</th>
                         <th className="p-3 text-center">Appointments</th>
                         <th className="p-3 text-center">Disconnected</th>
@@ -369,12 +370,14 @@ export default function AnalyticsPage() {
                       {analytics.aggregateInsights.sourcePerformance.map((source, index) => {
                         const totalCost = source.totalLeads * (source.avgCost || 0);
                         const roi = totalCost > 0 ? ((source.totalRevenue - totalCost) / totalCost) * 100 : 0;
+                        const contactRate = source.totalDials > 0 ? ((source.contacted / source.totalDials) * 100) : 0;
                         return (
                           <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
                             <td className="p-3 font-bold">{source.source}</td>
                             <td className="p-3 text-center">{source.totalLeads}</td>
+                            <td className="p-3 text-center">{source.totalDials}</td>
                             <td className="p-3 text-center">
-                              {source.contacted} ({source.totalLeads > 0 ? ((source.contacted / source.totalLeads) * 100).toFixed(1) : 0}%)
+                              {source.contacted} ({contactRate.toFixed(1)}%)
                             </td>
                             <td className="p-3 text-center">
                               {source.appointments} ({source.totalLeads > 0 ? ((source.appointments / source.totalLeads) * 100).toFixed(1) : 0}%)

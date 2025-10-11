@@ -149,6 +149,7 @@ export async function GET(request: NextRequest) {
         SELECT
           l.source,
           COUNT(DISTINCT l.id) as totalLeads,
+          COALESCE(SUM(CASE WHEN la.activity_type = 'call' THEN la.dial_count ELSE 0 END), 0) as totalDials,
           COUNT(DISTINCT CASE WHEN la.outcome IN ('answered', 'scheduled') THEN l.id END) as contacted,
           COUNT(DISTINCT CASE WHEN la.outcome = 'scheduled' THEN l.id END) as appointments,
           COUNT(DISTINCT CASE WHEN la.outcome = 'disconnected' THEN l.id END) as disconnected,

@@ -504,28 +504,33 @@ export default function AnalyticsPage() {
                         <th className="p-3 text-left">City</th>
                         <th className="p-3 text-left">State</th>
                         <th className="p-3 text-center">Total Leads</th>
+                        <th className="p-3 text-center">Dials</th>
                         <th className="p-3 text-center">Contact Rate</th>
                         <th className="p-3 text-center">Appt Rate</th>
                         <th className="p-3 text-center">Close Rate</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {analytics.aggregateInsights.geoPerformance.map((location, index) => (
-                        <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                          <td className="p-3 font-bold">{location.city}</td>
-                          <td className="p-3">{location.state}</td>
-                          <td className="p-3 text-center">{location.totalLeads}</td>
-                          <td className="p-3 text-center">
-                            {location.totalLeads > 0 ? ((location.contacted / location.totalLeads) * 100).toFixed(1) : 0}%
-                          </td>
-                          <td className="p-3 text-center">
-                            {location.totalLeads > 0 ? ((location.appointments / location.totalLeads) * 100).toFixed(1) : 0}%
-                          </td>
-                          <td className="p-3 text-center font-bold text-green-600">
-                            {location.totalLeads > 0 ? ((location.sales / location.totalLeads) * 100).toFixed(1) : 0}%
-                          </td>
-                        </tr>
-                      ))}
+                      {analytics.aggregateInsights.geoPerformance.map((location, index) => {
+                        const contactRate = location.totalDials > 0 ? ((location.contacted / location.totalDials) * 100) : 0;
+                        return (
+                          <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                            <td className="p-3 font-bold">{location.city}</td>
+                            <td className="p-3">{location.state}</td>
+                            <td className="p-3 text-center">{location.totalLeads}</td>
+                            <td className="p-3 text-center">{location.totalDials}</td>
+                            <td className="p-3 text-center">
+                              {contactRate.toFixed(1)}%
+                            </td>
+                            <td className="p-3 text-center">
+                              {location.totalLeads > 0 ? ((location.appointments / location.totalLeads) * 100).toFixed(1) : 0}%
+                            </td>
+                            <td className="p-3 text-center font-bold text-green-600">
+                              {location.totalLeads > 0 ? ((location.sales / location.totalLeads) * 100).toFixed(1) : 0}%
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

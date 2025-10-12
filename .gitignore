@@ -58,3 +58,4 @@ data/forge.db-wal
 *.csv
 /public/uploads/*
 !/public/uploads/.gitkeep
+*.db

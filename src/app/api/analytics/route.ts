@@ -198,7 +198,7 @@ export async function GET(request: NextRequest) {
         LEFT JOIN lead_activities la ON l.id = la.lead_id
         LEFT JOIN lead_policies lp ON l.id = lp.lead_id
         WHERE l.city IS NOT NULL AND l.city != '' ${dateFilter.replace('la.created_at', 'l.created_at')}
-        GROUP BY city, state
+        GROUP BY 1, 2
         HAVING totalLeads >= 3
         ORDER BY sales DESC, contacted DESC
         LIMIT 15

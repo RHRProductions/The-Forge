@@ -784,56 +784,99 @@ export default function AnalyticsPage() {
 
               return (
                 <div className="overflow-x-auto">
-                  <div className="flex gap-2 min-w-max">
+                  <div className="flex gap-3 min-w-max pb-4">
                     {analytics.timeSeriesData.map((day, index) => {
+                      // Calculate max for scaling (use overall max across all metrics)
                       const maxValue = Math.max(
-                        ...analytics.timeSeriesData.map(d => Math.max(d.dials, d.contacts, d.appointments, d.sales))
+                        ...analytics.timeSeriesData.flatMap(d => [d.dials, d.contacts, d.appointments, d.sales]),
+                        1
                       );
+
+                      const hasData = day.dials > 0 || day.contacts > 0 || day.appointments > 0 || day.sales > 0;
+
+                      // Skip days with no data to save space
+                      if (!hasData) return null;
+
                       return (
-                        <div key={index} className="flex-1 min-w-[80px]">
-                          <div className="text-xs text-center mb-2 font-bold">
+                        <div key={index} className="flex flex-col items-center min-w-[100px]">
+                          <div className="text-xs text-center mb-2 font-bold text-gray-700">
                             {new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                           </div>
-                          <div className="h-40 flex flex-col justify-end gap-1 bg-gray-50 rounded relative">
-                            {(day.dials > 0 || day.contacts > 0 || day.appointments > 0 || day.sales > 0) ? (
-                              <>
-                                {day.dials > 0 && (
-                                  <div
-                                    className="bg-blue-500 rounded"
-                                    style={{ height: `${(day.dials / maxValue) * 100}%` }}
-                                    title={`Dials: ${day.dials}`}
-                                  ></div>
-                                )}
-                                {day.contacts > 0 && (
-                                  <div
-                                    className="bg-green-500 rounded"
-                                    style={{ height: `${(day.contacts / maxValue) * 100}%` }}
-                                    title={`Contacts: ${day.contacts}`}
-                                  ></div>
-                                )}
-                                {day.appointments > 0 && (
-                                  <div
-                                    className="bg-purple-500 rounded"
-                                    style={{ height: `${(day.appointments / maxValue) * 100}%` }}
-                                    title={`Appointments: ${day.appointments}`}
-                                  ></div>
-                                )}
-                                {day.sales > 0 && (
-                                  <div
-                                    className="bg-red-500 rounded"
-                                    style={{ height: `${(day.sales / maxValue) * 100}%` }}
-                                    title={`Sales: ${day.sales}`}
-                                  ></div>
-                                )}
-                              </>
-                            ) : (
-                              <div className="absolute inset-0 flex items-end justify-center pb-1 text-gray-300 text-xs">-</div>
-                            )}
+
+                          {/* Grouped bars with fixed height container */}
+                          <div className="flex gap-1 items-end w-full px-2" style={{ height: '200px' }}>
+                            {/* Dials bar */}
+                            <div className="flex-1 flex flex-col justify-end items-center group relative h-full">
+                              {day.dials > 0 && (
+                                <div
+                                  className="w-full bg-blue-500 rounded-t hover:bg-blue-600 transition-colors cursor-pointer"
+                                  style={{
+                                    height: `${Math.max((day.dials / maxValue) * 100, 8)}%`,
+                                    minHeight: '8px'
+                                  }}
+                                >
+                                  <div className="hidden group-hover:block absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
+                                    Dials: {day.dials}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Contacts bar */}
+                            <div className="flex-1 flex flex-col justify-end items-center group relative h-full">
+                              {day.contacts > 0 && (
+                                <div
+                                  className="w-full bg-green-500 rounded-t hover:bg-green-600 transition-colors cursor-pointer"
+                                  style={{
+                                    height: `${Math.max((day.contacts / maxValue) * 100, 8)}%`,
+                                    minHeight: '8px'
+                                  }}
+                                >
+                                  <div className="hidden group-hover:block absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
+                                    Contacts: {day.contacts}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Appointments bar */}
+                            <div className="flex-1 flex flex-col justify-end items-center group relative h-full">
+                              {day.appointments > 0 && (
+                                <div
+                                  className="w-full bg-purple-500 rounded-t hover:bg-purple-600 transition-colors cursor-pointer"
+                                  style={{
+                                    height: `${Math.max((day.appointments / maxValue) * 100, 8)}%`,
+                                    minHeight: '8px'
+                                  }}
+                                >
+                                  <div className="hidden group-hover:block absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
+                                    Appointments: {day.appointments}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Sales bar */}
+                            <div className="flex-1 flex flex-col justify-end items-center group relative h-full">
+                              {day.sales > 0 && (
+                                <div
+                                  className="w-full bg-red-500 rounded-t hover:bg-red-600 transition-colors cursor-pointer"
+                                  style={{
+                                    height: `${Math.max((day.sales / maxValue) * 100, 8)}%`,
+                                    minHeight: '8px'
+                                  }}
+                                >
+                                  <div className="hidden group-hover:block absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
+                                    Sales: {day.sales}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <div className="text-xs text-center mt-2 space-y-1">
-                            {(day.dials > 0 || day.contacts > 0 || day.appointments > 0 || day.sales > 0) && (
-                              <div className="text-blue-600 font-semibold">{day.dials}</div>
-                            )}
+
+                          {/* Show count below for primary metric */}
+                          <div className="text-xs text-center mt-2 font-bold text-blue-600">
+                            {day.dials} dials
                           </div>
                         </div>
                       );

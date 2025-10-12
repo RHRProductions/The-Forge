@@ -132,9 +132,11 @@ export async function GET(request: NextRequest) {
     let aggregateInsights = null;
     if (userRole === 'admin') {
       // Best performing times of day (hour of day analysis)
+      // Convert UTC timestamps to Mountain Time (UTC-6 for MDT, UTC-7 for MST)
+      // Using -6 hours for Mountain Daylight Time (March-November)
       const timeOfDayData = db.prepare(`
         SELECT
-          CAST(strftime('%H', la.created_at) AS INTEGER) as hour,
+          CAST(strftime('%H', datetime(la.created_at, '-6 hours')) AS INTEGER) as hour,
           SUM(CASE WHEN la.activity_type = 'call' THEN COALESCE(la.dial_count, 1) ELSE 0 END) as dials,
           COUNT(CASE WHEN la.activity_type = 'call' AND la.outcome IN ('answered', 'scheduled') THEN 1 END) as contacts,
           COUNT(CASE WHEN la.outcome = 'scheduled' THEN 1 END) as appointments
@@ -223,7 +225,7 @@ export async function GET(request: NextRequest) {
       // Day of week performance
       const dayOfWeekData = db.prepare(`
         SELECT
-          CAST(strftime('%w', la.created_at) AS INTEGER) as dayOfWeek,
+          CAST(strftime('%w', datetime(la.created_at, '-6 hours')) AS INTEGER) as dayOfWeek,
           SUM(CASE WHEN la.activity_type = 'call' THEN COALESCE(la.dial_count, 1) ELSE 0 END) as dials,
           COUNT(CASE WHEN la.activity_type = 'call' AND la.outcome IN ('answered', 'scheduled') THEN 1 END) as contacts,
           COUNT(CASE WHEN la.outcome = 'scheduled' THEN 1 END) as appointments
@@ -275,8 +277,8 @@ export async function GET(request: NextRequest) {
       // Time and day combination performance (power hours)
       const powerHours = db.prepare(`
         SELECT
-          CAST(strftime('%w', la.created_at) AS INTEGER) as dayOfWeek,
-          CAST(strftime('%H', la.created_at) AS INTEGER) as hour,
+          CAST(strftime('%w', datetime(la.created_at, '-6 hours')) AS INTEGER) as dayOfWeek,
+          CAST(strftime('%H', datetime(la.created_at, '-6 hours')) AS INTEGER) as hour,
           COUNT(CASE WHEN la.activity_type = 'call' THEN 1 END) as dials,
           COUNT(CASE WHEN la.activity_type = 'call' AND la.outcome IN ('answered', 'scheduled') THEN 1 END) as contacts,
           COUNT(CASE WHEN la.outcome = 'scheduled' THEN 1 END) as appointments

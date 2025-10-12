@@ -408,43 +408,47 @@ export default function AnalyticsPage() {
               {analytics.aggregateInsights.timeOfDay.length > 0 ? (
                 <div className="bg-white border-2 border-gray-300 rounded-lg p-6">
                   <div className="mb-4 text-sm text-gray-600">
-                    Contact rates by hour of day • Hover over bars for details
+                    Contact rates by hour of day • Hover over bars for details • <span className="text-red-600 font-bold">Red = Illegal calling hours</span>
                   </div>
                   <div className="flex gap-2 items-end h-64">
-                    {Array.from({ length: 13 }, (_, i) => i + 8).map(hour => {
+                    {Array.from({ length: 24 }, (_, i) => i).map(hour => {
                       const hourData = analytics.aggregateInsights!.timeOfDay.find(h => h.hour === hour);
                       const dials = hourData?.dials || 0;
                       const contacts = hourData?.contacts || 0;
                       const appointments = hourData?.appointments || 0;
 
-                      // Only consider hours 8am-8pm for max calculation
-                      const validHourData = analytics.aggregateInsights!.timeOfDay.filter(h => h.hour >= 8 && h.hour <= 20);
-                      const maxContacts = Math.max(...validHourData.map(h => h.contacts), 1);
+                      // Skip hours with no data
+                      if (dials === 0) return null;
+
+                      // Check if hour is legal (8am-8pm)
+                      const isLegal = hour >= 8 && hour <= 20;
+                      const maxContacts = Math.max(...analytics.aggregateInsights!.timeOfDay.map(h => h.contacts), 1);
                       const height = contacts > 0 ? (contacts / maxContacts) * 100 : 0;
                       const contactRate = dials > 0 ? (contacts / dials) * 100 : 0;
                       const apptRate = contacts > 0 ? (appointments / contacts) * 100 : 0;
 
                       return (
-                        <div key={hour} className="flex-1 flex flex-col justify-end items-center group relative">
+                        <div key={hour} className="flex-1 flex flex-col justify-end items-center group relative h-full">
                           <div
                             className={`w-full rounded-t transition-colors ${
-                              dials > 0
-                                ? 'bg-gradient-to-t from-green-600 to-green-400 hover:from-green-700 hover:to-green-500 cursor-pointer'
-                                : 'bg-gray-100'
-                            }`}
-                            style={{ height: `${Math.max(height, dials > 0 ? 5 : 0)}%` }}
-                            title={dials > 0 ? `${hour}:00 - ${contacts} contacts (${contactRate.toFixed(1)}% rate)` : `${hour}:00 - No data`}
+                              isLegal
+                                ? 'bg-gradient-to-t from-green-600 to-green-400 hover:from-green-700 hover:to-green-500'
+                                : 'bg-gradient-to-t from-red-600 to-red-400 hover:from-red-700 hover:to-red-500'
+                            } cursor-pointer`}
+                            style={{ height: `${Math.max(height, 10)}%` }}
+                            title={`${hour}:00 - ${contacts} contacts (${contactRate.toFixed(1)}% rate)`}
                           >
-                            {dials > 0 && (
-                              <div className="hidden group-hover:block absolute bottom-full mb-2 bg-black text-white text-xs p-3 rounded whitespace-nowrap z-10 shadow-lg">
-                                <div className="font-bold mb-1">{hour % 12 || 12}:00 {hour >= 12 ? 'PM' : 'AM'}</div>
-                                <div>Dials: {dials}</div>
-                                <div>Contacts: {contacts} ({contactRate.toFixed(1)}%)</div>
-                                <div>Appointments: {appointments} {contacts > 0 && `(${apptRate.toFixed(1)}%)`}</div>
+                            <div className="hidden group-hover:block absolute bottom-full mb-2 bg-black text-white text-xs p-3 rounded whitespace-nowrap z-10 shadow-lg">
+                              <div className="font-bold mb-1">
+                                {hour % 12 || 12}:00 {hour >= 12 ? 'PM' : 'AM'}
+                                {!isLegal && <span className="text-red-400 ml-2">⚠️ Illegal</span>}
                               </div>
-                            )}
+                              <div>Dials: {dials}</div>
+                              <div>Contacts: {contacts} ({contactRate.toFixed(1)}%)</div>
+                              <div>Appointments: {appointments} {contacts > 0 && `(${apptRate.toFixed(1)}%)`}</div>
+                            </div>
                           </div>
-                          <div className={`text-xs mt-2 ${dials > 0 ? 'font-bold' : 'text-gray-400'}`}>
+                          <div className={`text-xs mt-2 font-bold ${!isLegal ? 'text-red-600' : ''}`}>
                             {hour % 12 || 12}{hour >= 12 ? 'P' : 'A'}
                           </div>
                         </div>
@@ -452,7 +456,7 @@ export default function AnalyticsPage() {
                     })}
                   </div>
                   <div className="mt-4 text-xs text-gray-600 text-center">
-                    💡 Tip: Focus your calling during hours with the highest contact rates to maximize efficiency
+                    💡 Tip: Focus your calling during legal hours (8AM-8PM) with the highest contact rates
                   </div>
                 </div>
               ) : (

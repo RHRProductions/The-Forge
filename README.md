@@ -70,17 +70,25 @@ npm run dev
 
 ### Production Deployment
 
-**See [DEPLOYMENT_NOTES.md](./DEPLOYMENT_NOTES.md) for complete deployment guide.**
+**Automated (Recommended):**
+```bash
+./deploy.sh
+```
 
-Quick version:
+The automated script handles database backup, code updates, building, and verification.
+
+**Manual Deployment:**
 ```bash
 ssh root@143.244.185.41
 cd /var/www/the-forge
-git pull
+cp data/forge.db data/forge.db.backup-$(date +%Y%m%d-%H%M%S)
+git pull origin master
+npm install
 npm run build
 pm2 restart the-forge --update-env
-pm2 save
 ```
+
+**See [DEPLOYMENT.md](./DEPLOYMENT.md) or [DEPLOYMENT_NOTES.md](./DEPLOYMENT_NOTES.md) for complete deployment guide.**
 
 **Production URL:** http://143.244.185.41:3000
 

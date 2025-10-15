@@ -21,7 +21,34 @@ Before deploying, ensure:
 
 ---
 
-## Deployment Steps
+## Automated Deployment (Recommended)
+
+For quick deployments, use the automated deployment script:
+
+```bash
+./deploy.sh
+```
+
+The script will:
+1. ✓ Verify SSH connection to production server
+2. ✓ Check for uncommitted local changes
+3. ✓ Backup production database with timestamp
+4. ✓ Pull latest changes from GitHub
+5. ✓ Install dependencies
+6. ✓ Build production bundle
+7. ✓ Restart application with PM2
+8. ✓ Verify deployment success
+9. ✓ Show recent logs
+
+**Prerequisites:**
+- SSH key configured for passwordless login to production server
+- All changes committed and pushed to GitHub
+
+---
+
+## Manual Deployment Steps
+
+If you prefer manual control or need to troubleshoot:
 
 ### 1. SSH into Production Server
 

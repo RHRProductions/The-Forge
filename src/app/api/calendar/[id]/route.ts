@@ -50,7 +50,7 @@ export async function PATCH(
     const { id } = await params;
     const eventId = parseInt(id);
     const body = await request.json();
-    const { title, description, start_time, end_time, event_type } = body;
+    const { title, description, start_time, end_time, event_type, color } = body;
 
     const db = getDatabase();
 
@@ -87,6 +87,11 @@ export async function PATCH(
     if (event_type !== undefined) {
       updates.push('event_type = ?');
       values.push(event_type);
+    }
+
+    if (color !== undefined) {
+      updates.push('color = ?');
+      values.push(color);
     }
 
     updates.push('updated_at = CURRENT_TIMESTAMP');

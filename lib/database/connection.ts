@@ -226,6 +226,13 @@ function initializeDatabase() {
     );
   `);
 
+  // Add color column to calendar_events table
+  try {
+    db.exec(`ALTER TABLE calendar_events ADD COLUMN color TEXT;`);
+  } catch (error) {
+    // Column already exists, ignore error
+  }
+
   // Create clients table for client management
   db.exec(`
     CREATE TABLE IF NOT EXISTS clients (

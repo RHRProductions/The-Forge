@@ -11,6 +11,7 @@ interface Lead {
   email: string;
   phone: string;
   phone_2: string;
+  address: string;
   city: string;
   state: string;
   zip_code: string;
@@ -292,11 +293,14 @@ export default function DuplicatesPage() {
                                   <div className="font-semibold">{lead.email || '-'}</div>
                                 </div>
                                 <div>
-                                  <div className="text-gray-600">Location</div>
+                                  <div className="text-gray-600">Full Address</div>
                                   <div className="font-semibold">
+                                    {lead.address && (
+                                      <div>{lead.address}</div>
+                                    )}
                                     {lead.city && lead.state
                                       ? `${lead.city}, ${lead.state} ${lead.zip_code || ''}`
-                                      : '-'}
+                                      : lead.address ? '' : '-'}
                                   </div>
                                 </div>
                                 <div>
@@ -400,11 +404,14 @@ export default function DuplicatesPage() {
                             <div className="font-semibold">{lead.email || '-'}</div>
                           </div>
                           <div>
-                            <div className="text-gray-600">Location</div>
+                            <div className="text-gray-600">Full Address</div>
                             <div className="font-semibold">
+                              {lead.address && (
+                                <div>{lead.address}</div>
+                              )}
                               {lead.city && lead.state
                                 ? `${lead.city}, ${lead.state} ${lead.zip_code || ''}`
-                                : '-'}
+                                : lead.address ? '' : '-'}
                             </div>
                           </div>
                           <div>

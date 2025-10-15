@@ -30,6 +30,8 @@ export async function GET(request: NextRequest) {
     const zipCode = searchParams.get('zip_code') || '';
     const source = searchParams.get('source') || '';
     const temperature = searchParams.get('temperature') || '';
+    const ageMin = searchParams.get('age_min') || '';
+    const ageMax = searchParams.get('age_max') || '';
 
     // Build WHERE clause for filters
     const buildWhereClause = (baseWhere: string = '1=1') => {
@@ -82,6 +84,16 @@ export async function GET(request: NextRequest) {
       if (temperature) {
         where += ` AND lead_temperature = ?`;
         params.push(temperature);
+      }
+
+      if (ageMin) {
+        where += ` AND age >= ?`;
+        params.push(parseInt(ageMin));
+      }
+
+      if (ageMax) {
+        where += ` AND age <= ?`;
+        params.push(parseInt(ageMax));
       }
 
       return { where, params };

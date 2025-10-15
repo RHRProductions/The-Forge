@@ -13,10 +13,17 @@ interface CalendarEvent {
   start_time: string;
   end_time: string;
   event_type: string;
+  color?: string;
   lead_first_name?: string;
   lead_last_name?: string;
   lead_phone?: string;
   created_by_name?: string;
+  appointment_outcome?: string;
+  appointment_detail?: string;
+  lead_temperature?: string;
+  lead_status?: string;
+  pending_policies?: number;
+  active_policies?: number;
 }
 
 export default function CalendarPage() {
@@ -33,6 +40,7 @@ export default function CalendarPage() {
     start_time: '',
     end_time: '',
     event_type: 'appointment',
+    color: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -65,6 +73,8 @@ export default function CalendarPage() {
   const [images, setImages] = useState<any[]>([]);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [editingPolicy, setEditingPolicy] = useState<any | null>(null);
+  const [editingColor, setEditingColor] = useState(false);
+  const [selectedColor, setSelectedColor] = useState('');
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -198,6 +208,7 @@ export default function CalendarPage() {
           start_time: formData.start_time,
           end_time: formData.end_time,
           event_type: formData.event_type,
+          color: formData.color || null,
         }),
       });
 
@@ -210,6 +221,7 @@ export default function CalendarPage() {
           start_time: '',
           end_time: '',
           event_type: 'appointment',
+          color: '',
         });
         setSelectedTimeSlot(null);
       } else {
@@ -264,6 +276,29 @@ export default function CalendarPage() {
     }
   };
 
+  const handleUpdateColor = async (color: string) => {
+    if (!selectedEvent) return;
+
+    try {
+      const response = await fetch(`/api/calendar/${selectedEvent.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          color: color || null,
+        }),
+      });
+
+      if (response.ok) {
+        await fetchEvents();
+        // Update the selected event with new color
+        setSelectedEvent({ ...selectedEvent, color: color });
+        setEditingColor(false);
+      }
+    } catch (error) {
+      alert('Failed to update color');
+    }
+  };
+
   const handleCreateActivity = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!selectedEvent?.lead_id) return;
@@ -306,6 +341,8 @@ export default function CalendarPage() {
 
               if (updateResponse.ok) {
                 alert('Lead set to HOT with follow-up reminder for 7 days out.');
+                // Refresh calendar to show updated color
+                await fetchEvents();
               } else {
                 console.error('Failed to update lead:', await updateResponse.text());
                 alert('Failed to update lead. Please try again.');
@@ -329,6 +366,7 @@ export default function CalendarPage() {
         });
 
         await fetchActivities(selectedEvent.lead_id);
+        await fetchEvents(); // Refresh calendar to show any status changes
         setShowActivityForm(false);
         setActivityFormData({
           activity_type: 'note',
@@ -388,6 +426,7 @@ export default function CalendarPage() {
         }
 
         await fetchActivities(selectedEvent.lead_id);
+        await fetchEvents(); // Refresh calendar to show status changes (e.g., purple for no-show/cancelled)
       }
     } catch (error) {
       alert('Failed to log activity');
@@ -409,6 +448,7 @@ export default function CalendarPage() {
 
         if (response.ok) {
           await fetchPolicies(selectedEvent.lead_id);
+          await fetchEvents(); // Refresh calendar to show updated colors
           setShowPolicyForm(false);
           setEditingPolicy(null);
           setPolicyFormData({
@@ -432,6 +472,7 @@ export default function CalendarPage() {
 
         if (response.ok) {
           await fetchPolicies(selectedEvent.lead_id);
+          await fetchEvents(); // Refresh calendar to show updated colors
           setShowPolicyForm(false);
           setPolicyFormData({
             policy_number: '',
@@ -461,6 +502,7 @@ export default function CalendarPage() {
 
       if (response.ok) {
         await fetchPolicies(selectedEvent.lead_id);
+        await fetchEvents(); // Refresh calendar to show updated colors
       }
     } catch (error) {
       alert('Failed to delete policy');
@@ -765,6 +807,44 @@ export default function CalendarPage() {
                   </select>
                 </div>
 
+                <div>
+                  <label className="block text-sm font-medium mb-2">Custom Color (Optional)</label>
+                  <p className="text-xs text-gray-500 mb-2">Leave blank to use automatic colors based on appointment status</p>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { name: 'Blue', value: 'bg-blue-500 text-white' },
+                      { name: 'Green', value: 'bg-green-500 text-white' },
+                      { name: 'Red', value: 'bg-red-500 text-white' },
+                      { name: 'Yellow', value: 'bg-yellow-500 text-white' },
+                      { name: 'Purple', value: 'bg-purple-500 text-white' },
+                      { name: 'Orange', value: 'bg-orange-500 text-white' },
+                      { name: 'Pink', value: 'bg-pink-500 text-white' },
+                      { name: 'Teal', value: 'bg-teal-500 text-white' },
+                      { name: 'Gray', value: 'bg-gray-500 text-white' },
+                    ].map((colorOption) => (
+                      <button
+                        key={colorOption.name}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, color: colorOption.value })}
+                        className={`px-3 py-2 rounded text-xs font-bold ${colorOption.value} ${
+                          formData.color === colorOption.value ? 'ring-2 ring-offset-2 ring-black' : ''
+                        }`}
+                      >
+                        {colorOption.name}
+                      </button>
+                    ))}
+                    {formData.color && (
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, color: '' })}
+                        className="px-3 py-2 rounded text-xs font-bold border-2 border-gray-300 hover:bg-gray-100"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 <div className="flex gap-3">
                   <button
                     type="submit"
@@ -888,6 +968,90 @@ export default function CalendarPage() {
                     <p className="text-md text-gray-600">{selectedEvent.created_by_name}</p>
                   </div>
                 )}
+
+                {/* Color Picker Section */}
+                <div className="border-t-2 border-gray-200 pt-4 mt-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="block text-sm font-bold text-gray-700">Appointment Color</label>
+                    {!editingColor && (
+                      <button
+                        onClick={() => {
+                          setSelectedColor(selectedEvent.color || '');
+                          setEditingColor(true);
+                        }}
+                        className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                      >
+                        Change Color
+                      </button>
+                    )}
+                  </div>
+
+                  {editingColor ? (
+                    <div className="space-y-3">
+                      <p className="text-xs text-gray-500">Select a color or clear to use automatic status-based colors</p>
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          { name: 'Blue', value: 'bg-blue-500 text-white' },
+                          { name: 'Green', value: 'bg-green-500 text-white' },
+                          { name: 'Red', value: 'bg-red-500 text-white' },
+                          { name: 'Yellow', value: 'bg-yellow-500 text-white' },
+                          { name: 'Purple', value: 'bg-purple-500 text-white' },
+                          { name: 'Orange', value: 'bg-orange-500 text-white' },
+                          { name: 'Pink', value: 'bg-pink-500 text-white' },
+                          { name: 'Teal', value: 'bg-teal-500 text-white' },
+                          { name: 'Gray', value: 'bg-gray-500 text-white' },
+                        ].map((colorOption) => (
+                          <button
+                            key={colorOption.name}
+                            type="button"
+                            onClick={() => setSelectedColor(colorOption.value)}
+                            className={`px-3 py-2 rounded text-xs font-bold ${colorOption.value} ${
+                              selectedColor === colorOption.value ? 'ring-2 ring-offset-2 ring-black' : ''
+                            }`}
+                          >
+                            {colorOption.name}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex gap-2 pt-2">
+                        <button
+                          onClick={() => handleUpdateColor(selectedColor)}
+                          className="flex-1 bg-green-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-green-700"
+                        >
+                          Save Color
+                        </button>
+                        <button
+                          onClick={() => handleUpdateColor('')}
+                          className="flex-1 bg-gray-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-gray-700"
+                        >
+                          Clear (Use Auto)
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingColor(false);
+                            setSelectedColor('');
+                          }}
+                          className="flex-1 bg-gray-300 text-black px-4 py-2 rounded text-sm font-bold hover:bg-gray-400"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3">
+                      {selectedEvent.color ? (
+                        <>
+                          <div className={`px-4 py-2 rounded text-sm font-bold ${selectedEvent.color}`}>
+                            Custom Color
+                          </div>
+                          <span className="text-xs text-gray-500">(Using custom color)</span>
+                        </>
+                      ) : (
+                        <span className="text-sm text-gray-500 italic">Using automatic status-based color</span>
+                      )}
+                    </div>
+                  )}
+                </div>
 
                 {/* Activities Section - Only show if event is linked to a lead */}
                 {selectedEvent.lead_id && (
@@ -1382,18 +1546,45 @@ export default function CalendarPage() {
                           onDragOver={handleDragOver}
                           onDrop={(e) => handleDrop(day, hour, e)}
                         >
-                          {slotEvents.map(event => (
+                          {slotEvents.map(event => {
+                            // Determine background color - use custom color if set, otherwise use automatic color logic
+                            let bgColorClass = '';
+                            if (event.color) {
+                              // Use custom color
+                              bgColorClass = event.color;
+                            } else {
+                              // Automatic color logic based on appointment status
+                              if (event.appointment_outcome === 'no_answer' || event.appointment_detail?.toLowerCase().includes('cancelled')) {
+                                bgColorClass = 'bg-purple-500 text-white';
+                              } else if (event.event_type === 'appointment' && event.active_policies && event.active_policies > 0) {
+                                bgColorClass = 'bg-green-400 text-white';
+                              } else if (event.event_type === 'appointment' && event.pending_policies && event.pending_policies > 0) {
+                                bgColorClass = 'bg-green-700 text-white';
+                              } else if (event.event_type === 'appointment' && event.lead_temperature === 'hot') {
+                                bgColorClass = 'bg-orange-600 text-white';
+                              } else if (event.event_type === 'appointment' && event.lead_temperature === 'warm') {
+                                bgColorClass = 'bg-orange-400 text-white';
+                              } else if (event.event_type === 'appointment' && !event.appointment_outcome) {
+                                bgColorClass = 'bg-blue-500 text-white';
+                              } else if (event.event_type === 'appointment') {
+                                bgColorClass = 'bg-green-500 text-white';
+                              } else if (event.event_type === 'meeting') {
+                                bgColorClass = 'bg-blue-500 text-white';
+                              } else if (event.event_type === 'call') {
+                                bgColorClass = 'bg-yellow-500 text-white';
+                              } else if (event.event_type === 'personal') {
+                                bgColorClass = 'bg-purple-500 text-white';
+                              } else {
+                                bgColorClass = 'bg-gray-500 text-white';
+                              }
+                            }
+
+                            return (
                             <div
                               key={event.id}
                               draggable
                               onDragStart={(e) => handleDragStart(event, e)}
-                              className={`mb-0.5 sm:mb-1 p-1 sm:p-2 rounded text-xs font-bold cursor-move relative group ${
-                                event.event_type === 'appointment' ? 'bg-green-500 text-white' :
-                                event.event_type === 'meeting' ? 'bg-blue-500 text-white' :
-                                event.event_type === 'call' ? 'bg-yellow-500 text-white' :
-                                event.event_type === 'personal' ? 'bg-purple-500 text-white' :
-                                'bg-gray-500 text-white'
-                              } ${draggedEvent?.id === event.id ? 'opacity-50' : ''}`}
+                              className={`mb-0.5 sm:mb-1 p-1 sm:p-2 rounded text-xs font-bold cursor-move relative group ${bgColorClass} ${draggedEvent?.id === event.id ? 'opacity-50' : ''}`}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setSelectedEvent(event);
@@ -1422,7 +1613,8 @@ export default function CalendarPage() {
                                 ✕
                               </button>
                             </div>
-                          ))}
+                            );
+                          })}
                         </td>
                       );
                     })}
@@ -1436,20 +1628,28 @@ export default function CalendarPage() {
         {/* Legend */}
         <div className="mt-4 flex gap-4 flex-wrap">
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-green-500 rounded"></div>
-            <span className="text-sm">Appointment</span>
-          </div>
-          <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-blue-500 rounded"></div>
-            <span className="text-sm">Meeting</span>
+            <span className="text-sm">New Appointment</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-yellow-500 rounded"></div>
-            <span className="text-sm">Call</span>
+            <div className="w-4 h-4 bg-orange-400 rounded"></div>
+            <span className="text-sm">Warm Lead</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-orange-600 rounded"></div>
+            <span className="text-sm">Hot Lead</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-purple-500 rounded"></div>
-            <span className="text-sm">Personal</span>
+            <span className="text-sm">Needs Rescheduling</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-green-700 rounded"></div>
+            <span className="text-sm">Pending Policy</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-green-400 rounded"></div>
+            <span className="text-sm">Active Client</span>
           </div>
         </div>
       </div>

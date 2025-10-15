@@ -526,14 +526,35 @@ function HomeContent() {
   // Auto-open lead modal if leadId is in URL (from calendar navigation)
   useEffect(() => {
     const leadIdParam = searchParams.get('leadId');
-    if (leadIdParam && leads.length > 0) {
+    if (leadIdParam) {
       const leadId = parseInt(leadIdParam);
+
+      // First check if lead is already in loaded leads
       const lead = leads.find(l => l.id === leadId);
       if (lead) {
         setSelectedLead(lead);
         setShowLeadDetail(true);
-        // Clear the URL parameter after opening
         router.replace('/');
+      } else {
+        // If not in current page, fetch the specific lead from API
+        fetch(`/api/leads/${leadId}`)
+          .then(res => {
+            if (!res.ok) throw new Error('Lead not found');
+            return res.json();
+          })
+          .then(data => {
+            // API returns lead directly, not wrapped
+            if (data && data.id) {
+              setSelectedLead(data);
+              setShowLeadDetail(true);
+              router.replace('/');
+            }
+          })
+          .catch(err => {
+            console.error('Error fetching lead:', err);
+            alert('Could not find that lead');
+            router.replace('/');
+          });
       }
     }
   }, [searchParams, leads, router]);
@@ -567,6 +588,8 @@ function HomeContent() {
       if (filters.zip_code) params.append('zip_code', filters.zip_code);
       if (filters.source) params.append('source', filters.source);
       if (filters.temperature) params.append('temperature', filters.temperature);
+      if (filters.age_min) params.append('age_min', filters.age_min);
+      if (filters.age_max) params.append('age_max', filters.age_max);
 
       const response = await fetch(`/api/leads?${params.toString()}`);
       if (response.ok) {
@@ -612,6 +635,8 @@ function HomeContent() {
       zip_code: '',
       age_min: '',
       age_max: '',
+      source: '',
+      temperature: '',
       search: ''
     });
   };
@@ -1508,10 +1533,11 @@ Type "DELETE ALL" to confirm:`;
         )}
 
         {/* Filter Controls */}
-        <div className="bg-gray-50 border-2 border-red-600 rounded p-3 sm:p-4 mb-4">
-          <div className="flex flex-wrap gap-3 sm:gap-4 items-center">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-800 w-full sm:w-auto sm:mr-4">Filter Leads:</h3>
+        <div className="bg-gray-50 border-2 border-red-600 rounded p-4 mb-4">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Filter Leads:</h3>
 
+          {/* Row 1: Search, Status, Lead Type, City */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             {/* Search Bar */}
             <div className="flex flex-col">
               <label className="text-sm font-medium text-gray-600 mb-1">Search</label>
@@ -1520,7 +1546,7 @@ Type "DELETE ALL" to confirm:`;
                 placeholder="Name or phone..."
                 value={filters.search}
                 onChange={(e) => handleFilterChange('search', e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none w-48"
+                className="px-3 py-2 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none"
               />
             </div>
 
@@ -1568,20 +1594,23 @@ Type "DELETE ALL" to confirm:`;
                 placeholder="Filter by city"
                 value={filters.city}
                 onChange={(e) => handleFilterChange('city', e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none w-32"
+                className="px-3 py-2 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none"
               />
             </div>
+          </div>
 
+          {/* Row 2: State, Zip, Age Range, Vendor */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             {/* State Filter */}
             <div className="flex flex-col">
               <label className="text-sm font-medium text-gray-600 mb-1">State</label>
               <input
                 type="text"
-                placeholder="e.g. AZ"
+                placeholder="e.g. CO"
                 value={filters.state}
                 onChange={(e) => handleFilterChange('state', e.target.value.toUpperCase())}
                 maxLength={2}
-                className="px-3 py-2 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none w-20 uppercase"
+                className="px-3 py-2 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none uppercase"
               />
             </div>
 
@@ -1593,7 +1622,7 @@ Type "DELETE ALL" to confirm:`;
                 placeholder="Filter by zip"
                 value={filters.zip_code}
                 onChange={(e) => handleFilterChange('zip_code', e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none w-28"
+                className="px-3 py-2 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none"
               />
             </div>
 
@@ -1606,30 +1635,43 @@ Type "DELETE ALL" to confirm:`;
                   placeholder="Min"
                   value={filters.age_min}
                   onChange={(e) => handleFilterChange('age_min', e.target.value)}
-                  className="px-2 py-2 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none w-16"
+                  className="px-2 py-2 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none w-full"
                 />
                 <input
                   type="number"
                   placeholder="Max"
                   value={filters.age_max}
                   onChange={(e) => handleFilterChange('age_max', e.target.value)}
-                  className="px-2 py-2 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none w-16"
+                  className="px-2 py-2 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none w-full"
                 />
               </div>
             </div>
 
-            {/* Clear Filters Button */}
-            <div className="flex flex-col justify-end">
-              <button
-                onClick={clearFilters}
-                className="px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition-colors"
-              >
-                Clear Filters
-              </button>
+            {/* Lead Vendor Filter */}
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-600 mb-1">Lead Vendor</label>
+              <input
+                type="text"
+                placeholder="Filter by vendor"
+                value={filters.source}
+                onChange={(e) => handleFilterChange('source', e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none"
+              />
             </div>
+          </div>
+
+          {/* Row 3: Action Buttons */}
+          <div className="flex flex-wrap gap-3 items-center">
+            {/* Clear Filters Button */}
+            <button
+              onClick={clearFilters}
+              className="px-6 py-2 bg-red-600 text-white rounded text-sm font-bold hover:bg-red-700 transition-colors"
+            >
+              Clear Filters
+            </button>
 
             {/* Bulk Delete Filtered Leads Button - Hidden by default, Agents/Admins only */}
-            {(session.user as any).role !== 'setter' && (filters.status || filters.lead_type || filters.city || filters.state || filters.zip_code || filters.age_min || filters.age_max) && filteredLeads.length > 0 && (
+            {(session.user as any).role !== 'setter' && (filters.status || filters.lead_type || filters.city || filters.state || filters.zip_code || filters.age_min || filters.age_max || filters.source) && filteredLeads.length > 0 && (
               <div className="flex flex-col justify-end">
                 {!showBulkDeleteButton ? (
                   <button
@@ -1664,9 +1706,12 @@ Type "DELETE ALL" to confirm:`;
                 )}
               </div>
             )}
+          </div>
+        </div>
 
-            {/* Results Count and Pagination */}
-            <div className="flex items-center gap-4">
+        {/* Results Count and Pagination */}
+        <div className="bg-gray-50 border-2 border-gray-300 rounded p-3 mb-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="text-sm text-gray-600">
                 Showing {((currentPage - 1) * 100) + 1}-{Math.min(currentPage * 100, totalCount)} of {totalCount} leads
               </div>
@@ -1691,7 +1736,6 @@ Type "DELETE ALL" to confirm:`;
                   </button>
                 </div>
               )}
-            </div>
           </div>
         </div>
 

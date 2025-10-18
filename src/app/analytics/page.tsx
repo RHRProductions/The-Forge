@@ -57,6 +57,7 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [timeFilter, setTimeFilter] = useState<'week' | 'month' | 'all'>('month');
   const [showInsights, setShowInsights] = useState(false);
+  const [emailStats, setEmailStats] = useState<{ leadsWithEmails: number; leadsWithoutEmails: number; percentage: number; totalLeads: number }>({ leadsWithEmails: 0, leadsWithoutEmails: 0, percentage: 0, totalLeads: 0 });
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -67,6 +68,7 @@ export default function AnalyticsPage() {
   useEffect(() => {
     if (session?.user) {
       fetchAnalytics();
+      fetchEmailStats();
     }
   }, [session, timeFilter]);
 
@@ -82,6 +84,23 @@ export default function AnalyticsPage() {
       console.error('Error fetching analytics:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchEmailStats = async () => {
+    try {
+      const response = await fetch('/api/leads/email-stats');
+      if (response.ok) {
+        const data = await response.json();
+        setEmailStats({
+          leadsWithEmails: data.leadsWithEmails,
+          leadsWithoutEmails: data.leadsWithoutEmails,
+          percentage: data.percentage,
+          totalLeads: data.totalLeads
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching email stats:', error);
     }
   };
 
@@ -152,6 +171,31 @@ export default function AnalyticsPage() {
           ) : (
             <AIInsights />
           )}
+        </div>
+
+        {/* Lead Data Quality */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold mb-4">Lead Data Quality</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-white p-6 rounded-lg border-2 border-gray-300">
+              <div className="text-sm font-bold text-gray-600 uppercase">Total Leads</div>
+              <div className="text-4xl font-black mt-2">{emailStats.totalLeads}</div>
+            </div>
+            <div className="bg-blue-500 text-white p-6 rounded-lg border-4 border-blue-700">
+              <div className="text-sm font-bold uppercase opacity-90">Leads with Emails</div>
+              <div className="text-4xl font-black mt-2">{emailStats.leadsWithEmails}</div>
+              <div className="text-sm mt-2">
+                {emailStats.percentage}% of total leads
+              </div>
+            </div>
+            <div className="bg-gray-100 p-6 rounded-lg border-2 border-gray-300">
+              <div className="text-sm font-bold text-gray-600 uppercase">Missing Email Data</div>
+              <div className="text-4xl font-black mt-2">{emailStats.leadsWithoutEmails}</div>
+              <div className="text-sm mt-2 text-gray-600">
+                {100 - emailStats.percentage}% of total leads
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Personal Metrics */}

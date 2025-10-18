@@ -172,13 +172,22 @@ export async function POST(
       (db.prepare('SELECT email FROM email_unsubscribes').all() as any[]).map(u => u.email.toLowerCase())
     );
 
-    // Filter out unsubscribed leads
+    // Check for bounced emails (emails that have bounced in the past)
+    const bouncedEmails = new Set(
+      (db.prepare(`
+        SELECT DISTINCT email_address
+        FROM email_sends
+        WHERE bounced = 1
+      `).all() as any[]).map(b => b.email_address.toLowerCase())
+    );
+
+    // Filter out unsubscribed and bounced leads
     const recipientLeads = leads.filter(
-      lead => !unsubscribedEmails.has(lead.email.toLowerCase())
+      lead => !unsubscribedEmails.has(lead.email.toLowerCase()) && !bouncedEmails.has(lead.email.toLowerCase())
     );
 
     if (recipientLeads.length === 0) {
-      return NextResponse.json({ error: 'All Medicare leads have unsubscribed' }, { status: 400 });
+      return NextResponse.json({ error: 'All Medicare leads have unsubscribed or have bounced emails' }, { status: 400 });
     }
 
     // Create email campaign for tracking

@@ -143,6 +143,17 @@ export default function NavigationMenu({ currentPage }: NavigationMenuProps) {
                 🔍 Find Duplicates
               </button>
             )}
+            {currentPage !== 'bounced-emails' && (
+              <button
+                onClick={() => {
+                  router.push('/bounced-emails');
+                  setShowNavMenu(false);
+                }}
+                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-black font-semibold transition-colors flex items-center gap-2"
+              >
+                ⚠️ Bounced Emails
+              </button>
+            )}
             {session && (session.user as any).role === 'admin' && (
               <>
                 <div className="border-t border-gray-200 my-2"></div>

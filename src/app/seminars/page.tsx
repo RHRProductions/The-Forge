@@ -32,6 +32,7 @@ export default function SeminarsPage() {
   const [seminars, setSeminars] = useState<Seminar[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [emailStats, setEmailStats] = useState<{ leadsWithEmails: number; percentage: number; totalLeads: number }>({ leadsWithEmails: 0, percentage: 0, totalLeads: 0 });
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -58,6 +59,7 @@ export default function SeminarsPage() {
   useEffect(() => {
     if (session?.user) {
       fetchSeminars();
+      fetchEmailStats();
     }
   }, [session]);
 
@@ -72,6 +74,22 @@ export default function SeminarsPage() {
       console.error('Error fetching seminars:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchEmailStats = async () => {
+    try {
+      const response = await fetch('/api/leads/email-stats');
+      if (response.ok) {
+        const data = await response.json();
+        setEmailStats({
+          leadsWithEmails: data.leadsWithEmails,
+          percentage: data.percentage,
+          totalLeads: data.totalLeads
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching email stats:', error);
     }
   };
 
@@ -238,6 +256,25 @@ export default function SeminarsPage() {
           >
             + Create Seminar
           </button>
+        </div>
+
+        {/* Email Stats Info Box */}
+        <div className="bg-blue-50 border-2 border-blue-400 rounded-lg p-4 mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">📧</span>
+              <div>
+                <h3 className="font-bold text-blue-800">Seminar Invitation Reach</h3>
+                <p className="text-blue-700 mt-1">
+                  <span className="font-bold text-xl">{emailStats.leadsWithEmails}</span> leads with valid email addresses
+                  <span className="text-sm ml-2">({emailStats.percentage}% of {emailStats.totalLeads} total leads)</span>
+                </p>
+                <p className="text-blue-600 text-sm mt-1">
+                  Invitations are sent to Medicare and T65 leads with email addresses
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Create Seminar Modal */}

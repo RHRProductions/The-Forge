@@ -466,6 +466,7 @@ function HomeContent() {
   });
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
   const [actualSalesRevenue, setActualSalesRevenue] = useState<number>(0);
+  const [emailStats, setEmailStats] = useState<{ leadsWithEmails: number; percentage: number }>({ leadsWithEmails: 0, percentage: 0 });
   const [formData, setFormData] = useState({
     first_name: '',
     last_name: '',
@@ -499,6 +500,7 @@ function HomeContent() {
   useEffect(() => {
     fetchLeads();
     fetchSalesRevenue();
+    fetchEmailStats();
   }, [currentPage, filters]); // Re-fetch when page OR filters change
 
   // Reset to page 1 when filters change (but not on initial load)
@@ -617,6 +619,18 @@ function HomeContent() {
       }
     } catch (error) {
       console.error('Error fetching sales revenue:', error);
+    }
+  };
+
+  const fetchEmailStats = async () => {
+    try {
+      const response = await fetch('/api/leads/email-stats');
+      if (response.ok) {
+        const data = await response.json();
+        setEmailStats({ leadsWithEmails: data.leadsWithEmails, percentage: data.percentage });
+      }
+    } catch (error) {
+      console.error('Error fetching email stats:', error);
     }
   };
 
@@ -1153,10 +1167,15 @@ Type "DELETE ALL" to confirm:`;
 
       {/* Dashboard Stats */}
       <div className="bg-gray-100 p-6 border-b-2 border-red-600">
-        <div className={`max-w-7xl mx-auto grid grid-cols-1 ${(session.user as any).role === 'setter' ? 'md:grid-cols-1' : 'md:grid-cols-4'} gap-6`}>
+        <div className={`max-w-7xl mx-auto grid grid-cols-1 ${(session.user as any).role === 'setter' ? 'md:grid-cols-2' : 'md:grid-cols-5'} gap-6`}>
           <div className="bg-white p-4 rounded border-l-4 border-red-600 shadow">
             <h3 className="text-sm font-medium text-gray-600">Total Leads</h3>
             <p className="text-2xl font-bold">{totalLeads}</p>
+          </div>
+          <div className="bg-white p-4 rounded border-l-4 border-blue-600 shadow">
+            <h3 className="text-sm font-medium text-gray-600">Leads with Emails</h3>
+            <p className="text-2xl font-bold">{emailStats.leadsWithEmails}</p>
+            <p className="text-xs text-gray-500 mt-1">{emailStats.percentage}% of total</p>
           </div>
           {(session.user as any).role !== 'setter' && (
             <>

@@ -27,6 +27,7 @@ export default function EmailsPage() {
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [previewCampaign, setPreviewCampaign] = useState<EmailCampaign | null>(null);
+  const [emailStats, setEmailStats] = useState<{ leadsWithEmails: number; percentage: number; totalLeads: number }>({ leadsWithEmails: 0, percentage: 0, totalLeads: 0 });
   const [formData, setFormData] = useState({
     name: '',
     subject_line: '',
@@ -47,6 +48,7 @@ export default function EmailsPage() {
   useEffect(() => {
     if (session?.user) {
       fetchCampaigns();
+      fetchEmailStats();
     }
   }, [session]);
 
@@ -61,6 +63,22 @@ export default function EmailsPage() {
       console.error('Error fetching campaigns:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchEmailStats = async () => {
+    try {
+      const response = await fetch('/api/leads/email-stats');
+      if (response.ok) {
+        const data = await response.json();
+        setEmailStats({
+          leadsWithEmails: data.leadsWithEmails,
+          percentage: data.percentage,
+          totalLeads: data.totalLeads
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching email stats:', error);
     }
   };
 
@@ -202,6 +220,22 @@ export default function EmailsPage() {
           >
             + Create Campaign
           </button>
+        </div>
+
+        {/* Email Stats Info Box */}
+        <div className="bg-blue-50 border-2 border-blue-400 rounded-lg p-4 mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">📧</span>
+              <div>
+                <h3 className="font-bold text-blue-800">Email Campaign Reach</h3>
+                <p className="text-blue-700 mt-1">
+                  <span className="font-bold text-xl">{emailStats.leadsWithEmails}</span> leads with valid email addresses
+                  <span className="text-sm ml-2">({emailStats.percentage}% of {emailStats.totalLeads} total leads)</span>
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* SendGrid Setup Warning */}

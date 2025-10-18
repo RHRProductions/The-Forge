@@ -158,7 +158,7 @@ export async function POST(
       LEFT JOIN seminar_invitations si ON l.id = si.lead_id AND si.seminar_id = ?
       WHERE l.email IS NOT NULL
         AND l.email != ''
-        AND l.lead_type = 'medicare'
+        AND (l.lead_type = 'medicare' OR l.lead_type = 't65')
         AND si.id IS NULL
       ORDER BY l.id
     `).all(seminarId) as any[];

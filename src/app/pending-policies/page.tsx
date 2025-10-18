@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import NavigationMenu from '@/components/NavigationMenu';
 
 interface PendingPolicy {
   id: number;
@@ -127,12 +128,7 @@ export default function PendingPoliciesPage() {
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-center">
             <h1 className="text-4xl font-black">⏳ Pending Policies</h1>
-            <button
-              onClick={() => router.push('/')}
-              className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded font-bold text-sm transition-colors"
-            >
-              Back to Dashboard
-            </button>
+            <NavigationMenu currentPage="pending-policies" />
           </div>
         </div>
       </header>

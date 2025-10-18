@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import AIInsights from '../../components/AIInsights';
+import NavigationMenu from '@/components/NavigationMenu';
 
 interface AnalyticsData {
   personal: {
@@ -105,12 +106,7 @@ export default function AnalyticsPage() {
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-center">
             <h1 className="text-4xl font-black">📊 Analytics</h1>
-            <button
-              onClick={() => router.push('/')}
-              className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded font-bold text-sm transition-colors"
-            >
-              Back to Dashboard
-            </button>
+            <NavigationMenu currentPage="analytics" />
           </div>
         </div>
       </header>

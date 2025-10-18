@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import NavigationMenu from '@/components/NavigationMenu';
 
 interface Lead {
   id: number;
@@ -194,12 +195,7 @@ export default function DuplicatesPage() {
               >
                 🔄 Refresh
               </button>
-              <button
-                onClick={() => router.push('/')}
-                className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded font-bold text-sm transition-colors"
-              >
-                Back to Dashboard
-              </button>
+              <NavigationMenu currentPage="duplicates" />
             </div>
           </div>
         </div>

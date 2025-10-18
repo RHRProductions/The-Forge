@@ -451,6 +451,7 @@ function HomeContent() {
   const [deleteStatus, setDeleteStatus] = useState<string>('');
   const [showDevMenu, setShowDevMenu] = useState(false);
   const [showBulkDeleteButton, setShowBulkDeleteButton] = useState(false);
+  const [leadSources, setLeadSources] = useState<string[]>([]);
   const [filters, setFilters] = useState({
     status: '',
     lead_type: '',
@@ -618,6 +619,23 @@ function HomeContent() {
       console.error('Error fetching sales revenue:', error);
     }
   };
+
+  const fetchLeadSources = async () => {
+    try {
+      const response = await fetch('/api/leads/sources');
+      if (response.ok) {
+        const sources = await response.json();
+        setLeadSources(sources);
+      }
+    } catch (error) {
+      console.error('Error fetching lead sources:', error);
+    }
+  };
+
+  // Fetch lead sources on initial load
+  useEffect(() => {
+    fetchLeadSources();
+  }, []);
 
   // Filtering is now done server-side in the API
   // filteredLeads is set directly from the API response in fetchLeads()
@@ -1041,13 +1059,56 @@ Type "DELETE ALL" to confirm:`;
                       </button>
                       <button
                         onClick={() => {
+                          router.push('/emails');
+                          setShowNavMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-black font-semibold transition-colors flex items-center gap-2"
+                      >
+                        📧 Emails
+                      </button>
+                      <button
+                        onClick={() => {
+                          router.push('/seminars');
+                          setShowNavMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-black font-semibold transition-colors flex items-center gap-2"
+                      >
+                        🎥 Seminars
+                      </button>
+
+                      {/* Analytics Section */}
+                      <div className="border-t border-gray-200 my-2"></div>
+                      <div className="px-4 py-1 text-xs font-bold text-gray-500 uppercase tracking-wider">Analytics</div>
+                      <button
+                        onClick={() => {
                           router.push('/analytics');
                           setShowNavMenu(false);
                         }}
                         className="w-full text-left px-4 py-2 hover:bg-gray-100 text-black font-semibold transition-colors flex items-center gap-2"
                       >
-                        📊 Analytics
+                        📊 Overview
                       </button>
+                      <button
+                        onClick={() => {
+                          router.push('/email-analytics');
+                          setShowNavMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-black font-semibold transition-colors flex items-center gap-2"
+                      >
+                        📈 Email Analytics
+                      </button>
+                      <button
+                        onClick={() => {
+                          router.push('/seminar-analytics');
+                          setShowNavMenu(false);
+                        }}
+                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-black font-semibold transition-colors flex items-center gap-2"
+                      >
+                        🎯 Seminar Analytics
+                      </button>
+
+                      {/* Utilities Section */}
+                      <div className="border-t border-gray-200 my-2"></div>
                       <button
                         onClick={() => {
                           router.push('/duplicates');
@@ -1650,13 +1711,16 @@ Type "DELETE ALL" to confirm:`;
             {/* Lead Vendor Filter */}
             <div className="flex flex-col">
               <label className="text-sm font-medium text-gray-600 mb-1">Lead Vendor</label>
-              <input
-                type="text"
-                placeholder="Filter by vendor"
+              <select
                 value={filters.source}
                 onChange={(e) => handleFilterChange('source', e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none"
-              />
+                className="px-3 py-2 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none bg-white"
+              >
+                <option value="">All Vendors</option>
+                {leadSources.map((source) => (
+                  <option key={source} value={source}>{source}</option>
+                ))}
+              </select>
             </div>
           </div>
 

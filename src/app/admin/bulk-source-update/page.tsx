@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import NavigationMenu from '@/components/NavigationMenu';
 
 interface LeadBatch {
   date: string;
@@ -124,20 +125,23 @@ export default function BulkSourceUpdatePage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-          <button
-            onClick={() => router.push('/')}
-            className="text-red-500 hover:text-red-400 mb-4"
-          >
-            ← Back to Dashboard
-          </button>
-          <h1 className="text-3xl font-bold">Bulk Source Update</h1>
-          <p className="text-gray-400 mt-2">
-            Update lead sources in bulk based on upload date
-          </p>
+    <div className="min-h-screen bg-white text-black">
+      {/* Header */}
+      <header className="bg-black text-white p-6 border-b-4 border-red-600">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-4xl font-black">🔧 Bulk Source Update</h1>
+              <p className="text-gray-400 mt-2 text-sm">
+                Update lead sources in bulk based on upload date
+              </p>
+            </div>
+            <NavigationMenu currentPage="bulk-source-update" />
+          </div>
         </div>
+      </header>
+
+      <div className="max-w-7xl mx-auto p-6">
 
         <div className="space-y-6">
           {batches.map((batch) => {

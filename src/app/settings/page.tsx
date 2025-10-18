@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import NavigationMenu from '@/components/NavigationMenu';
 
 interface User {
   id: number;
@@ -219,12 +220,7 @@ Type "RESET" to confirm:`;
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-center">
             <h1 className="text-4xl font-black">⚙️ User Management</h1>
-            <button
-              onClick={() => router.push('/')}
-              className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded font-bold text-sm transition-colors"
-            >
-              Back to Dashboard
-            </button>
+            <NavigationMenu currentPage="settings" />
           </div>
         </div>
       </header>
@@ -244,6 +240,12 @@ Type "RESET" to confirm:`;
               className="bg-purple-600 text-white px-6 py-3 rounded font-bold hover:bg-purple-700 transition-colors"
             >
               📊 Bulk Source Update
+            </button>
+            <button
+              onClick={() => router.push('/admin/lead-sources')}
+              className="bg-orange-600 text-white px-6 py-3 rounded font-bold hover:bg-orange-700 transition-colors"
+            >
+              🏷️ Lead Sources
             </button>
             <button
               onClick={handleResetAnalytics}

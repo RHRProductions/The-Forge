@@ -206,6 +206,20 @@ function initializeDatabase() {
     // Column already exists, ignore error
   }
 
+  // Add seminar_id to calendar_events for funnel tracking
+  try {
+    db.exec(`ALTER TABLE calendar_events ADD COLUMN seminar_id INTEGER;`);
+  } catch (error) {
+    // Column already exists, ignore error
+  }
+
+  // Add seminar_id to lead_policies for conversion tracking
+  try {
+    db.exec(`ALTER TABLE lead_policies ADD COLUMN seminar_id INTEGER;`);
+  } catch (error) {
+    // Column already exists, ignore error
+  }
+
   // Create calendar_events table for agent scheduling
   db.exec(`
     CREATE TABLE IF NOT EXISTS calendar_events (
@@ -270,6 +284,118 @@ function initializeDatabase() {
     );
   `);
 
+  // Create email campaign tables
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS email_campaigns (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      subject_line TEXT NOT NULL,
+      body_html TEXT NOT NULL,
+      body_text TEXT,
+      from_name TEXT NOT NULL,
+      from_email TEXT NOT NULL,
+      reply_to_email TEXT,
+      segment_filter TEXT,
+      status TEXT DEFAULT 'draft',
+      scheduled_for DATETIME,
+      sent_at DATETIME,
+      created_by_user_id INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS email_sends (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      campaign_id INTEGER NOT NULL,
+      lead_id INTEGER NOT NULL,
+      email_address TEXT NOT NULL,
+      sent_at DATETIME,
+      delivered_at DATETIME,
+      opened_at DATETIME,
+      clicked_at DATETIME,
+      bounced BOOLEAN DEFAULT 0,
+      bounce_reason TEXT,
+      sendgrid_message_id TEXT,
+      FOREIGN KEY (campaign_id) REFERENCES email_campaigns(id) ON DELETE CASCADE,
+      FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS email_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email_send_id INTEGER NOT NULL,
+      event_type TEXT NOT NULL,
+      event_data TEXT,
+      user_agent TEXT,
+      ip_address TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (email_send_id) REFERENCES email_sends(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS email_unsubscribes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      lead_id INTEGER,
+      email TEXT NOT NULL,
+      reason TEXT,
+      unsubscribed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE SET NULL
+    );
+  `);
+
+  // Create seminar/event tables
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS seminars (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      description TEXT,
+      seminar_type TEXT DEFAULT 'medicare',
+      event_date DATE NOT NULL,
+      event_time TIME NOT NULL,
+      timezone TEXT DEFAULT 'America/Denver',
+      duration_minutes INTEGER DEFAULT 60,
+      platform TEXT DEFAULT 'zoom',
+      meeting_link TEXT,
+      meeting_id TEXT,
+      meeting_password TEXT,
+      max_attendees INTEGER,
+      status TEXT DEFAULT 'scheduled',
+      created_by_user_id INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS seminar_invitations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      seminar_id INTEGER NOT NULL,
+      lead_id INTEGER NOT NULL,
+      email_campaign_id INTEGER,
+      invited_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      email_opened BOOLEAN DEFAULT 0,
+      link_clicked BOOLEAN DEFAULT 0,
+      registered BOOLEAN DEFAULT 0,
+      registered_at DATETIME,
+      attended BOOLEAN DEFAULT 0,
+      FOREIGN KEY (seminar_id) REFERENCES seminars(id) ON DELETE CASCADE,
+      FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE,
+      FOREIGN KEY (email_campaign_id) REFERENCES email_campaigns(id) ON DELETE SET NULL,
+      UNIQUE(seminar_id, lead_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS seminar_registrations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      seminar_id INTEGER NOT NULL,
+      lead_id INTEGER NOT NULL,
+      invitation_id INTEGER,
+      registration_source TEXT DEFAULT 'email',
+      registered_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      notes TEXT,
+      FOREIGN KEY (seminar_id) REFERENCES seminars(id) ON DELETE CASCADE,
+      FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE,
+      FOREIGN KEY (invitation_id) REFERENCES seminar_invitations(id) ON DELETE SET NULL
+    );
+  `);
+
   // Create indexes
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);
@@ -307,6 +433,29 @@ function initializeDatabase() {
 
     CREATE INDEX IF NOT EXISTS idx_client_activities_client_id ON client_activities(client_id);
     CREATE INDEX IF NOT EXISTS idx_client_activities_created_at ON client_activities(created_at);
+
+    CREATE INDEX IF NOT EXISTS idx_email_campaigns_status ON email_campaigns(status);
+    CREATE INDEX IF NOT EXISTS idx_email_campaigns_created_by ON email_campaigns(created_by_user_id);
+
+    CREATE INDEX IF NOT EXISTS idx_seminars_event_date ON seminars(event_date);
+    CREATE INDEX IF NOT EXISTS idx_seminars_status ON seminars(status);
+    CREATE INDEX IF NOT EXISTS idx_seminars_type ON seminars(seminar_type);
+
+    CREATE INDEX IF NOT EXISTS idx_seminar_invitations_seminar_id ON seminar_invitations(seminar_id);
+    CREATE INDEX IF NOT EXISTS idx_seminar_invitations_lead_id ON seminar_invitations(lead_id);
+    CREATE INDEX IF NOT EXISTS idx_seminar_invitations_registered ON seminar_invitations(registered);
+
+    CREATE INDEX IF NOT EXISTS idx_seminar_registrations_seminar_id ON seminar_registrations(seminar_id);
+    CREATE INDEX IF NOT EXISTS idx_seminar_registrations_lead_id ON seminar_registrations(lead_id);
+    CREATE INDEX IF NOT EXISTS idx_email_campaigns_created_at ON email_campaigns(created_at);
+    CREATE INDEX IF NOT EXISTS idx_email_sends_campaign_id ON email_sends(campaign_id);
+    CREATE INDEX IF NOT EXISTS idx_email_sends_lead_id ON email_sends(lead_id);
+    CREATE INDEX IF NOT EXISTS idx_email_sends_email ON email_sends(email_address);
+    CREATE INDEX IF NOT EXISTS idx_email_sends_opened_at ON email_sends(opened_at);
+    CREATE INDEX IF NOT EXISTS idx_email_events_send_id ON email_events(email_send_id);
+    CREATE INDEX IF NOT EXISTS idx_email_events_type ON email_events(event_type);
+    CREATE INDEX IF NOT EXISTS idx_email_unsubscribes_email ON email_unsubscribes(email);
+    CREATE INDEX IF NOT EXISTS idx_email_unsubscribes_lead_id ON email_unsubscribes(lead_id);
   `);
 }
 

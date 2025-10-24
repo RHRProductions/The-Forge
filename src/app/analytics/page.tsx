@@ -57,6 +57,10 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [timeFilter, setTimeFilter] = useState<'week' | 'month' | 'all'>('month');
   const [showInsights, setShowInsights] = useState(false);
+  const [showLocations, setShowLocations] = useState(true);
+  const [showPowerHours, setShowPowerHours] = useState(true);
+  const [showAgeGroups, setShowAgeGroups] = useState(true);
+  const [showSourcePerformance, setShowSourcePerformance] = useState(true);
   const [emailStats, setEmailStats] = useState<{ leadsWithEmails: number; leadsWithoutEmails: number; percentage: number; totalLeads: number }>({ leadsWithEmails: 0, leadsWithoutEmails: 0, percentage: 0, totalLeads: 0 });
 
   useEffect(() => {
@@ -389,60 +393,70 @@ export default function AnalyticsPage() {
             {/* Lead Source Performance */}
             {analytics.aggregateInsights.sourcePerformance.length > 0 && (
               <div className="mb-8">
-                <h3 className="text-2xl font-bold mb-4">Lead Source Performance</h3>
-                <div className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden">
-                  <table className="w-full">
-                    <thead className="bg-black text-white">
-                      <tr>
-                        <th className="p-3 text-left">Source</th>
-                        <th className="p-3 text-center">Total Leads</th>
-                        <th className="p-3 text-center">Dials</th>
-                        <th className="p-3 text-center">Contacted</th>
-                        <th className="p-3 text-center">Appointments</th>
-                        <th className="p-3 text-center">Disconnected</th>
-                        <th className="p-3 text-center">Wrong Info</th>
-                        <th className="p-3 text-center">Sales</th>
-                        <th className="p-3 text-center">Avg Cost</th>
-                        <th className="p-3 text-center">Revenue</th>
-                        <th className="p-3 text-center">ROI</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {analytics.aggregateInsights.sourcePerformance.map((source, index) => {
-                        const totalCost = source.totalLeads * (source.avgCost || 0);
-                        const roi = totalCost > 0 ? ((source.totalRevenue - totalCost) / totalCost) * 100 : 0;
-                        const contactRate = source.totalDials > 0 ? ((source.contacted / source.totalDials) * 100) : 0;
-                        return (
-                          <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                            <td className="p-3 font-bold">{source.source}</td>
-                            <td className="p-3 text-center">{source.totalLeads}</td>
-                            <td className="p-3 text-center">{source.totalDials}</td>
-                            <td className="p-3 text-center">
-                              {source.contacted} ({contactRate.toFixed(1)}%)
-                            </td>
-                            <td className="p-3 text-center">
-                              {source.appointments} ({source.totalLeads > 0 ? ((source.appointments / source.totalLeads) * 100).toFixed(1) : 0}%)
-                            </td>
-                            <td className="p-3 text-center text-red-600">
-                              {source.disconnected} ({source.totalLeads > 0 ? ((source.disconnected / source.totalLeads) * 100).toFixed(1) : 0}%)
-                            </td>
-                            <td className="p-3 text-center text-yellow-600">
-                              {source.wrongInfo || 0} ({source.totalLeads > 0 ? (((source.wrongInfo || 0) / source.totalLeads) * 100).toFixed(1) : 0}%)
-                            </td>
-                            <td className="p-3 text-center">
-                              {source.sales} ({source.totalLeads > 0 ? ((source.sales / source.totalLeads) * 100).toFixed(1) : 0}%)
-                            </td>
-                            <td className="p-3 text-center">${(source.avgCost || 0).toFixed(2)}</td>
-                            <td className="p-3 text-center font-bold text-green-600">${source.totalRevenue.toLocaleString()}</td>
-                            <td className={`p-3 text-center font-bold ${roi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                              {roi.toFixed(0)}%
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                <div
+                  onClick={() => setShowSourcePerformance(!showSourcePerformance)}
+                  className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors mb-4"
+                >
+                  <h3 className="text-2xl font-bold">Lead Source Performance</h3>
+                  <span className="text-2xl font-bold">
+                    {showSourcePerformance ? '▼' : '▶'}
+                  </span>
                 </div>
+                {showSourcePerformance && (
+                  <div className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-black text-white">
+                        <tr>
+                          <th className="p-3 text-left">Source</th>
+                          <th className="p-3 text-center">Total Leads</th>
+                          <th className="p-3 text-center">Dials</th>
+                          <th className="p-3 text-center">Contacted</th>
+                          <th className="p-3 text-center">Appointments</th>
+                          <th className="p-3 text-center">Disconnected</th>
+                          <th className="p-3 text-center">Wrong Info</th>
+                          <th className="p-3 text-center">Sales</th>
+                          <th className="p-3 text-center">Avg Cost</th>
+                          <th className="p-3 text-center">Revenue</th>
+                          <th className="p-3 text-center">ROI</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {analytics.aggregateInsights.sourcePerformance.map((source, index) => {
+                          const totalCost = source.totalLeads * (source.avgCost || 0);
+                          const roi = totalCost > 0 ? ((source.totalRevenue - totalCost) / totalCost) * 100 : 0;
+                          const contactRate = source.totalDials > 0 ? ((source.contacted / source.totalDials) * 100) : 0;
+                          return (
+                            <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                              <td className="p-3 font-bold">{source.source}</td>
+                              <td className="p-3 text-center">{source.totalLeads}</td>
+                              <td className="p-3 text-center">{source.totalDials}</td>
+                              <td className="p-3 text-center">
+                                {source.contacted} ({contactRate.toFixed(1)}%)
+                              </td>
+                              <td className="p-3 text-center">
+                                {source.appointments} ({source.totalLeads > 0 ? ((source.appointments / source.totalLeads) * 100).toFixed(1) : 0}%)
+                              </td>
+                              <td className="p-3 text-center text-red-600">
+                                {source.disconnected} ({source.totalLeads > 0 ? ((source.disconnected / source.totalLeads) * 100).toFixed(1) : 0}%)
+                              </td>
+                              <td className="p-3 text-center text-yellow-600">
+                                {source.wrongInfo || 0} ({source.totalLeads > 0 ? (((source.wrongInfo || 0) / source.totalLeads) * 100).toFixed(1) : 0}%)
+                              </td>
+                              <td className="p-3 text-center">
+                                {source.sales} ({source.totalLeads > 0 ? ((source.sales / source.totalLeads) * 100).toFixed(1) : 0}%)
+                              </td>
+                              <td className="p-3 text-center">${(source.avgCost || 0).toFixed(2)}</td>
+                              <td className="p-3 text-center font-bold text-green-600">${source.totalRevenue.toLocaleString()}</td>
+                              <td className={`p-3 text-center font-bold ${roi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {roi.toFixed(0)}%
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )}
 
@@ -544,44 +558,54 @@ export default function AnalyticsPage() {
             {/* Geographic Performance */}
             {analytics.aggregateInsights.geoPerformance.length > 0 && (
               <div className="mb-8">
-                <h3 className="text-2xl font-bold mb-4">Top Performing Locations</h3>
-                <div className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden">
-                  <table className="w-full">
-                    <thead className="bg-black text-white">
-                      <tr>
-                        <th className="p-3 text-left">City</th>
-                        <th className="p-3 text-left">State</th>
-                        <th className="p-3 text-center">Total Leads</th>
-                        <th className="p-3 text-center">Dials</th>
-                        <th className="p-3 text-center">Contact Rate</th>
-                        <th className="p-3 text-center">Appt Rate</th>
-                        <th className="p-3 text-center">Close Rate</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {analytics.aggregateInsights.geoPerformance.map((location, index) => {
-                        const contactRate = location.totalDials > 0 ? ((location.contacted / location.totalDials) * 100) : 0;
-                        return (
-                          <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                            <td className="p-3 font-bold">{location.city}</td>
-                            <td className="p-3">{location.state}</td>
-                            <td className="p-3 text-center">{location.totalLeads}</td>
-                            <td className="p-3 text-center">{location.totalDials}</td>
-                            <td className="p-3 text-center">
-                              {contactRate.toFixed(1)}%
-                            </td>
-                            <td className="p-3 text-center">
-                              {location.totalLeads > 0 ? ((location.appointments / location.totalLeads) * 100).toFixed(1) : 0}%
-                            </td>
-                            <td className="p-3 text-center font-bold text-green-600">
-                              {location.totalLeads > 0 ? ((location.sales / location.totalLeads) * 100).toFixed(1) : 0}%
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                <div
+                  onClick={() => setShowLocations(!showLocations)}
+                  className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors mb-4"
+                >
+                  <h3 className="text-2xl font-bold">Top Performing Locations</h3>
+                  <span className="text-2xl font-bold">
+                    {showLocations ? '▼' : '▶'}
+                  </span>
                 </div>
+                {showLocations && (
+                  <div className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-black text-white">
+                        <tr>
+                          <th className="p-3 text-left">City</th>
+                          <th className="p-3 text-left">State</th>
+                          <th className="p-3 text-center">Total Leads</th>
+                          <th className="p-3 text-center">Dials</th>
+                          <th className="p-3 text-center">Contact Rate</th>
+                          <th className="p-3 text-center">Appt Rate</th>
+                          <th className="p-3 text-center">Close Rate</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {analytics.aggregateInsights.geoPerformance.map((location, index) => {
+                          const contactRate = location.totalDials > 0 ? ((location.contacted / location.totalDials) * 100) : 0;
+                          return (
+                            <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                              <td className="p-3 font-bold">{location.city}</td>
+                              <td className="p-3">{location.state}</td>
+                              <td className="p-3 text-center">{location.totalLeads}</td>
+                              <td className="p-3 text-center">{location.totalDials}</td>
+                              <td className="p-3 text-center">
+                                {contactRate.toFixed(1)}%
+                              </td>
+                              <td className="p-3 text-center">
+                                {location.totalLeads > 0 ? ((location.appointments / location.totalLeads) * 100).toFixed(1) : 0}%
+                              </td>
+                              <td className="p-3 text-center font-bold text-green-600">
+                                {location.totalLeads > 0 ? ((location.sales / location.totalLeads) * 100).toFixed(1) : 0}%
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )}
 
@@ -667,100 +691,120 @@ export default function AnalyticsPage() {
             {/* Age Group Performance */}
             {analytics.aggregateInsights.ageGroupPerformance && analytics.aggregateInsights.ageGroupPerformance.length > 0 && (
               <div className="mb-8">
-                <h3 className="text-2xl font-bold mb-4">🎯 Performance by Age Group</h3>
-                <div className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden">
-                  <table className="w-full">
-                    <thead className="bg-black text-white">
-                      <tr>
-                        <th className="p-3 text-left">Age Group</th>
-                        <th className="p-3 text-center">Total Leads</th>
-                        <th className="p-3 text-center">Contact Rate</th>
-                        <th className="p-3 text-center">Answered No Appt</th>
-                        <th className="p-3 text-center">Appointment Rate</th>
-                        <th className="p-3 text-center">Close Rate</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {analytics.aggregateInsights.ageGroupPerformance.map((group:any, index:number) => {
-                        const contactRate = group.totalLeads > 0 ? (group.contacted / group.totalLeads) * 100 : 0;
-                        const apptRate = group.totalLeads > 0 ? (group.appointments / group.totalLeads) * 100 : 0;
-                        const closeRate = group.totalLeads > 0 ? (group.sales / group.totalLeads) * 100 : 0;
-                        const answeredNoApptRate = group.totalLeads > 0 ? (group.answeredNoAppt / group.totalLeads) * 100 : 0;
-
-                        return (
-                          <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                            <td className="p-3 font-bold">{group.ageGroup}</td>
-                            <td className="p-3 text-center">{group.totalLeads}</td>
-                            <td className="p-3 text-center">{contactRate.toFixed(1)}%</td>
-                            <td className="p-3 text-center text-orange-600">
-                              {group.answeredNoAppt} ({answeredNoApptRate.toFixed(1)}%)
-                            </td>
-                            <td className="p-3 text-center font-bold text-purple-600">{apptRate.toFixed(1)}%</td>
-                            <td className="p-3 text-center font-bold text-green-600">{closeRate.toFixed(1)}%</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                <div
+                  onClick={() => setShowAgeGroups(!showAgeGroups)}
+                  className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors mb-4"
+                >
+                  <h3 className="text-2xl font-bold">🎯 Performance by Age Group</h3>
+                  <span className="text-2xl font-bold">
+                    {showAgeGroups ? '▼' : '▶'}
+                  </span>
                 </div>
+                {showAgeGroups && (
+                  <div className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-black text-white">
+                        <tr>
+                          <th className="p-3 text-left">Age Group</th>
+                          <th className="p-3 text-center">Total Leads</th>
+                          <th className="p-3 text-center">Contact Rate</th>
+                          <th className="p-3 text-center">Answered No Appt</th>
+                          <th className="p-3 text-center">Appointment Rate</th>
+                          <th className="p-3 text-center">Close Rate</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {analytics.aggregateInsights.ageGroupPerformance.map((group:any, index:number) => {
+                          const contactRate = group.totalLeads > 0 ? (group.contacted / group.totalLeads) * 100 : 0;
+                          const apptRate = group.totalLeads > 0 ? (group.appointments / group.totalLeads) * 100 : 0;
+                          const closeRate = group.totalLeads > 0 ? (group.sales / group.totalLeads) * 100 : 0;
+                          const answeredNoApptRate = group.totalLeads > 0 ? (group.answeredNoAppt / group.totalLeads) * 100 : 0;
+
+                          return (
+                            <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                              <td className="p-3 font-bold">{group.ageGroup}</td>
+                              <td className="p-3 text-center">{group.totalLeads}</td>
+                              <td className="p-3 text-center">{contactRate.toFixed(1)}%</td>
+                              <td className="p-3 text-center text-orange-600">
+                                {group.answeredNoAppt} ({answeredNoApptRate.toFixed(1)}%)
+                              </td>
+                              <td className="p-3 text-center font-bold text-purple-600">{apptRate.toFixed(1)}%</td>
+                              <td className="p-3 text-center font-bold text-green-600">{closeRate.toFixed(1)}%</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )}
 
             {/* Power Hours - Best Day/Time Combinations */}
             {analytics.aggregateInsights.powerHours && analytics.aggregateInsights.powerHours.length > 0 && (
               <div className="mb-8">
-                <h3 className="text-2xl font-bold mb-4">⚡ Power Hours - Best Day & Time Combinations</h3>
-                <div className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden">
-                  <table className="w-full">
-                    <thead className="bg-black text-white">
-                      <tr>
-                        <th className="p-3 text-left">Rank</th>
-                        <th className="p-3 text-left">Day & Time</th>
-                        <th className="p-3 text-center">Dials</th>
-                        <th className="p-3 text-center">Contacts</th>
-                        <th className="p-3 text-center">Contact Rate</th>
-                        <th className="p-3 text-center">Appointments</th>
-                        <th className="p-3 text-center">Appt Rate</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {analytics.aggregateInsights.powerHours.map((slot:any, index:number) => {
-                        const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-                        const contactRate = slot.dials > 0 ? (slot.contacts / slot.dials) * 100 : 0;
-                        const apptRate = slot.contacts > 0 ? (slot.appointments / slot.contacts) * 100 : 0;
-                        const hour12 = slot.hour % 12 || 12;
-                        const ampm = slot.hour >= 12 ? 'PM' : 'AM';
-
-                        return (
-                          <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                            <td className="p-3 font-bold text-2xl text-gray-400">#{index + 1}</td>
-                            <td className="p-3 font-bold">
-                              {dayNames[slot.dayOfWeek]} {hour12}:00 {ampm}
-                            </td>
-                            <td className="p-3 text-center">{slot.dials}</td>
-                            <td className="p-3 text-center font-bold">{slot.contacts}</td>
-                            <td className="p-3 text-center">
-                              <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full font-bold">
-                                {contactRate.toFixed(1)}%
-                              </span>
-                            </td>
-                            <td className="p-3 text-center font-bold">{slot.appointments}</td>
-                            <td className="p-3 text-center">
-                              <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full font-bold">
-                                {apptRate.toFixed(1)}%
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                  <div className="bg-blue-50 p-4 border-t border-blue-200">
-                    <p className="text-sm text-blue-900">
-                      💡 <strong>Pro Tip:</strong> These are your highest-performing time slots. Schedule your most important calling sessions during these windows to maximize results!
-                    </p>
-                  </div>
+                <div
+                  onClick={() => setShowPowerHours(!showPowerHours)}
+                  className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors mb-4"
+                >
+                  <h3 className="text-2xl font-bold">⚡ Power Hours - Best Day & Time Combinations</h3>
+                  <span className="text-2xl font-bold">
+                    {showPowerHours ? '▼' : '▶'}
+                  </span>
                 </div>
+                {showPowerHours && (
+                  <div className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-black text-white">
+                        <tr>
+                          <th className="p-3 text-left">Rank</th>
+                          <th className="p-3 text-left">Day & Time</th>
+                          <th className="p-3 text-center">Dials</th>
+                          <th className="p-3 text-center">Contacts</th>
+                          <th className="p-3 text-center">Contact Rate</th>
+                          <th className="p-3 text-center">Appointments</th>
+                          <th className="p-3 text-center">Appt Rate</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {analytics.aggregateInsights.powerHours.map((slot:any, index:number) => {
+                          const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                          const contactRate = slot.dials > 0 ? (slot.contacts / slot.dials) * 100 : 0;
+                          const apptRate = slot.contacts > 0 ? (slot.appointments / slot.contacts) * 100 : 0;
+                          const hour12 = slot.hour % 12 || 12;
+                          const ampm = slot.hour >= 12 ? 'PM' : 'AM';
+
+                          return (
+                            <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                              <td className="p-3 font-bold text-2xl text-gray-400">#{index + 1}</td>
+                              <td className="p-3 font-bold">
+                                {dayNames[slot.dayOfWeek]} {hour12}:00 {ampm}
+                              </td>
+                              <td className="p-3 text-center">{slot.dials}</td>
+                              <td className="p-3 text-center font-bold">{slot.contacts}</td>
+                              <td className="p-3 text-center">
+                                <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full font-bold">
+                                  {contactRate.toFixed(1)}%
+                                </span>
+                              </td>
+                              <td className="p-3 text-center font-bold">{slot.appointments}</td>
+                              <td className="p-3 text-center">
+                                <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full font-bold">
+                                  {apptRate.toFixed(1)}%
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                    <div className="bg-blue-50 p-4 border-t border-blue-200">
+                      <p className="text-sm text-blue-900">
+                        💡 <strong>Pro Tip:</strong> These are your highest-performing time slots. Schedule your most important calling sessions during these windows to maximize results!
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

@@ -400,6 +400,7 @@ export default function AnalyticsPage() {
                         <th className="p-3 text-center">Contacted</th>
                         <th className="p-3 text-center">Appointments</th>
                         <th className="p-3 text-center">Disconnected</th>
+                        <th className="p-3 text-center">Wrong Info</th>
                         <th className="p-3 text-center">Sales</th>
                         <th className="p-3 text-center">Avg Cost</th>
                         <th className="p-3 text-center">Revenue</th>
@@ -424,6 +425,9 @@ export default function AnalyticsPage() {
                             </td>
                             <td className="p-3 text-center text-red-600">
                               {source.disconnected} ({source.totalLeads > 0 ? ((source.disconnected / source.totalLeads) * 100).toFixed(1) : 0}%)
+                            </td>
+                            <td className="p-3 text-center text-yellow-600">
+                              {source.wrongInfo || 0} ({source.totalLeads > 0 ? (((source.wrongInfo || 0) / source.totalLeads) * 100).toFixed(1) : 0}%)
                             </td>
                             <td className="p-3 text-center">
                               {source.sales} ({source.totalLeads > 0 ? ((source.sales / source.totalLeads) * 100).toFixed(1) : 0}%)

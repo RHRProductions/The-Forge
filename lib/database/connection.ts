@@ -82,7 +82,8 @@ function initializeDatabase() {
     'next_follow_up TEXT',
     'contact_attempt_count INTEGER DEFAULT 0',
     'owner_id INTEGER',
-    'worked_by_id INTEGER'
+    'worked_by_id INTEGER',
+    'wrong_info BOOLEAN DEFAULT 0'
   ];
 
   newColumns.forEach(column => {
@@ -342,6 +343,75 @@ function initializeDatabase() {
     );
   `);
 
+  // Create email sequence tables for drip campaigns
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS email_sequences (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      description TEXT,
+      is_active BOOLEAN DEFAULT 1,
+      goal TEXT,
+      created_by_user_id INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS email_sequence_steps (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sequence_id INTEGER NOT NULL,
+      step_order INTEGER NOT NULL,
+      delay_days INTEGER NOT NULL DEFAULT 0,
+      delay_hours INTEGER NOT NULL DEFAULT 0,
+      subject_line TEXT NOT NULL,
+      body_html TEXT NOT NULL,
+      body_text TEXT,
+      from_name TEXT NOT NULL,
+      from_email TEXT NOT NULL,
+      reply_to_email TEXT,
+      is_active BOOLEAN DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (sequence_id) REFERENCES email_sequences(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS email_sequence_enrollments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      sequence_id INTEGER NOT NULL,
+      lead_id INTEGER NOT NULL,
+      current_step INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'active',
+      enrolled_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      completed_at DATETIME,
+      stopped_at DATETIME,
+      stop_reason TEXT,
+      last_email_sent_at DATETIME,
+      FOREIGN KEY (sequence_id) REFERENCES email_sequences(id) ON DELETE CASCADE,
+      FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE,
+      UNIQUE(sequence_id, lead_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS email_sequence_sends (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      enrollment_id INTEGER NOT NULL,
+      step_id INTEGER NOT NULL,
+      lead_id INTEGER NOT NULL,
+      email_address TEXT NOT NULL,
+      sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      delivered_at DATETIME,
+      opened_at DATETIME,
+      clicked_at DATETIME,
+      bounced BOOLEAN DEFAULT 0,
+      bounce_reason TEXT,
+      sendgrid_message_id TEXT,
+      converted BOOLEAN DEFAULT 0,
+      conversion_type TEXT,
+      FOREIGN KEY (enrollment_id) REFERENCES email_sequence_enrollments(id) ON DELETE CASCADE,
+      FOREIGN KEY (step_id) REFERENCES email_sequence_steps(id) ON DELETE CASCADE,
+      FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE
+    );
+  `);
+
   // Create seminar/event tables
   db.exec(`
     CREATE TABLE IF NOT EXISTS seminars (
@@ -456,6 +526,16 @@ function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_email_events_type ON email_events(event_type);
     CREATE INDEX IF NOT EXISTS idx_email_unsubscribes_email ON email_unsubscribes(email);
     CREATE INDEX IF NOT EXISTS idx_email_unsubscribes_lead_id ON email_unsubscribes(lead_id);
+
+    CREATE INDEX IF NOT EXISTS idx_email_sequences_active ON email_sequences(is_active);
+    CREATE INDEX IF NOT EXISTS idx_email_sequence_steps_sequence_id ON email_sequence_steps(sequence_id);
+    CREATE INDEX IF NOT EXISTS idx_email_sequence_steps_order ON email_sequence_steps(sequence_id, step_order);
+    CREATE INDEX IF NOT EXISTS idx_email_sequence_enrollments_sequence_id ON email_sequence_enrollments(sequence_id);
+    CREATE INDEX IF NOT EXISTS idx_email_sequence_enrollments_lead_id ON email_sequence_enrollments(lead_id);
+    CREATE INDEX IF NOT EXISTS idx_email_sequence_enrollments_status ON email_sequence_enrollments(status);
+    CREATE INDEX IF NOT EXISTS idx_email_sequence_sends_enrollment_id ON email_sequence_sends(enrollment_id);
+    CREATE INDEX IF NOT EXISTS idx_email_sequence_sends_lead_id ON email_sequence_sends(lead_id);
+    CREATE INDEX IF NOT EXISTS idx_email_sequence_sends_converted ON email_sequence_sends(converted);
   `);
 }
 

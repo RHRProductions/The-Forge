@@ -85,9 +85,28 @@ export async function PUT(
     }
 
     // Validate status
-    const validStatuses = ['active', 'pending', 'cancelled', 'expired'];
+    const validStatuses = ['active', 'pending', 'cancelled', 'expired', 'not_approved', 'declined', 'lapsed'];
     if (status && !validStatuses.includes(status)) {
       return NextResponse.json({ error: 'Invalid policy status' }, { status: 400 });
+    }
+
+    // Check if policy is being marked as fallen off (needs follow-up)
+    const fallOffStatuses = ['cancelled', 'not_approved', 'declined', 'lapsed'];
+    const isFallOff = status && fallOffStatuses.includes(status);
+
+    // If policy falls off and was previously pending, mark lead as hot and set follow-up date
+    if (isFallOff && (existingPolicy as any).status === 'pending') {
+      // Set follow-up date to tomorrow
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const followUpDate = tomorrow.toISOString().split('T')[0];
+
+      db.prepare(`
+        UPDATE leads SET
+          lead_temperature = 'hot',
+          next_follow_up = ?
+        WHERE id = ?
+      `).run(followUpDate, leadId);
     }
 
     // Update the policy

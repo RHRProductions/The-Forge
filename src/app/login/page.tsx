@@ -105,9 +105,13 @@ export default function LoginPage() {
     <div className="min-h-screen bg-black flex items-center justify-center p-6">
       <div className="bg-white rounded-lg shadow-2xl border-4 border-red-600 p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-5xl font-black text-black mb-2">
-            🔥 The Forge 🔥
-          </h1>
+          <div className="flex items-center justify-center gap-3 mb-2">
+            <span className="text-5xl">🔥</span>
+            <h1 className="text-5xl font-black text-black whitespace-nowrap">
+              The Forge
+            </h1>
+            <span className="text-5xl">🔥</span>
+          </div>
           <p className="text-gray-600">Sign in to access your leads</p>
         </div>
 

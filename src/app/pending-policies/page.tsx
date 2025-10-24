@@ -113,6 +113,46 @@ export default function PendingPoliciesPage() {
     }
   };
 
+  const handleMarkPolicyStatus = async (newStatus: string, statusLabel: string) => {
+    if (!selectedPolicy) return;
+
+    if (!confirm(`Mark this policy as ${statusLabel}? The lead will be returned to the hot leads pool for follow-up.`)) {
+      return;
+    }
+
+    setIssuingPolicy(true);
+    try {
+      const response = await fetch(`/api/leads/${selectedPolicy.lead_id}/policies/${selectedPolicy.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          policy_type: selectedPolicy.policy_type,
+          policy_number: selectedPolicy.policy_number,
+          coverage_amount: selectedPolicy.coverage_amount,
+          premium_amount: selectedPolicy.premium_amount,
+          commission_amount: selectedPolicy.commission_amount,
+          start_date: selectedPolicy.start_date,
+          end_date: selectedPolicy.end_date,
+          status: newStatus,
+          notes: selectedPolicy.notes
+        })
+      });
+
+      if (response.ok) {
+        setSelectedPolicy(null);
+        await fetchPolicies(); // Refresh the list
+        alert(`Policy marked as ${statusLabel}. Lead has been returned to the hot leads pool.`);
+      } else {
+        alert(`Failed to mark policy as ${statusLabel}`);
+      }
+    } catch (error) {
+      console.error('Error updating policy:', error);
+      alert('Error updating policy');
+    } finally {
+      setIssuingPolicy(false);
+    }
+  };
+
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -339,21 +379,56 @@ export default function PendingPoliciesPage() {
             )}
 
             {/* Action Buttons */}
-            <div className="flex gap-3 justify-end border-t pt-4">
-              <button
-                onClick={() => setSelectedPolicy(null)}
-                disabled={issuingPolicy}
-                className="px-6 py-3 bg-gray-300 hover:bg-gray-400 text-black rounded font-bold transition-colors disabled:opacity-50"
-              >
-                Close
-              </button>
-              <button
-                onClick={handleIssuePolicy}
-                disabled={issuingPolicy}
-                className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded font-bold transition-colors disabled:opacity-50"
-              >
-                {issuingPolicy ? '⏳ Issuing...' : '✅ Mark as Issued'}
-              </button>
+            <div className="border-t pt-4">
+              <div className="mb-4">
+                <h3 className="font-bold text-sm mb-2 text-gray-700">Policy Fell Off?</h3>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => handleMarkPolicyStatus('cancelled', 'Cancelled')}
+                    disabled={issuingPolicy}
+                    className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-800 rounded font-medium text-sm transition-colors disabled:opacity-50"
+                  >
+                    Cancelled
+                  </button>
+                  <button
+                    onClick={() => handleMarkPolicyStatus('not_approved', 'Not Approved')}
+                    disabled={issuingPolicy}
+                    className="px-4 py-2 bg-orange-100 hover:bg-orange-200 text-orange-800 rounded font-medium text-sm transition-colors disabled:opacity-50"
+                  >
+                    Not Approved
+                  </button>
+                  <button
+                    onClick={() => handleMarkPolicyStatus('declined', 'Declined')}
+                    disabled={issuingPolicy}
+                    className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-800 rounded font-medium text-sm transition-colors disabled:opacity-50"
+                  >
+                    Declined
+                  </button>
+                  <button
+                    onClick={() => handleMarkPolicyStatus('lapsed', 'Lapsed')}
+                    disabled={issuingPolicy}
+                    className="px-4 py-2 bg-purple-100 hover:bg-purple-200 text-purple-800 rounded font-medium text-sm transition-colors disabled:opacity-50"
+                  >
+                    Lapsed
+                  </button>
+                </div>
+              </div>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setSelectedPolicy(null)}
+                  disabled={issuingPolicy}
+                  className="px-6 py-3 bg-gray-300 hover:bg-gray-400 text-black rounded font-bold transition-colors disabled:opacity-50"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={handleIssuePolicy}
+                  disabled={issuingPolicy}
+                  className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded font-bold transition-colors disabled:opacity-50"
+                >
+                  {issuingPolicy ? '⏳ Processing...' : '✅ Mark as Issued'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

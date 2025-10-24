@@ -190,15 +190,22 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Get total cost from ALL leads (not just current page)
+    // Get total cost from ALL leads (not just current page) - only count leads with cost > 0
     let totalCostResult;
+    let wrongInfoCount;
     if (userRole === 'admin') {
-      totalCostResult = db.prepare('SELECT SUM(cost_per_lead) as totalCost FROM leads').get() as any;
+      totalCostResult = db.prepare('SELECT SUM(cost_per_lead) as totalCost FROM leads WHERE cost_per_lead > 0').get() as any;
+      wrongInfoCount = db.prepare('SELECT COUNT(*) as count FROM leads WHERE wrong_info = 1').get() as any;
     } else if (userRole === 'agent') {
       totalCostResult = db.prepare(`
         SELECT SUM(l.cost_per_lead) as totalCost FROM leads l
         LEFT JOIN users u ON l.owner_id = u.id
-        WHERE l.owner_id = ? OR u.agent_id = ?
+        WHERE (l.owner_id = ? OR u.agent_id = ?) AND l.cost_per_lead > 0
+      `).get(userId, userId) as any;
+      wrongInfoCount = db.prepare(`
+        SELECT COUNT(*) as count FROM leads l
+        LEFT JOIN users u ON l.owner_id = u.id
+        WHERE (l.owner_id = ? OR u.agent_id = ?) AND l.wrong_info = 1
       `).get(userId, userId) as any;
     } else {
       const user = db.prepare('SELECT agent_id FROM users WHERE id = ?').get(userId) as any;
@@ -206,10 +213,16 @@ export async function GET(request: NextRequest) {
         totalCostResult = db.prepare(`
           SELECT SUM(l.cost_per_lead) as totalCost FROM leads l
           LEFT JOIN users u ON l.owner_id = u.id
-          WHERE l.owner_id = ? OR u.agent_id = ?
+          WHERE (l.owner_id = ? OR u.agent_id = ?) AND l.cost_per_lead > 0
+        `).get(user.agent_id, user.agent_id) as any;
+        wrongInfoCount = db.prepare(`
+          SELECT COUNT(*) as count FROM leads l
+          LEFT JOIN users u ON l.owner_id = u.id
+          WHERE (l.owner_id = ? OR u.agent_id = ?) AND l.wrong_info = 1
         `).get(user.agent_id, user.agent_id) as any;
       } else {
-        totalCostResult = db.prepare('SELECT SUM(cost_per_lead) as totalCost FROM leads WHERE owner_id = ?').get(userId) as any;
+        totalCostResult = db.prepare('SELECT SUM(cost_per_lead) as totalCost FROM leads WHERE owner_id = ? AND cost_per_lead > 0').get(userId) as any;
+        wrongInfoCount = db.prepare('SELECT COUNT(*) as count FROM leads WHERE owner_id = ? AND wrong_info = 1').get(userId) as any;
       }
     }
 
@@ -264,7 +277,8 @@ export async function GET(request: NextRequest) {
         hasPrevPage: page > 1
       },
       stats: {
-        totalCost: totalCostResult?.totalCost || 0
+        totalCost: totalCostResult?.totalCost || 0,
+        wrongInfoCount: wrongInfoCount?.count || 0
       },
       followUpLeads: followUpLeads || []
     });

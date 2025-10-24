@@ -11,12 +11,16 @@ import { TimestampedNote, LeadImage, LeadPolicy, LeadActivity, ActivityType, Act
 function FollowUpReminders({
   leads,
   onLeadClick,
-  onRemoveFollowUp
+  onRemoveFollowUp,
+  onUpdateFollowUpDate
 }: {
   leads: Lead[];
   onLeadClick: (lead: Lead) => void;
   onRemoveFollowUp: (leadId: number) => void;
+  onUpdateFollowUpDate: (leadId: number, newDate: string) => Promise<void>;
 }) {
+  const [editingLeadId, setEditingLeadId] = useState<number | null>(null);
+  const [editDate, setEditDate] = useState<string>('');
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -70,7 +74,31 @@ function FollowUpReminders({
     return `${month}/${day}`;
   };
 
-  const LeadCard = ({ lead, category }: { lead: Lead; category: 'overdue' | 'today' | 'upcoming' }) => (
+  const handleStartEdit = (lead: Lead, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingLeadId(lead.id!);
+    setEditDate(lead.next_follow_up || '');
+  };
+
+  const handleSaveDate = async (leadId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (editDate) {
+      await onUpdateFollowUpDate(leadId, editDate);
+      setEditingLeadId(null);
+      setEditDate('');
+    }
+  };
+
+  const handleCancelEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingLeadId(null);
+    setEditDate('');
+  };
+
+  const LeadCard = ({ lead, category }: { lead: Lead; category: 'overdue' | 'today' | 'upcoming' }) => {
+    const isEditing = editingLeadId === lead.id;
+
+    return (
     <div
       onClick={() => onLeadClick(lead)}
       className="p-3 bg-white border border-gray-200 rounded hover:border-red-600 hover:shadow-md cursor-pointer transition-all relative group"
@@ -108,21 +136,57 @@ function FollowUpReminders({
         </div>
       </div>
       <div className="flex items-center justify-between">
-        <span className={`text-xs font-medium ${
-          category === 'overdue' ? 'text-red-600' :
-          category === 'today' ? 'text-green-600' :
-          'text-gray-600'
-        }`}>
-          {category === 'overdue' && '⚠️ '}
-          {category === 'today' && '📅 '}
-          {formatDate(lead.next_follow_up!)}
-        </span>
+        {isEditing ? (
+          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+            <input
+              type="date"
+              value={editDate}
+              onChange={(e) => setEditDate(e.target.value)}
+              className="text-xs border border-gray-300 rounded px-1 py-0.5"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <button
+              onClick={(e) => handleSaveDate(lead.id!, e)}
+              className="text-xs bg-green-600 text-white px-2 py-0.5 rounded hover:bg-green-700"
+              title="Save"
+            >
+              ✓
+            </button>
+            <button
+              onClick={handleCancelEdit}
+              className="text-xs bg-gray-400 text-white px-2 py-0.5 rounded hover:bg-gray-500"
+              title="Cancel"
+            >
+              ✕
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1">
+            <span className={`text-xs font-medium ${
+              category === 'overdue' ? 'text-red-600' :
+              category === 'today' ? 'text-green-600' :
+              'text-gray-600'
+            }`}>
+              {category === 'overdue' && '⚠️ '}
+              {category === 'today' && '📅 '}
+              {formatDate(lead.next_follow_up!)}
+            </span>
+            <button
+              onClick={(e) => handleStartEdit(lead, e)}
+              className="text-xs text-blue-600 hover:text-blue-800 opacity-0 group-hover:opacity-100 transition-opacity"
+              title="Edit date"
+            >
+              ✏️
+            </button>
+          </div>
+        )}
         <span className="text-xs text-gray-500">
           {formatLocation(lead.city)}, {formatLocation(lead.state)}
         </span>
       </div>
     </div>
-  );
+    );
+  };
 
   return (
     <div className="bg-gray-50 border-2 border-red-600 rounded overflow-hidden">
@@ -132,7 +196,7 @@ function FollowUpReminders({
           Follow-Up Reminders
         </h3>
       </div>
-      <div className="px-3 sm:px-4 pb-3 sm:pb-4 h-32 overflow-y-auto">
+      <div className="px-3 sm:px-4 pb-3 sm:pb-4">
 
       {followUpLeads.length === 0 ? (
         <div className="text-center py-8 text-gray-500 text-sm">
@@ -432,6 +496,7 @@ function HomeContent() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [followUpLeads, setFollowUpLeads] = useState<Lead[]>([]);
   const [totalCost, setTotalCost] = useState(0);
+  const [wrongInfoCount, setWrongInfoCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -465,6 +530,7 @@ function HomeContent() {
     search: ''
   });
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
+  const [showFollowUpModal, setShowFollowUpModal] = useState(false);
   const [actualSalesRevenue, setActualSalesRevenue] = useState<number>(0);
   const [emailStats, setEmailStats] = useState<{ leadsWithEmails: number; percentage: number }>({ leadsWithEmails: 0, percentage: 0 });
   const [formData, setFormData] = useState({
@@ -485,7 +551,7 @@ function HomeContent() {
     occupation: '',
     income: '',
     household_size: 0,
-    status: 'new' as LeadStatus,
+    status: 'appointment_set' as LeadStatus,
     contact_method: '' as ContactMethod,
     lead_type: 'other' as LeadType,
     cost_per_lead: 0,
@@ -574,6 +640,13 @@ function HomeContent() {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, []);
 
+  // Show follow-up reminders modal on initial load
+  useEffect(() => {
+    if (session && followUpLeads.length > 0) {
+      setShowFollowUpModal(true);
+    }
+  }, [session, followUpLeads]);
+
   const fetchLeads = async () => {
     try {
       // Build query params with filters
@@ -601,6 +674,7 @@ function HomeContent() {
         setFilteredLeads(data.leads); // Set filteredLeads to the server-filtered results
         setFollowUpLeads(data.followUpLeads);
         setTotalCost(data.stats.totalCost);
+        setWrongInfoCount(data.stats.wrongInfoCount);
         setTotalPages(data.pagination.totalPages);
         setTotalCount(data.pagination.totalCount);
         setOverallTotalCount(data.pagination.overallTotalCount);
@@ -743,6 +817,39 @@ function HomeContent() {
     }
   };
 
+  const handleUpdateFollowUpDate = async (leadId: number, newDate: string) => {
+    try {
+      const response = await fetch(`/api/leads/${leadId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ next_follow_up: newDate }),
+      });
+
+      if (response.ok) {
+        const updatedLead = await response.json();
+
+        // Update leads array
+        setLeads(prevLeads =>
+          prevLeads.map(l => l.id === leadId ? updatedLead : l)
+        );
+
+        // Update follow-up leads
+        setFollowUpLeads(prevLeads =>
+          prevLeads.map(l => l.id === leadId ? updatedLead : l)
+        );
+
+        // Update selectedLead if it's the same lead
+        if (selectedLead?.id === leadId) {
+          setSelectedLead(updatedLead);
+        }
+      }
+    } catch (error) {
+      console.error('Error updating follow-up date:', error);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       first_name: '',
@@ -762,7 +869,7 @@ function HomeContent() {
       occupation: '',
       income: '',
       household_size: 0,
-      status: 'new',
+      status: 'appointment_set',
       contact_method: '' as ContactMethod,
       cost_per_lead: 0,
       sales_amount: 0,
@@ -1031,6 +1138,16 @@ Type "DELETE ALL" to confirm:`;
                 <div className="text-xs text-gray-400">{session.user?.email}</div>
               </div>
 
+              {/* Follow-Up Reminders Button */}
+              {followUpLeads.length > 0 && (
+                <button
+                  onClick={() => setShowFollowUpModal(true)}
+                  className="bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 px-4 py-2 rounded font-black text-sm transition-colors whitespace-nowrap flex items-center gap-2 animate-pulse border-2 border-yellow-400"
+                >
+                  📋 FOLLOW-UPS ({followUpLeads.length})
+                </button>
+              )}
+
               {/* Navigation Dropdown */}
               <div className="relative nav-dropdown">
                 <button
@@ -1167,7 +1284,7 @@ Type "DELETE ALL" to confirm:`;
 
       {/* Dashboard Stats */}
       <div className="bg-gray-100 p-6 border-b-2 border-red-600">
-        <div className={`max-w-7xl mx-auto grid grid-cols-1 ${(session.user as any).role === 'setter' ? 'md:grid-cols-2' : 'md:grid-cols-5'} gap-6`}>
+        <div className={`max-w-7xl mx-auto grid grid-cols-1 ${(session.user as any).role === 'setter' ? 'md:grid-cols-3' : 'md:grid-cols-6'} gap-6`}>
           <div className="bg-white p-4 rounded border-l-4 border-red-600 shadow">
             <h3 className="text-sm font-medium text-gray-600">Total Leads</h3>
             <p className="text-2xl font-bold">{totalLeads}</p>
@@ -1176,6 +1293,11 @@ Type "DELETE ALL" to confirm:`;
             <h3 className="text-sm font-medium text-gray-600">Leads with Emails</h3>
             <p className="text-2xl font-bold">{emailStats.leadsWithEmails}</p>
             <p className="text-xs text-gray-500 mt-1">{emailStats.percentage}% of total</p>
+          </div>
+          <div className="bg-white p-4 rounded border-l-4 border-yellow-600 shadow">
+            <h3 className="text-sm font-medium text-gray-600">Wrong Info</h3>
+            <p className="text-2xl font-bold">{wrongInfoCount}</p>
+            <p className="text-xs text-gray-500 mt-1">{totalLeads > 0 ? ((wrongInfoCount / totalLeads) * 100).toFixed(1) : '0'}% of total</p>
           </div>
           {(session.user as any).role !== 'setter' && (
             <>
@@ -1376,27 +1498,6 @@ Type "DELETE ALL" to confirm:`;
                     <option value="divorced">Divorced</option>
                     <option value="widowed">Widowed</option>
                   </select>
-                  <input
-                    type="text"
-                    placeholder="Occupation"
-                    value={formData.occupation}
-                    onChange={(e) => handleFormChange('occupation', e.target.value)}
-                    className="p-3 border border-gray-300 rounded focus:border-red-600 focus:outline-none"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Income"
-                    value={formData.income}
-                    onChange={(e) => handleFormChange('income', e.target.value)}
-                    className="p-3 border border-gray-300 rounded focus:border-red-600 focus:outline-none"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Household Size"
-                    value={formData.household_size}
-                    onChange={(e) => handleFormChange('household_size', parseInt(e.target.value) || 0)}
-                    className="p-3 border border-gray-300 rounded focus:border-red-600 focus:outline-none"
-                  />
                 </div>
               </div>
 
@@ -1409,19 +1510,9 @@ Type "DELETE ALL" to confirm:`;
                     onChange={(e) => handleFormChange('status', e.target.value as LeadStatus)}
                     className="p-3 border border-gray-300 rounded focus:border-red-600 focus:outline-none"
                   >
-                    <option value="new">New</option>
-                    <option value="contacted">Contacted</option>
-                    <option value="no_answer">No Answer</option>
-                    <option value="not_set">Not Set</option>
-                    <option value="follow_up_needed">Follow Up Needed</option>
                     <option value="appointment_set">Appointment Set</option>
-                    <option value="pending">Pending</option>
-                    <option value="qualified">Qualified</option>
-                    <option value="not_qualified">Not Qualified</option>
-                    <option value="refund_needed">Refund Needed</option>
-                    <option value="closed_won">Closed Won</option>
-                    <option value="closed_lost">Closed Lost</option>
-                    <option value="closed">Closed</option>
+                    <option value="closed">Client</option>
+                    <option value="new">Referral</option>
                   </select>
                   <select
                     value={formData.contact_method}
@@ -1438,51 +1529,8 @@ Type "DELETE ALL" to confirm:`;
                     <option value="in_person">In Person</option>
                     <option value="social_media">Social Media</option>
                   </select>
-                  {(session.user as any).role !== 'setter' && (
-                    <>
-                      <input
-                        type="number"
-                        step="0.01"
-                        placeholder="Cost Per Lead"
-                        value={formData.cost_per_lead.toFixed(2)}
-                        onChange={(e) => handleFormChange('cost_per_lead', parseFloat(e.target.value) || 0)}
-                        className="p-3 border border-gray-300 rounded focus:border-red-600 focus:outline-none"
-                      />
-                      <input
-                        type="number"
-                        step="0.01"
-                        placeholder="Sales Amount"
-                        value={formData.sales_amount}
-                        onChange={(e) => handleFormChange('sales_amount', parseFloat(e.target.value) || 0)}
-                        className="p-3 border border-gray-300 rounded focus:border-red-600 focus:outline-none"
-                      />
-                    </>
-                  )}
-                  <input
-                    type="number"
-                    placeholder="Lead Score (0-100)"
-                    value={formData.lead_score}
-                    onChange={(e) => handleFormChange('lead_score', parseInt(e.target.value) || 0)}
-                    className="p-3 border border-gray-300 rounded focus:border-red-600 focus:outline-none"
-                    min="0"
-                    max="100"
-                  />
-                  <input
-                    type="date"
-                    placeholder="Next Follow Up"
-                    value={formData.next_follow_up}
-                    onChange={(e) => setFormData({...formData, next_follow_up: e.target.value})}
-                    className="p-3 border border-gray-300 rounded focus:border-red-600 focus:outline-none"
-                  />
                 </div>
               </div>
-              <textarea
-                placeholder="Notes"
-                value={formData.notes}
-                onChange={(e) => handleFormChange('notes', e.target.value)}
-                className="p-3 border border-gray-300 rounded focus:border-red-600 focus:outline-none md:col-span-2"
-                rows={3}
-              />
               <div className="md:col-span-2 flex gap-4">
                 <button
                   type="submit"
@@ -1646,6 +1694,7 @@ Type "DELETE ALL" to confirm:`;
                 <option value="appointment_set">Appointment Set</option>
                 <option value="refund_needed">Refund Needed</option>
                 <option value="closed">Closed</option>
+                <option value="tol">TOL</option>
               </select>
             </div>
 
@@ -1822,15 +1871,6 @@ Type "DELETE ALL" to confirm:`;
           </div>
         </div>
 
-        {/* Follow-Up Reminders - Full Width Above Table */}
-        <div className="mb-6">
-          <FollowUpReminders
-            leads={followUpLeads}
-            onLeadClick={handleLeadDoubleClick}
-            onRemoveFollowUp={handleRemoveFollowUp}
-          />
-        </div>
-
         {/* Leads Table - Full Width */}
         <div className="bg-white rounded border-2 border-red-600 overflow-hidden">
           <div className="overflow-x-auto">
@@ -1861,7 +1901,14 @@ Type "DELETE ALL" to confirm:`;
                     >
                       <td className="p-2 sm:p-4">
                         <div>
-                          <div className="font-medium text-xs sm:text-base">{formatName(lead.first_name)} {formatName(lead.last_name)}</div>
+                          <div className="font-medium text-xs sm:text-base flex items-center gap-2">
+                            {formatName(lead.first_name)} {formatName(lead.last_name)}
+                            {!!lead.wrong_info && (
+                              <span className="text-xs px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded border border-yellow-300" title="Lead has wrong/bad information">
+                                ⚠️ Wrong Info
+                              </span>
+                            )}
+                          </div>
                           <div className="text-xs sm:text-sm text-black">{lead.company}</div>
                         </div>
                       </td>
@@ -2007,6 +2054,29 @@ Type "DELETE ALL" to confirm:`;
               });
             }}
           />
+        </ResizableMovableModal>
+      )}
+
+      {/* Follow-Up Reminders Popup Modal */}
+      {showFollowUpModal && (
+        <ResizableMovableModal
+          onClose={() => setShowFollowUpModal(false)}
+        >
+          <div className="max-h-full overflow-y-auto">
+            <div className="mb-6">
+              <h2 className="text-3xl font-black text-gray-900">📋 FOLLOW-UP REMINDERS</h2>
+              <p className="text-gray-600 mt-1">Your hot and warm leads that need attention</p>
+            </div>
+            <FollowUpReminders
+              leads={followUpLeads}
+              onLeadClick={(lead) => {
+                handleLeadDoubleClick(lead);
+                setShowFollowUpModal(false);
+              }}
+              onRemoveFollowUp={handleRemoveFollowUp}
+              onUpdateFollowUpDate={handleUpdateFollowUpDate}
+            />
+          </div>
         </ResizableMovableModal>
       )}
     </div>
@@ -2296,6 +2366,7 @@ function LeadDetailForm({
                 <option value="issued">Issued</option>
                 <option value="refund_needed">Refund Needed</option>
                 <option value="closed">Closed</option>
+                <option value="tol">TOL</option>
               </select>
             </div>
             <div>
@@ -2892,6 +2963,37 @@ function ActivitiesSection({ leadId, lead, onLeadUpdate, session }: { leadId: nu
             </div>
           </div>
 
+          {/* Wrong Info Checkbox */}
+          <div className="mb-2">
+            <label className="flex items-center gap-2 cursor-pointer bg-yellow-50 border border-yellow-300 rounded p-2 hover:bg-yellow-100 transition-colors">
+              <input
+                type="checkbox"
+                checked={lead?.wrong_info || false}
+                onChange={async (e) => {
+                  if (!lead?.id) return;
+                  const newValue = e.target.checked;
+                  try {
+                    const response = await fetch(`/api/leads/${lead.id}`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ wrong_info: newValue }),
+                    });
+                    if (response.ok) {
+                      const updatedLead = await response.json();
+                      onLeadUpdate(updatedLead);
+                    }
+                  } catch (error) {
+                    console.error('Error updating wrong info:', error);
+                  }
+                }}
+                className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+              />
+              <span className="text-xs font-medium text-gray-700">
+                ⚠️ Mark as Wrong Info (bad phone, email, address, etc.)
+              </span>
+            </label>
+          </div>
+
           <div className="mb-2">
             <label className="block text-xs font-medium text-gray-700 mb-1">Additional Details (Optional)</label>
             <textarea
@@ -3413,6 +3515,9 @@ function PoliciesSection({ leadId }: { leadId: number }) {
       case 'active': return 'bg-green-100 text-green-800';
       case 'pending': return 'bg-yellow-100 text-yellow-800';
       case 'cancelled': return 'bg-red-100 text-red-800';
+      case 'not_approved': return 'bg-orange-100 text-orange-800';
+      case 'declined': return 'bg-red-100 text-red-800';
+      case 'lapsed': return 'bg-purple-100 text-purple-800';
       case 'expired': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -3505,6 +3610,9 @@ function PoliciesSection({ leadId }: { leadId: number }) {
             <option value="pending">Pending</option>
             <option value="active">Active</option>
             <option value="cancelled">Cancelled</option>
+            <option value="not_approved">Not Approved</option>
+            <option value="declined">Declined</option>
+            <option value="lapsed">Lapsed</option>
             <option value="expired">Expired</option>
           </select>
           <textarea
@@ -3671,6 +3779,9 @@ function PoliciesSection({ leadId }: { leadId: number }) {
                 <option value="pending">Pending</option>
                 <option value="active">Active</option>
                 <option value="cancelled">Cancelled</option>
+                <option value="not_approved">Not Approved</option>
+                <option value="declined">Declined</option>
+                <option value="lapsed">Lapsed</option>
                 <option value="expired">Expired</option>
               </select>
               <textarea

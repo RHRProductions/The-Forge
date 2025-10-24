@@ -48,6 +48,7 @@ export default function CalendarPage() {
   const [draggedEvent, setDraggedEvent] = useState<CalendarEvent | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [showEventDetail, setShowEventDetail] = useState(false);
+  const [resizingEvent, setResizingEvent] = useState<{ event: CalendarEvent; edge: 'top' | 'bottom'; previewStart?: Date; previewEnd?: Date } | null>(null);
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesText, setNotesText] = useState('');
   const [activities, setActivities] = useState<any[]>([]);
@@ -76,6 +77,9 @@ export default function CalendarPage() {
   const [editingPolicy, setEditingPolicy] = useState<any | null>(null);
   const [editingColor, setEditingColor] = useState(false);
   const [selectedColor, setSelectedColor] = useState('');
+  const [editingDateTime, setEditingDateTime] = useState(false);
+  const [editStartTime, setEditStartTime] = useState('');
+  const [editEndTime, setEditEndTime] = useState('');
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -152,12 +156,12 @@ export default function CalendarPage() {
     }
   }, [showEventDetail, selectedEvent]);
 
-  const handleTimeSlotClick = (date: Date, hour: number) => {
+  const handleTimeSlotClick = (date: Date, hour: number, minute: number = 0) => {
     setSelectedTimeSlot({ date, hour });
     const startDateTime = new Date(date);
-    startDateTime.setHours(hour, 0, 0, 0);
+    startDateTime.setHours(hour, minute, 0, 0);
     const endDateTime = new Date(startDateTime);
-    endDateTime.setHours(hour + 1, 0, 0, 0);
+    endDateTime.setHours(hour, minute + 15, 0, 0); // Default to 15 minutes
 
     // Format for datetime-local input (YYYY-MM-DDTHH:mm)
     const formatForInput = (d: Date) => {
@@ -277,6 +281,16 @@ export default function CalendarPage() {
     }
   };
 
+  const handleCloseEventDetail = async () => {
+    // If editing notes and there are changes, save them first
+    if (editingNotes && notesText !== selectedEvent?.description) {
+      await handleSaveNotes();
+    }
+    setShowEventDetail(false);
+    setSelectedEvent(null);
+    setEditingNotes(false);
+  };
+
   const handleUpdateColor = async (color: string) => {
     if (!selectedEvent) return;
 
@@ -297,6 +311,38 @@ export default function CalendarPage() {
       }
     } catch (error) {
       alert('Failed to update color');
+    }
+  };
+
+  const handleUpdateDateTime = async () => {
+    if (!selectedEvent) return;
+
+    // Validate that end is after start
+    const start = new Date(editStartTime);
+    const end = new Date(editEndTime);
+    if (end <= start) {
+      alert('End time must be after start time');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/calendar/${selectedEvent.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          start_time: editStartTime,
+          end_time: editEndTime,
+        }),
+      });
+
+      if (response.ok) {
+        await fetchEvents();
+        // Update the selected event with new times
+        setSelectedEvent({ ...selectedEvent, start_time: editStartTime, end_time: editEndTime });
+        setEditingDateTime(false);
+      }
+    } catch (error) {
+      alert('Failed to update time');
     }
   };
 
@@ -530,7 +576,7 @@ export default function CalendarPage() {
 
     const file = e.target.files[0];
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('image', file);  // Changed from 'file' to 'image' to match API
 
     setUploadingImage(true);
     try {
@@ -561,14 +607,85 @@ export default function CalendarPage() {
     e.dataTransfer.dropEffect = 'move';
   };
 
-  const handleDrop = async (date: Date, hour: number, e: React.DragEvent) => {
+  const handleResizeStart = (event: CalendarEvent, edge: 'top' | 'bottom', e: React.MouseEvent) => {
+    e.stopPropagation();
+    const currentStart = new Date(event.start_time.replace('T', ' '));
+    const currentEnd = new Date(event.end_time.replace('T', ' '));
+    setResizingEvent({ event, edge, previewStart: currentStart, previewEnd: currentEnd });
+  };
+
+  const handleResizePreview = (date: Date, hour: number, minute: number) => {
+    if (!resizingEvent) return;
+
+    const newTime = new Date(date);
+    newTime.setHours(hour, minute, 0, 0);
+
+    const currentStart = new Date(resizingEvent.event.start_time.replace('T', ' '));
+    const currentEnd = new Date(resizingEvent.event.end_time.replace('T', ' '));
+
+    setResizingEvent({
+      ...resizingEvent,
+      previewStart: resizingEvent.edge === 'top' ? newTime : currentStart,
+      previewEnd: resizingEvent.edge === 'bottom' ? newTime : currentEnd,
+    });
+  };
+
+  const handleResizeMove = async (date: Date, hour: number, minute: number) => {
+    if (!resizingEvent) return;
+
+    const newTime = new Date(date);
+    newTime.setHours(hour, minute, 0, 0);
+
+    const formatForInput = (d: Date) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+
+    const currentStart = new Date(resizingEvent.event.start_time.replace('T', ' '));
+    const currentEnd = new Date(resizingEvent.event.end_time.replace('T', ' '));
+
+    const newStart = resizingEvent.edge === 'top' ? newTime : currentStart;
+    const newEnd = resizingEvent.edge === 'bottom' ? newTime : currentEnd;
+
+    // Validate that end is after start
+    if (newEnd <= newStart) {
+      alert('End time must be after start time');
+      setResizingEvent(null);
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/calendar/${resizingEvent.event.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          start_time: formatForInput(newStart),
+          end_time: formatForInput(newEnd),
+        }),
+      });
+
+      if (response.ok) {
+        await fetchEvents();
+      }
+    } catch (error) {
+      alert('Failed to resize event');
+    }
+
+    setResizingEvent(null);
+  };
+
+  const handleDrop = async (date: Date, hour: number, minute: number, e: React.DragEvent) => {
     e.preventDefault();
 
     if (!draggedEvent) return;
 
     // Calculate new start and end times
     const newStartTime = new Date(date);
-    newStartTime.setHours(hour, 0, 0, 0);
+    newStartTime.setHours(hour, minute, 0, 0);
 
     const oldStartTime = new Date(draggedEvent.start_time.replace('T', ' '));
     const oldEndTime = new Date(draggedEvent.end_time.replace('T', ' '));
@@ -620,33 +737,67 @@ export default function CalendarPage() {
     return week;
   };
 
-  // Time slots (8 AM to 8 PM)
-  const timeSlots = Array.from({ length: 13 }, (_, i) => i + 8);
+  // Time slots (Full 24 hours in 15-minute increments)
+  const timeSlots = Array.from({ length: 24 }, (_, i) => i);
 
-  // Get events for a specific time slot
-  const getEventsForSlot = (date: Date, hour: number) => {
+  // Get events for a specific date
+  const getEventsForDate = (date: Date) => {
     return events.filter(event => {
       // Handle both ISO format (with Z) and local format (without Z)
-      // For local format, create date in local timezone
       let eventStart: Date;
       if (event.start_time.includes('Z')) {
-        // UTC format - convert to local
         eventStart = new Date(event.start_time);
       } else {
-        // Local format - parse as local time
         eventStart = new Date(event.start_time.replace('T', ' '));
       }
 
-      // Check if event is on the same date and hour
+      // Check if event is on the same date
       const isSameDate =
         eventStart.getFullYear() === date.getFullYear() &&
         eventStart.getMonth() === date.getMonth() &&
         eventStart.getDate() === date.getDate();
 
-      const isSameHour = eventStart.getHours() === hour;
-
-      return isSameDate && isSameHour;
+      return isSameDate;
     });
+  };
+
+  // Calculate event position and height
+  const getEventPosition = (event: CalendarEvent, previewStart?: Date, previewEnd?: Date) => {
+    let eventStart: Date, eventEnd: Date;
+
+    if (previewStart && previewEnd) {
+      eventStart = previewStart;
+      eventEnd = previewEnd;
+    } else if (event.start_time.includes('Z')) {
+      eventStart = new Date(event.start_time);
+      eventEnd = new Date(event.end_time);
+    } else {
+      eventStart = new Date(event.start_time.replace('T', ' '));
+      eventEnd = new Date(event.end_time.replace('T', ' '));
+    }
+
+    // Calculate start position in minutes from midnight
+    const startMinutes = eventStart.getHours() * 60 + eventStart.getMinutes();
+    const endMinutes = eventEnd.getHours() * 60 + eventEnd.getMinutes();
+    const durationMinutes = endMinutes - startMinutes;
+
+    // Each hour row is a fixed height, calculate proportional positioning
+    // 60 minutes = 100% of one hour row
+    const hourRowHeight = 60; // This will be used for percentage calculations
+    const topPosition = (startMinutes / 60) * hourRowHeight;
+    const height = (durationMinutes / 60) * hourRowHeight;
+
+    return { topPosition, height, startMinutes, durationMinutes };
+  };
+
+  // Format duration for display
+  const formatDuration = (minutes: number) => {
+    if (minutes < 60) {
+      return `${minutes}m`;
+    }
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
   };
 
   const navigateWeek = (direction: 'prev' | 'next') => {
@@ -867,15 +1018,18 @@ export default function CalendarPage() {
 
         {/* Event Detail Modal */}
         {showEventDetail && selectedEvent && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-            <div className="bg-white border-2 sm:border-4 border-red-600 rounded-lg w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] flex flex-col shadow-2xl">
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4"
+            onClick={handleCloseEventDetail}
+          >
+            <div
+              className="bg-white border-2 sm:border-4 border-red-600 rounded-lg w-full max-w-2xl max-h-[95vh] sm:max-h-[90vh] flex flex-col shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="flex justify-between items-start p-4 sm:p-6 pb-3 sm:pb-4 border-b border-gray-200">
                 <h2 className="text-xl sm:text-2xl font-bold">Appointment Details</h2>
                 <button
-                  onClick={() => {
-                    setShowEventDetail(false);
-                    setSelectedEvent(null);
-                  }}
+                  onClick={handleCloseEventDetail}
                   className="text-gray-500 hover:text-gray-700 text-2xl ml-2 min-w-[32px]"
                 >
                   ×
@@ -915,47 +1069,213 @@ export default function CalendarPage() {
                 )}
 
                 {selectedEvent.description && (() => {
-                  // Extract address from description (first line typically contains address info)
-                  const lines = selectedEvent.description.split('\n').filter(line => line.trim());
-                  const addressLines = [];
-                  for (const line of lines) {
-                    if (line.startsWith('Phone:') || line.startsWith('Notes:')) break;
-                    if (line.trim()) addressLines.push(line.trim());
-                  }
-                  const address = addressLines.join(', ');
+                  // Look for an explicit address pattern (street number + street name, or starts with "Address:")
+                  const description = selectedEvent.description;
+                  const addressMatch = description.match(/(?:^|\n)(?:Address:\s*)?(\d+[^,\n]+(?:Street|St|Avenue|Ave|Road|Rd|Drive|Dr|Lane|Ln|Boulevard|Blvd|Way|Court|Ct|Circle|Cir|Parkway|Pkwy)[^,\n]*(?:,\s*[^,\n]+)?(?:,\s*[A-Z]{2}\s*\d{5})?)/i);
 
-                  return address ? (
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-1">Address</label>
-                      <p className="text-lg">
-                        <a
-                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline"
-                        >
-                          {address} 📍
-                        </a>
-                      </p>
-                    </div>
-                  ) : null;
+                  if (addressMatch) {
+                    const address = addressMatch[1].trim();
+                    return (
+                      <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-1">Address</label>
+                        <p className="text-lg">
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline"
+                          >
+                            {address} 📍
+                          </a>
+                        </p>
+                      </div>
+                    );
+                  }
+                  return null;
                 })()}
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1">Date & Time</label>
-                  <p className="text-lg">
-                    {new Date(selectedEvent.start_time).toLocaleDateString('en-US', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
-                  </p>
-                  <p className="text-md text-gray-600">
-                    {new Date(selectedEvent.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    {' - '}
-                    {new Date(selectedEvent.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="block text-sm font-bold text-gray-700">Date & Time</label>
+                    {!editingDateTime && (
+                      <button
+                        onClick={() => {
+                          // Format for datetime-local input (YYYY-MM-DDTHH:mm)
+                          const formatForInput = (timeStr: string) => {
+                            // Parse the time string properly
+                            let d: Date;
+                            if (timeStr.includes('Z')) {
+                              // UTC format
+                              d = new Date(timeStr);
+                            } else if (timeStr.includes('T') && !timeStr.includes(' ')) {
+                              // Already in YYYY-MM-DDTHH:mm format
+                              d = new Date(timeStr.replace('T', ' '));
+                            } else {
+                              // Other formats
+                              d = new Date(timeStr);
+                            }
+
+                            const year = d.getFullYear();
+                            const month = String(d.getMonth() + 1).padStart(2, '0');
+                            const day = String(d.getDate()).padStart(2, '0');
+                            const hours = String(d.getHours()).padStart(2, '0');
+                            const minutes = String(d.getMinutes()).padStart(2, '0');
+                            return `${year}-${month}-${day}T${hours}:${minutes}`;
+                          };
+
+                          const startFormatted = formatForInput(selectedEvent.start_time);
+                          const endFormatted = formatForInput(selectedEvent.end_time);
+
+                          console.log('Start time:', selectedEvent.start_time, '-> formatted:', startFormatted);
+                          console.log('End time:', selectedEvent.end_time, '-> formatted:', endFormatted);
+
+                          setEditStartTime(startFormatted);
+                          setEditEndTime(endFormatted);
+                          setEditingDateTime(true);
+                        }}
+                        className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                      >
+                        Edit Time
+                      </button>
+                    )}
+                  </div>
+
+                  {editingDateTime ? (
+                    <div className="space-y-3 bg-gray-50 p-3 rounded border-2 border-gray-300">
+                      <div>
+                        <label className="block text-xs font-medium mb-1">Start Date & Time</label>
+                        <div className="flex gap-2">
+                          <input
+                            type="date"
+                            value={editStartTime.split('T')[0]}
+                            onChange={(e) => {
+                              const time = editStartTime.split('T')[1] || '09:00';
+                              setEditStartTime(`${e.target.value}T${time}`);
+                            }}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
+                          />
+                          <select
+                            value={parseInt(editStartTime.split('T')[1]?.split(':')[0] || '9')}
+                            onChange={(e) => {
+                              const date = editStartTime.split('T')[0];
+                              const minute = editStartTime.split('T')[1]?.split(':')[1] || '00';
+                              setEditStartTime(`${date}T${e.target.value.padStart(2, '0')}:${minute}`);
+                            }}
+                            className="px-3 py-2 border border-gray-300 rounded text-sm"
+                          >
+                            {Array.from({ length: 24 }, (_, i) => (
+                              <option key={i} value={i}>
+                                {i === 0 ? '12 AM' : i < 12 ? `${i} AM` : i === 12 ? '12 PM' : `${i - 12} PM`}
+                              </option>
+                            ))}
+                          </select>
+                          <select
+                            value={editStartTime.split('T')[1]?.split(':')[1] || '00'}
+                            onChange={(e) => {
+                              const date = editStartTime.split('T')[0];
+                              const hour = editStartTime.split('T')[1]?.split(':')[0] || '09';
+                              setEditStartTime(`${date}T${hour}:${e.target.value}`);
+                            }}
+                            className="px-3 py-2 border border-gray-300 rounded text-sm"
+                          >
+                            <option value="00">:00</option>
+                            <option value="15">:15</option>
+                            <option value="30">:30</option>
+                            <option value="45">:45</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium mb-1">End Date & Time</label>
+                        <div className="flex gap-2">
+                          <input
+                            type="date"
+                            value={editEndTime.split('T')[0]}
+                            onChange={(e) => {
+                              const time = editEndTime.split('T')[1] || '10:00';
+                              setEditEndTime(`${e.target.value}T${time}`);
+                            }}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded text-sm"
+                          />
+                          <select
+                            value={parseInt(editEndTime.split('T')[1]?.split(':')[0] || '10')}
+                            onChange={(e) => {
+                              const date = editEndTime.split('T')[0];
+                              const minute = editEndTime.split('T')[1]?.split(':')[1] || '00';
+                              setEditEndTime(`${date}T${e.target.value.padStart(2, '0')}:${minute}`);
+                            }}
+                            className="px-3 py-2 border border-gray-300 rounded text-sm"
+                          >
+                            {Array.from({ length: 24 }, (_, i) => (
+                              <option key={i} value={i}>
+                                {i === 0 ? '12 AM' : i < 12 ? `${i} AM` : i === 12 ? '12 PM' : `${i - 12} PM`}
+                              </option>
+                            ))}
+                          </select>
+                          <select
+                            value={editEndTime.split('T')[1]?.split(':')[1] || '00'}
+                            onChange={(e) => {
+                              const date = editEndTime.split('T')[0];
+                              const hour = editEndTime.split('T')[1]?.split(':')[0] || '10';
+                              setEditEndTime(`${date}T${hour}:${e.target.value}`);
+                            }}
+                            className="px-3 py-2 border border-gray-300 rounded text-sm"
+                          >
+                            <option value="00">:00</option>
+                            <option value="15">:15</option>
+                            <option value="30">:30</option>
+                            <option value="45">:45</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 pt-2">
+                        <button
+                          onClick={handleUpdateDateTime}
+                          className="flex-1 bg-green-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-green-700"
+                        >
+                          Save Time
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingDateTime(false);
+                            setEditStartTime('');
+                            setEditEndTime('');
+                          }}
+                          className="flex-1 bg-gray-300 text-black px-4 py-2 rounded text-sm font-bold hover:bg-gray-400"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-lg">
+                        {new Date(selectedEvent.start_time).toLocaleDateString('en-US', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </p>
+                      <p className="text-md text-gray-600">
+                        {new Date(selectedEvent.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {' - '}
+                        {new Date(selectedEvent.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        <span className="ml-2 text-sm font-semibold text-gray-700">
+                          ({(() => {
+                            const start = new Date(selectedEvent.start_time);
+                            const end = new Date(selectedEvent.end_time);
+                            const durationMs = end.getTime() - start.getTime();
+                            const durationMinutes = Math.floor(durationMs / 60000);
+                            if (durationMinutes < 60) return `${durationMinutes}m`;
+                            const hours = Math.floor(durationMinutes / 60);
+                            const mins = durationMinutes % 60;
+                            return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+                          })()})
+                        </span>
+                      </p>
+                    </>
+                  )}
                 </div>
 
                 {selectedEvent.created_by_name && (
@@ -1526,23 +1846,58 @@ export default function CalendarPage() {
               </thead>
               <tbody>
                 {timeSlots.map(hour => (
-                  <tr key={hour} className="border-t border-gray-200">
-                    <td className="p-1 sm:p-2 text-xs sm:text-sm font-medium text-gray-600 border-r border-gray-200 bg-gray-50">
+                  <tr key={hour} style={{ height: '60px' }}>
+                    <td className="p-1 sm:p-2 text-xs sm:text-sm font-medium text-gray-600 border-r border-gray-200 bg-gray-50 align-top">
                       {hour % 12 || 12}:00 {hour >= 12 ? 'PM' : 'AM'}
                     </td>
                     {weekDays.map(day => {
-                      const slotEvents = getEventsForSlot(day, hour);
+                      const dayEvents = getEventsForDate(day);
+                      // Filter events that start in this hour or span across it
+                      const hourEvents = dayEvents.filter(event => {
+                        const { startMinutes } = getEventPosition(event);
+                        const eventHour = Math.floor(startMinutes / 60);
+                        return eventHour === hour;
+                      });
+
                       return (
                         <td
                           key={`${day.toISOString()}-${hour}`}
-                          className={`p-0.5 sm:p-1 border-r border-gray-200 align-top cursor-pointer hover:bg-blue-50 transition-colors min-h-[60px] sm:min-h-[80px] ${
-                            draggedEvent ? 'hover:bg-green-100' : ''
-                          }`}
-                          onClick={() => handleTimeSlotClick(day, hour)}
-                          onDragOver={handleDragOver}
-                          onDrop={(e) => handleDrop(day, hour, e)}
+                          className="border-r border-gray-200 cursor-pointer transition-colors relative"
+                          style={{ height: '60px', padding: 0 }}
                         >
-                          {slotEvents.map(event => {
+                          {/* Click zones for 15-minute increments */}
+                          <div
+                            className="absolute top-0 left-0 right-0 h-1/4 hover:bg-blue-100 hover:bg-opacity-30"
+                            onClick={() => handleTimeSlotClick(day, hour, 0)}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(day, hour, 0, e)}
+                          ></div>
+                          <div
+                            className="absolute top-1/4 left-0 right-0 h-1/4 hover:bg-blue-100 hover:bg-opacity-30"
+                            onClick={() => handleTimeSlotClick(day, hour, 15)}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(day, hour, 15, e)}
+                          ></div>
+                          <div
+                            className="absolute top-1/2 left-0 right-0 h-1/4 hover:bg-blue-100 hover:bg-opacity-30"
+                            onClick={() => handleTimeSlotClick(day, hour, 30)}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(day, hour, 30, e)}
+                          ></div>
+                          <div
+                            className="absolute top-3/4 left-0 right-0 h-1/4 hover:bg-blue-100 hover:bg-opacity-30"
+                            onClick={() => handleTimeSlotClick(day, hour, 45)}
+                            onDragOver={handleDragOver}
+                            onDrop={(e) => handleDrop(day, hour, 45, e)}
+                          ></div>
+
+                          {/* Render events with calculated positions */}
+                          {hourEvents.map(event => {
+                            const { topPosition, height, durationMinutes } = getEventPosition(event);
+                            const offsetInHour = topPosition - (hour * 60);
+                            const topPercent = (offsetInHour / 60) * 100;
+                            const heightPercent = (height / 60) * 100;
+
                             // Determine background color - use custom color if set, otherwise use automatic color logic
                             let bgColorClass = '';
                             if (event.color) {
@@ -1580,22 +1935,38 @@ export default function CalendarPage() {
                               key={event.id}
                               draggable
                               onDragStart={(e) => handleDragStart(event, e)}
-                              className={`mb-0.5 sm:mb-1 p-1 sm:p-2 rounded text-xs font-bold cursor-move relative group ${bgColorClass} ${draggedEvent?.id === event.id ? 'opacity-50' : ''}`}
+                              className={`absolute left-1 right-1 px-2 py-1 rounded text-xs font-bold group ${bgColorClass} ${draggedEvent?.id === event.id ? 'opacity-50' : ''} cursor-move`}
+                              style={{
+                                top: `calc(${topPercent}% + 1px)`,
+                                height: `calc(${heightPercent}% - 2px)`,
+                                minHeight: '18px',
+                                zIndex: 10
+                              }}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setSelectedEvent(event);
                                 setShowEventDetail(true);
                               }}
                             >
-                              <div className="font-bold truncate pr-5 text-xs leading-tight">{event.title}</div>
-                              {event.lead_first_name && (
-                                <div className="text-xs opacity-90 truncate leading-tight">
-                                  {event.lead_first_name} {event.lead_last_name}
+                              <div className="overflow-hidden h-full flex flex-col justify-center">
+                                <div className="flex items-center justify-between gap-1">
+                                  <div className="font-bold truncate leading-tight flex-1">{event.title}</div>
+                                  <div className="text-xs opacity-90 font-bold whitespace-nowrap">
+                                    {formatDuration(durationMinutes)}
+                                  </div>
                                 </div>
-                              )}
-                              <div className="text-xs opacity-75 hidden sm:block">
-                                {new Date(event.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {event.lead_first_name && heightPercent > 20 && (
+                                  <div className="text-xs opacity-90 truncate leading-tight">
+                                    {event.lead_first_name} {event.lead_last_name}
+                                  </div>
+                                )}
+                                {heightPercent > 30 && (
+                                  <div className="text-xs opacity-75">
+                                    {new Date(event.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </div>
+                                )}
                               </div>
+
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();

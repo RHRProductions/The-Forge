@@ -169,12 +169,14 @@ export async function GET(request: NextRequest) {
         SUM(CASE WHEN lp.id IS NOT NULL THEN lp.commission_amount ELSE 0 END) as total_revenue,
         SUM(CASE WHEN la.outcome = 'contact' OR la.outcome = 'appointment' THEN 1 ELSE 0 END) as contacts,
         COUNT(la.id) as total_calls,
-        SUM(CASE WHEN la.outcome = 'appointment' THEN 1 ELSE 0 END) as appointments
+        SUM(CASE WHEN la.outcome = 'appointment' THEN 1 ELSE 0 END) as appointments,
+        SUM(CASE WHEN l.wrong_info = 1 THEN 1 ELSE 0 END) as wrong_info_count
       FROM leads l
       LEFT JOIN users u ON l.owner_id = u.id
       LEFT JOIN lead_activities la ON l.id = la.lead_id AND la.activity_type = 'call' AND la.created_at >= ?
       LEFT JOIN lead_policies lp ON l.id = lp.lead_id
       ${sourceWhereClause}
+      AND l.cost_per_lead > 0
       GROUP BY l.source
       HAVING lead_count >= 10
       ORDER BY (total_revenue - total_cost) DESC
@@ -216,6 +218,26 @@ export async function GET(request: NextRequest) {
           action: 'Stop buying from this source or negotiate better pricing',
           icon: '⚠️',
           data: { source: negativeSource.source, roi, loss }
+        });
+      }
+
+      // High wrong info rate sources
+      const badInfoSource = sourceStats.find(s => {
+        const wrongInfoRate = s.lead_count > 0 ? (s.wrong_info_count / s.lead_count) * 100 : 0;
+        return wrongInfoRate >= 20; // 20% or more have wrong info
+      });
+
+      if (badInfoSource) {
+        const wrongInfoRate = ((badInfoSource.wrong_info_count / badInfoSource.lead_count) * 100).toFixed(1);
+
+        insights.push({
+          type: 'bad_data_source',
+          priority: 'high',
+          title: `🚫 Bad Data Quality: ${badInfoSource.source}`,
+          detail: `${wrongInfoRate}% of leads have wrong/bad information (${badInfoSource.wrong_info_count} of ${badInfoSource.lead_count} leads)`,
+          action: 'Contact vendor about data quality or consider switching sources',
+          icon: '🚫',
+          data: { source: badInfoSource.source, wrongInfoRate, wrongInfoCount: badInfoSource.wrong_info_count }
         });
       }
     }

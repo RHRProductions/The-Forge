@@ -47,6 +47,7 @@ export interface Lead {
   total_dials?: number;
   owner_id?: number;
   worked_by_id?: number;
+  wrong_info?: boolean;
   created_at?: string;
   updated_at?: string;
 }
@@ -79,7 +80,7 @@ export interface LeadPolicy {
   commission_amount?: number;
   start_date?: string;
   end_date?: string;
-  status: 'active' | 'pending' | 'cancelled' | 'expired';
+  status: 'active' | 'pending' | 'cancelled' | 'expired' | 'not_approved' | 'declined' | 'lapsed';
   notes?: string;
   created_at: string;
 }
@@ -128,7 +129,8 @@ export type LeadStatus =
   | 'refund_needed'
   | 'closed_won'
   | 'closed_lost'
-  | 'closed';
+  | 'closed'
+  | 'tol';
 
 export type ContactMethod = 
   | 'phone'

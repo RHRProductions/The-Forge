@@ -157,7 +157,8 @@ export async function GET(request: NextRequest) {
           COUNT(DISTINCT CASE WHEN la.outcome = 'disconnected' THEN l.id END) as disconnected,
           COUNT(DISTINCT lp.lead_id) as sales,
           AVG(l.cost_per_lead) as avgCost,
-          COALESCE(SUM(lp.commission_amount), 0) as totalRevenue
+          COALESCE(SUM(lp.commission_amount), 0) as totalRevenue,
+          SUM(CASE WHEN l.wrong_info = 1 THEN 1 ELSE 0 END) as wrongInfo
         FROM leads l
         LEFT JOIN lead_activities la ON l.id = la.lead_id
         LEFT JOIN lead_policies lp ON l.id = lp.lead_id

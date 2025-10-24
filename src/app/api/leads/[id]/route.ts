@@ -24,9 +24,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const leadData: Partial<Lead> = await request.json();
     const db = getDatabase();
 
@@ -69,19 +70,23 @@ export async function PUT(
     addField('last_contact_date', leadData.last_contact_date);
     addField('next_follow_up', leadData.next_follow_up);
     addField('lead_temperature', leadData.lead_temperature);
+    // Convert boolean to number for SQLite
+    if (leadData.wrong_info !== undefined) {
+      addField('wrong_info', leadData.wrong_info ? 1 : 0);
+    }
 
     // Always update updated_at
     updates.push('updated_at = CURRENT_TIMESTAMP');
 
     // Add the id parameter
-    values.push(params.id);
+    values.push(id);
 
     if (updates.length > 1) { // More than just updated_at
       const query = `UPDATE leads SET ${updates.join(', ')} WHERE id = ?`;
       db.prepare(query).run(...values);
     }
 
-    const updatedLead = db.prepare('SELECT * FROM leads WHERE id = ?').get(params.id);
+    const updatedLead = db.prepare('SELECT * FROM leads WHERE id = ?').get(id);
     return NextResponse.json(updatedLead);
   } catch (error) {
     console.error('Error updating lead:', error);
@@ -91,11 +96,12 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const db = getDatabase();
-    db.prepare('DELETE FROM leads WHERE id = ?').run(params.id);
+    db.prepare('DELETE FROM leads WHERE id = ?').run(id);
     return NextResponse.json({ message: 'Lead deleted successfully' });
   } catch (error) {
     console.error('Error deleting lead:', error);

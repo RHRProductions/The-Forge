@@ -61,11 +61,16 @@ async function processWebhookEvent(db: any, event: any) {
   const extractedCampaignId = customArgs.campaign_id || campaign_id;
   const extractedLeadId = customArgs.lead_id || lead_id;
   const extractedSeminarId = customArgs.seminar_id || seminar_id;
+  const extractedSequenceId = customArgs.sequence_id;
+  const extractedEnrollmentId = customArgs.enrollment_id;
+  const extractedStepId = customArgs.step_id;
 
   console.log(`Processing ${eventType} event for ${email}`, {
     campaign_id: extractedCampaignId,
     lead_id: extractedLeadId,
-    seminar_id: extractedSeminarId
+    seminar_id: extractedSeminarId,
+    sequence_id: extractedSequenceId,
+    enrollment_id: extractedEnrollmentId
   });
 
   // Find the email send record
@@ -78,14 +83,29 @@ async function processWebhookEvent(db: any, event: any) {
     LIMIT 1
   `).get(email, sg_message_id, extractedCampaignId);
 
-  if (!emailSend && !extractedCampaignId) {
+  // Also find sequence send record if applicable
+  let sequenceSend = null;
+  if (extractedEnrollmentId) {
+    sequenceSend = db.prepare(`
+      SELECT id, enrollment_id, step_id, lead_id
+      FROM email_sequence_sends
+      WHERE email_address = ?
+        AND (sendgrid_message_id = ? OR enrollment_id = ?)
+      ORDER BY sent_at DESC
+      LIMIT 1
+    `).get(email, sg_message_id, extractedEnrollmentId);
+  }
+
+  if (!emailSend && !extractedCampaignId && !sequenceSend) {
     console.log('Email send record not found, skipping event');
     return;
   }
 
   const emailSendId = emailSend?.id;
   const campaignId = emailSend?.campaign_id || extractedCampaignId;
-  const leadId = emailSend?.lead_id || extractedLeadId;
+  const leadId = emailSend?.lead_id || extractedLeadId || sequenceSend?.lead_id;
+  const sequenceSendId = sequenceSend?.id;
+  const enrollmentId = sequenceSend?.enrollment_id || extractedEnrollmentId;
 
   // Process different event types
   switch (eventType) {
@@ -96,6 +116,13 @@ async function processWebhookEvent(db: any, event: any) {
           SET delivered_at = datetime(?, 'unixepoch')
           WHERE id = ?
         `).run(timestamp, emailSendId);
+      }
+      if (sequenceSendId) {
+        db.prepare(`
+          UPDATE email_sequence_sends
+          SET delivered_at = datetime(?, 'unixepoch')
+          WHERE id = ?
+        `).run(timestamp, sequenceSendId);
       }
       break;
 
@@ -123,6 +150,14 @@ async function processWebhookEvent(db: any, event: any) {
             WHERE seminar_id = ? AND lead_id = ?
           `).run(extractedSeminarId, leadId);
         }
+      }
+      if (sequenceSendId) {
+        // Update sequence send record
+        db.prepare(`
+          UPDATE email_sequence_sends
+          SET opened_at = COALESCE(opened_at, datetime(?, 'unixepoch'))
+          WHERE id = ?
+        `).run(timestamp, sequenceSendId);
       }
       break;
 
@@ -183,6 +218,48 @@ async function processWebhookEvent(db: any, event: any) {
           }
         }
       }
+      if (sequenceSendId) {
+        // Update sequence send record
+        db.prepare(`
+          UPDATE email_sequence_sends
+          SET clicked_at = COALESCE(clicked_at, datetime(?, 'unixepoch'))
+          WHERE id = ?
+        `).run(timestamp, sequenceSendId);
+
+        // Check if this is a conversion (booking or livestream registration)
+        if (url) {
+          let conversionType = null;
+
+          // Check for booking link
+          if (url.includes('/book')) {
+            conversionType = 'appointment_booked';
+          }
+          // Check for livestream registration
+          else if (url.includes('/livestream') || url.includes('/register')) {
+            conversionType = 'livestream_registered';
+          }
+
+          // Mark as converted
+          if (conversionType) {
+            db.prepare(`
+              UPDATE email_sequence_sends
+              SET converted = 1, conversion_type = ?
+              WHERE id = ?
+            `).run(conversionType, sequenceSendId);
+
+            // Stop the enrollment since they converted
+            if (enrollmentId) {
+              db.prepare(`
+                UPDATE email_sequence_enrollments
+                SET status = 'completed',
+                    completed_at = CURRENT_TIMESTAMP,
+                    stop_reason = 'converted'
+                WHERE id = ?
+              `).run(enrollmentId);
+            }
+          }
+        }
+      }
       break;
 
     case 'bounce':
@@ -200,6 +277,24 @@ async function processWebhookEvent(db: any, event: any) {
             email_send_id, event_type, event_data, created_at
           ) VALUES (?, ?, ?, datetime(?, 'unixepoch'))
         `).run(emailSendId, eventType, JSON.stringify(event), timestamp);
+      }
+      if (sequenceSendId) {
+        db.prepare(`
+          UPDATE email_sequence_sends
+          SET bounced = 1, bounce_reason = ?
+          WHERE id = ?
+        `).run(reason || eventType, sequenceSendId);
+
+        // Stop the enrollment
+        if (enrollmentId) {
+          db.prepare(`
+            UPDATE email_sequence_enrollments
+            SET status = 'stopped',
+                stopped_at = CURRENT_TIMESTAMP,
+                stop_reason = 'bounced'
+            WHERE id = ?
+          `).run(enrollmentId);
+        }
       }
       break;
 
@@ -228,6 +323,17 @@ async function processWebhookEvent(db: any, event: any) {
           ) VALUES (?, ?, ?, datetime(?, 'unixepoch'))
         `).run(emailSendId, eventType, JSON.stringify(event), timestamp);
       }
+
+      // Stop all active sequence enrollments for this email
+      db.prepare(`
+        UPDATE email_sequence_enrollments
+        SET status = 'stopped',
+            stopped_at = CURRENT_TIMESTAMP,
+            stop_reason = 'unsubscribed'
+        WHERE lead_id IN (SELECT id FROM leads WHERE email = ?)
+          AND status = 'active'
+      `).run(email);
+
       break;
 
     default:

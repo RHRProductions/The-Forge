@@ -27,8 +27,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Check for test mode (bypasses delay checks for testing)
+    const { searchParams } = new URL(request.url);
+    const testMode = searchParams.get('test_mode') === 'true';
+
     const db = getDatabase();
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
+    if (testMode) {
+      console.log('⚡ TEST MODE ENABLED: Will send all due emails immediately');
+    }
 
     // Get all active enrollments
     const activeEnrollments = db.prepare(`
@@ -168,12 +176,17 @@ export async function POST(request: NextRequest) {
         console.log(`  Due date: ${dueDate.toISOString()}`);
         console.log(`  Now: ${now.toISOString()}`);
         console.log(`  Is due? ${now >= dueDate}`);
+        console.log(`  Test mode? ${testMode}`);
 
-        if (now < dueDate) {
-          // Not due yet
+        if (!testMode && now < dueDate) {
+          // Not due yet (unless in test mode)
           console.log(`  SKIPPED: Not due yet`);
           results.skipped++;
           continue;
+        }
+
+        if (testMode) {
+          console.log(`  ⚡ TEST MODE: Sending email now regardless of due date`);
         }
 
         // Get agent info

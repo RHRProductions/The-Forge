@@ -640,12 +640,12 @@ function HomeContent() {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, []);
 
-  // Show follow-up reminders modal on initial load
-  useEffect(() => {
-    if (session && followUpLeads.length > 0) {
-      setShowFollowUpModal(true);
-    }
-  }, [session, followUpLeads]);
+  // Auto-popup disabled - modal only opens when user clicks the Follow-Ups button
+  // useEffect(() => {
+  //   if (session && followUpLeads.length > 0) {
+  //     setShowFollowUpModal(true);
+  //   }
+  // }, [session, followUpLeads]);
 
   const fetchLeads = async () => {
     try {

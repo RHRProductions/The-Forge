@@ -6,6 +6,7 @@ export default function TestSequencePage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState('');
+  const [sendingStep, setSendingStep] = useState<number | null>(null);
 
   const initializeSequence = async () => {
     setLoading(true);
@@ -37,20 +38,38 @@ export default function TestSequencePage() {
     setResult(null);
 
     try {
-      // First get a test lead
-      const leadsResponse = await fetch('/api/leads?limit=1');
+      const leadsResponse = await fetch('/api/leads?search=test&limit=10');
       const leadsData = await leadsResponse.json();
 
       if (!leadsData.leads || leadsData.leads.length === 0) {
-        setError('No leads found. Create a test lead first.');
+        setError('No test lead found. Create a lead with "test" in the name first.');
         setLoading(false);
         return;
       }
 
-      const testLead = leadsData.leads[0];
+      const testLead = leadsData.leads.find((lead: any) => lead.email && lead.email.includes('@'));
 
-      // Enroll the lead in sequence ID 1
-      const enrollResponse = await fetch('/api/sequences/1/enroll', {
+      if (!testLead) {
+        setError('Test lead found but has no email address. Please add an email.');
+        setLoading(false);
+        return;
+      }
+
+      // Get the Medicare sequence (should be the first/only one)
+      const sequencesResponse = await fetch('/api/sequences');
+      const sequencesData = await sequencesResponse.json();
+
+      if (!sequencesData.sequences || sequencesData.sequences.length === 0) {
+        setError('No sequence found. Please create the sequence first (Step 1).');
+        setLoading(false);
+        return;
+      }
+
+      const medicareSequence = sequencesData.sequences.find((s: any) =>
+        s.name === 'Medicare Cold Email Sequence'
+      ) || sequencesData.sequences[0];
+
+      const enrollResponse = await fetch(`/api/sequences/${medicareSequence.id}/enroll`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -76,6 +95,59 @@ export default function TestSequencePage() {
     }
   };
 
+  const sendTestEmail = async (stepNumber: number) => {
+    setSendingStep(stepNumber);
+    setError('');
+    setResult(null);
+
+    try {
+      // Get the test lead
+      const leadsResponse = await fetch('/api/leads?search=test&limit=10');
+      const leadsData = await leadsResponse.json();
+      const testLead = leadsData.leads?.find((lead: any) => lead.email && lead.email.includes('@'));
+
+      if (!testLead) {
+        setError('No test lead found. Please create a lead first.');
+        setSendingStep(null);
+        return;
+      }
+
+      // Get the enrollment
+      const enrollmentsResponse = await fetch(`/api/sequences/enrollments?lead_id=${testLead.id}`);
+      const enrollmentsData = await enrollmentsResponse.json();
+
+      if (!enrollmentsData.enrollments || enrollmentsData.enrollments.length === 0) {
+        setError('No enrollment found. Please enroll a test lead first.');
+        setSendingStep(null);
+        return;
+      }
+
+      const enrollment = enrollmentsData.enrollments[0];
+
+      // Send the specific step
+      const response = await fetch('/api/sequences/send-step', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enrollmentId: enrollment.id,
+          stepOrder: stepNumber
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setResult(data);
+      } else {
+        setError(data.error || 'Failed to send email');
+      }
+    } catch (err) {
+      setError('Network error');
+    } finally {
+      setSendingStep(null);
+    }
+  };
+
   const processSequences = async () => {
     setLoading(true);
     setError('');
@@ -98,19 +170,6 @@ export default function TestSequencePage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const viewBookingPage = () => {
-    // Open booking page with first lead
-    fetch('/api/leads?limit=1')
-      .then(res => res.json())
-      .then(data => {
-        if (data.leads && data.leads.length > 0) {
-          window.open(`/book?lead=${data.leads[0].id}`, '_blank');
-        } else {
-          setError('No leads found');
-        }
-      });
   };
 
   return (
@@ -147,29 +206,35 @@ export default function TestSequencePage() {
         </div>
 
         <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Step 3: Process Sequences (Send Emails)</h2>
+          <h2 className="text-xl font-semibold mb-4">Step 3: Send Individual Test Emails</h2>
           <p className="text-gray-600 mb-4">
-            Checks all enrollments and sends any due emails. Will send Email #1 immediately.
+            Click to send each email individually to your test lead.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {[1, 2, 3, 4, 5].map((stepNum) => (
+              <button
+                key={stepNum}
+                onClick={() => sendTestEmail(stepNum)}
+                disabled={sendingStep === stepNum}
+                className="bg-purple-600 text-white px-6 py-3 rounded hover:bg-purple-700 disabled:bg-gray-300"
+              >
+                {sendingStep === stepNum ? 'Sending...' : `Send Email #${stepNum}`}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4">Step 4: Process Sequences (Send Next Due Email)</h2>
+          <p className="text-gray-600 mb-4">
+            Checks all enrollments and sends any due emails. Sends one email at a time.
           </p>
           <button
             onClick={processSequences}
             disabled={loading}
             className="bg-red-600 text-white px-6 py-3 rounded hover:bg-red-700 disabled:bg-gray-300"
           >
-            {loading ? 'Processing...' : 'Send Due Emails'}
-          </button>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Step 4: Test Booking Page</h2>
-          <p className="text-gray-600 mb-4">
-            Opens the appointment booking page for your first lead.
-          </p>
-          <button
-            onClick={viewBookingPage}
-            className="bg-purple-600 text-white px-6 py-3 rounded hover:bg-purple-700"
-          >
-            View Booking Page
+            {loading ? 'Processing...' : 'Send Next Due Email'}
           </button>
         </div>
 

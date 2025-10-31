@@ -31,408 +31,529 @@ export interface EmailTemplate {
  */
 
 export const medicareSequenceTemplates: EmailTemplate[] = [
-  // EMAIL 1: Curiosity Hook + Pattern Interrupt (Day 0)
+  // EMAIL 1: The Medicare Surprise (Day 0)
   {
     stepOrder: 1,
     delayDays: 0,
-    subjectLine: "{first_name}, are you making these Medicare mistakes?",
+    subjectLine: "{first_name}, what they don't tell you about Medicare",
     bodyHtml: `
-      <p>Hi {first_name},</p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">Hi {first_name},</p>
 
-      <p>Most people turning 65 in {city} don't realize they're leaving money on the table with Medicare.</p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">Most people turning 65 in {city} think Medicare covers everything.</p>
 
-      <p>In fact, the average person overpays by $1,800/year because they don't know about:</p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;"><strong>It doesn't.</strong></p>
 
-      <ul>
-        <li>Hidden Plan G vs Plan N savings</li>
-        <li>Prescription drug cost traps</li>
-        <li>The "birthday rule" loophole</li>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">Here's what catches people off guard:</p>
+
+      <ul style="font-size: 16px; color: #1f2937; line-height: 1.8;">
+        <li>Medicare Parts A, B, and D only cover about 80% of your costs</li>
+        <li>That 20% gap can mean thousands out of pocket</li>
+        <li>Miss your enrollment window? Late penalties can follow you for life</li>
       </ul>
 
-      <p><strong>I help {state} residents navigate Medicare enrollment without the confusion.</strong></p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">Without secondary coverage, you're exposed to costs that can devastate your retirement savings.</p>
 
-      <p>Want to make sure you're not overpaying?</p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;"><strong>That's where I come in.</strong></p>
 
-      <p><a href="{booking_link}" style="display: inline-block; background-color: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Book a Free 15-Minute Review</a></p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">I'm a local Medicare advisor right here in {city}. I help {state} residents understand how Medicare actually works, what their real costs are, and what they're eligible for.</p>
 
-      <p>No pressure. No sales pitch. Just straight answers.</p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">I meet with people face-to-face (or by phone/video if you prefer) to walk through everything together.</p>
 
-      <p>Talk soon,<br>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;"><strong>Let's sit down and make sure you're not overpaying.</strong></p>
+
+      <p><a href="{booking_link}" style="display: inline-block; background-color: #dc2626; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">Schedule Your Free Sit-Down Review</a></p>
+
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6; margin-top: 15px;">No pressure. No sales pitch. Just a personal guide you can count on.</p>
+
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">Talk soon,<br>
       {agent_name}<br>
       Licensed Medicare Advisor<br>
       {agent_phone}</p>
 
-      <p style="font-size: 12px; color: #666; margin-top: 30px;">
-        P.S. — Spots fill fast during enrollment season. Grab a time that works for you while they last.
+      <p style="font-size: 16px; color: #1f2937; margin-top: 30px; font-weight: 500;">
+        P.S. — Don't risk late enrollment penalties. Let's make sure you're on track.
       </p>
 
       <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
 
       <p style="font-size: 11px; color: #9ca3af; line-height: 1.6;">
+        <strong>Marc Anthony Spagnuolo</strong><br>
         Right Hand Retirement<br>
-        13034 E 14th Ave, Aurora, CO 80011<br>
-        720-447-4966 | marcanthony@righthandretirement.com
+        P.O. Box [TBD], Aurora, CO 80011<br>
+        720-447-4966 | marcanthony@righthandretirement.com<br><br>
+        <a href="{unsubscribe_link}" style="color: #9ca3af; text-decoration: underline;">Unsubscribe</a> | <a href="https://righthandretirement.com" style="color: #9ca3af; text-decoration: underline;">Visit Our Website</a>
+      </p>
+
+      <p style="font-size: 10px; color: #9ca3af; line-height: 1.5; margin-top: 15px; padding: 10px; background-color: #f9fafb; border-left: 3px solid #dc2626;">
+        <strong>CMS Disclaimer:</strong> We do not offer every plan available in your area. Any information we provide is limited to those plans we do offer in your area. Please contact Medicare.gov or 1-800-MEDICARE to get information on all of your options.<br><br>
+        For more information on our carrier options:<br>
+        • <a href="https://www.medicareenroll.com/?purl=undefined" style="color: #9ca3af; text-decoration: underline;">Medicare Enroll</a><br>
+        • <a href="https://www.planenroll.com/?purl=1DwkmXow" style="color: #9ca3af; text-decoration: underline;">Plan Enroll</a>
       </p>
     `,
     bodyText: `Hi {first_name},
 
-Most people turning 65 in {city} don't realize they're leaving money on the table with Medicare.
+Most people turning 65 in {city} think Medicare covers everything.
 
-In fact, the average person overpays by $1,800/year because they don't know about:
+It doesn't.
 
-• Hidden Plan G vs Plan N savings
-• Prescription drug cost traps
-• The "birthday rule" loophole
+Here's what catches people off guard:
 
-I help {state} residents navigate Medicare enrollment without the confusion.
+• Medicare Parts A, B, and D only cover about 80% of your costs
+• That 20% gap can mean thousands out of pocket
+• Miss your enrollment window? Late penalties can follow you for life
 
-Want to make sure you're not overpaying?
+Without secondary coverage, you're exposed to costs that can devastate your retirement savings.
 
-Book a Free 15-Minute Review: {booking_link}
+That's where I come in.
 
-No pressure. No sales pitch. Just straight answers.
+I'm a local Medicare advisor right here in {city}. I help {state} residents understand how Medicare actually works, what their real costs are, and what they're eligible for.
+
+I meet with people face-to-face (or by phone/video if you prefer) to walk through everything together.
+
+Let's sit down and make sure you're not overpaying.
+
+Schedule Your Free Sit-Down Review: {booking_link}
+
+No pressure. No sales pitch. Just a personal guide you can count on.
 
 Talk soon,
 {agent_name}
 Licensed Medicare Advisor
 {agent_phone}
 
-P.S. — Spots fill fast during enrollment season. Grab a time that works for you while they last.`
+P.S. — Don't risk late enrollment penalties. Let's make sure you're on track.
+
+---
+Marc Anthony Spagnuolo
+Right Hand Retirement
+P.O. Box [TBD], Aurora, CO 80011
+720-447-4966 | marcanthony@righthandretirement.com
+
+Unsubscribe: {unsubscribe_link}
+
+---
+CMS Disclaimer: We do not offer every plan available in your area. Any information we provide is limited to those plans we do offer in your area. Please contact Medicare.gov or 1-800-MEDICARE to get information on all of your options.
+
+For more information on our carrier options:
+• Medicare Enroll: https://www.medicareenroll.com/?purl=undefined
+• Plan Enroll: https://www.planenroll.com/?purl=1DwkmXow`
   },
 
-  // EMAIL 2: Education + Livestream Invite (Day 3)
+  // EMAIL 2: Two Paths Forward (Day 3)
   {
     stepOrder: 2,
     delayDays: 3,
-    subjectLine: "Free Medicare workshop this Friday (online)",
+    subjectLine: "Two ways to fill the Medicare gap",
     bodyHtml: `
-      <p>Hi {first_name},</p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">Hi {first_name},</p>
 
-      <p>Quick question: Are you confused about when to enroll in Medicare?</p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">Remember that 20% gap I mentioned?</p>
 
-      <p>You're not alone. Last week, I talked to someone who missed their enrollment window and got hit with a <strong>permanent late penalty of $67/month</strong>. Ouch.</p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">The good news: There are two routes to fill it.</p>
 
-      <p><strong>That's why I'm hosting a free online Medicare workshop this Friday.</strong></p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;"><strong>Option 1: Medicare Supplement Plans</strong><br>
+      These work alongside Original Medicare and help cover the 20% gap.</p>
 
-      <p>In 45 minutes, you'll learn:</p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;"><strong>Option 2: Medicare Advantage Plans</strong><br>
+      These replace Original Medicare and typically come with low or no premiums, plus extra benefits.</p>
 
-      <ul>
-        <li>✓ The 3 enrollment periods (and which one applies to you)</li>
-        <li>✓ How to avoid costly penalties and coverage gaps</li>
-        <li>✓ Medigap vs Medicare Advantage: Which is right for you?</li>
-        <li>✓ How to compare drug plans and save hundreds per year</li>
-      </ul>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">Most people I work with end up choosing Advantage plans because they offer more value for less cost.</p>
 
-      <p><a href="{livestream_link}" style="display: inline-block; background-color: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Save Your Spot (Free)</a></p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;"><strong>But the right choice depends on YOUR situation.</strong></p>
 
-      <p><strong>When:</strong> This Friday at 10:00 AM MT<br>
-      <strong>Where:</strong> Online (link sent after registration)<br>
-      <strong>Cost:</strong> $0</p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">Your health needs. Your budget. Your doctors. Your medications.</p>
 
-      <p>Bring your questions. I'll answer them all.</p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">That's what I help you figure out.</p>
 
-      <p>See you there,<br>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;"><strong>Join my free Medicare 101 workshop this Friday where I'll break down both options in plain English.</strong></p>
+
+      <p><a href="{livestream_link}" style="display: inline-block; background-color: #dc2626; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">Save Your Spot (Free)</a></p>
+
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6; margin-top: 15px;">45 minutes. Live Q&A. No jargon. No pressure.</p>
+
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">Best,<br>
       {agent_name}<br>
       {agent_phone}</p>
 
-      <p style="font-size: 12px; color: #666; margin-top: 30px;">
-        P.S. — Can't make it? No worries. <a href="{booking_link}">Book a one-on-one call</a> instead.
+      <p style="font-size: 16px; color: #1f2937; margin-top: 30px; font-weight: 500;">
+        P.S. — There's no "one size fits all" with Medicare. Let's find what fits YOU.
       </p>
 
       <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
 
       <p style="font-size: 11px; color: #9ca3af; line-height: 1.6;">
+        <strong>Marc Anthony Spagnuolo</strong><br>
         Right Hand Retirement<br>
-        13034 E 14th Ave, Aurora, CO 80011<br>
-        720-447-4966 | marcanthony@righthandretirement.com
+        P.O. Box [TBD], Aurora, CO 80011<br>
+        720-447-4966 | marcanthony@righthandretirement.com<br><br>
+        <a href="{unsubscribe_link}" style="color: #9ca3af; text-decoration: underline;">Unsubscribe</a> | <a href="https://righthandretirement.com" style="color: #9ca3af; text-decoration: underline;">Visit Our Website</a>
+      </p>
+
+      <p style="font-size: 10px; color: #9ca3af; line-height: 1.5; margin-top: 15px; padding: 10px; background-color: #f9fafb; border-left: 3px solid #dc2626;">
+        <strong>CMS Disclaimer:</strong> We do not offer every plan available in your area. Any information we provide is limited to those plans we do offer in your area. Please contact Medicare.gov or 1-800-MEDICARE to get information on all of your options.<br><br>
+        For more information on our carrier options:<br>
+        • <a href="https://www.medicareenroll.com/?purl=undefined" style="color: #9ca3af; text-decoration: underline;">Medicare Enroll</a><br>
+        • <a href="https://www.planenroll.com/?purl=1DwkmXow" style="color: #9ca3af; text-decoration: underline;">Plan Enroll</a>
       </p>
     `,
     bodyText: `Hi {first_name},
 
-Quick question: Are you confused about when to enroll in Medicare?
+Remember that 20% gap I mentioned?
 
-You're not alone. Last week, I talked to someone who missed their enrollment window and got hit with a permanent late penalty of $67/month. Ouch.
+The good news: There are two routes to fill it.
 
-That's why I'm hosting a free online Medicare workshop this Friday.
+Option 1: Medicare Supplement Plans
+These work alongside Original Medicare and help cover the 20% gap.
 
-In 45 minutes, you'll learn:
+Option 2: Medicare Advantage Plans
+These replace Original Medicare and typically come with low or no premiums, plus extra benefits.
 
-✓ The 3 enrollment periods (and which one applies to you)
-✓ How to avoid costly penalties and coverage gaps
-✓ Medigap vs Medicare Advantage: Which is right for you?
-✓ How to compare drug plans and save hundreds per year
+Most people I work with end up choosing Advantage plans because they offer more value for less cost.
+
+But the right choice depends on YOUR situation.
+
+Your health needs. Your budget. Your doctors. Your medications.
+
+That's what I help you figure out.
+
+Join my free Medicare 101 workshop this Friday where I'll break down both options in plain English.
 
 Save Your Spot (Free): {livestream_link}
 
-When: This Friday at 10:00 AM MT
-Where: Online (link sent after registration)
-Cost: $0
-
-Bring your questions. I'll answer them all.
-
-See you there,
-{agent_name}
-{agent_phone}
-
-P.S. — Can't make it? No worries. Book a one-on-one call instead: {booking_link}`
-  },
-
-  // EMAIL 3: Social Proof + Testimonial (Day 7)
-  {
-    stepOrder: 3,
-    delayDays: 7,
-    subjectLine: "How Linda saved $2,400/year on Medicare",
-    bodyHtml: `
-      <p>Hi {first_name},</p>
-
-      <p>I wanted to share a quick win from last week.</p>
-
-      <p>Linda (64, from Colorado Springs) was about to enroll in a Medicare Advantage plan her friend recommended.</p>
-
-      <p><strong>But we found her a better option that saves her $2,400/year.</strong></p>
-
-      <p>Here's what made the difference:</p>
-
-      <blockquote style="border-left: 4px solid #dc2626; padding-left: 16px; margin: 20px 0; font-style: italic; color: #555;">
-        "I had no idea there were so many hidden costs in that plan. {agent_name} walked me through everything in plain English. No jargon. No pressure. Just real help. I'm so glad I didn't sign up blindly!"
-        <br><br>
-        — Linda S., Colorado Springs
-      </blockquote>
-
-      <p>The problem? Most people don't know what questions to ask.</p>
-
-      <p>They end up with:</p>
-      <ul>
-        <li>❌ Plans that don't cover their doctors</li>
-        <li>❌ High prescription drug costs</li>
-        <li>❌ Surprise out-of-pocket expenses</li>
-      </ul>
-
-      <p><strong>Want to make sure you're not leaving money on the table?</strong></p>
-
-      <p><a href="{booking_link}" style="display: inline-block; background-color: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Book Your Free Medicare Review</a></p>
-
-      <p>15 minutes. Zero obligation. Real answers.</p>
-
-      <p>Best,<br>
-      {agent_name}<br>
-      {agent_phone}</p>
-
-      <p style="font-size: 12px; color: #666; margin-top: 30px;">
-        P.S. — I have 3 spots open this week. First come, first served.
-      </p>
-
-      <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-
-      <p style="font-size: 11px; color: #9ca3af; line-height: 1.6;">
-        Right Hand Retirement<br>
-        13034 E 14th Ave, Aurora, CO 80011<br>
-        720-447-4966 | marcanthony@righthandretirement.com
-      </p>
-    `,
-    bodyText: `Hi {first_name},
-
-I wanted to share a quick win from last week.
-
-Linda (64, from Colorado Springs) was about to enroll in a Medicare Advantage plan her friend recommended.
-
-But we found her a better option that saves her $2,400/year.
-
-Here's what made the difference:
-
-"I had no idea there were so many hidden costs in that plan. {agent_name} walked me through everything in plain English. No jargon. No pressure. Just real help. I'm so glad I didn't sign up blindly!"
-
-— Linda S., Colorado Springs
-
-The problem? Most people don't know what questions to ask.
-
-They end up with:
-❌ Plans that don't cover their doctors
-❌ High prescription drug costs
-❌ Surprise out-of-pocket expenses
-
-Want to make sure you're not leaving money on the table?
-
-Book Your Free Medicare Review: {booking_link}
-
-15 minutes. Zero obligation. Real answers.
+45 minutes. Live Q&A. No jargon. No pressure.
 
 Best,
 {agent_name}
 {agent_phone}
 
-P.S. — I have 3 spots open this week. First come, first served.`
+P.S. — There's no "one size fits all" with Medicare. Let's find what fits YOU.
+
+---
+Marc Anthony Spagnuolo
+Right Hand Retirement
+P.O. Box [TBD], Aurora, CO 80011
+720-447-4966 | marcanthony@righthandretirement.com
+
+Unsubscribe: {unsubscribe_link}
+
+---
+CMS Disclaimer: We do not offer every plan available in your area. Any information we provide is limited to those plans we do offer in your area. Please contact Medicare.gov or 1-800-MEDICARE to get information on all of your options.
+
+For more information on our carrier options:
+• Medicare Enroll: https://www.medicareenroll.com/?purl=undefined
+• Plan Enroll: https://www.planenroll.com/?purl=1DwkmXow`
   },
 
-  // EMAIL 4: Urgency + Event Reminder (Day 10)
+  // EMAIL 3: What Most People Don't Know (Day 7)
   {
-    stepOrder: 4,
-    delayDays: 10,
-    subjectLine: "Livestream starts Friday → last call",
+    stepOrder: 3,
+    delayDays: 7,
+    subjectLine: "What most people don't know about their options",
     bodyHtml: `
-      <p>Hi {first_name},</p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">Hi {first_name},</p>
 
-      <p>Just a quick heads up — our free Medicare workshop is <strong>this Friday at 10:00 AM MT</strong>.</p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">I want to share something that surprises most people I work with.</p>
 
-      <p>We're at 47/50 seats filled. Once we hit capacity, registration closes.</p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">When it comes to Medicare Advantage plans, many people don't realize the kinds of benefits that can be included.</p>
 
-      <p><strong>Here's what you'll walk away with:</strong></p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">In my experience, I've seen plans that include things like:</p>
 
-      <ul>
-        <li>✓ A clear Medicare enrollment timeline (no more confusion)</li>
-        <li>✓ How to compare plans apples-to-apples</li>
-        <li>✓ 3 ways to cut your prescription costs in half</li>
-        <li>✓ The #1 mistake that costs retirees $1,500+/year</li>
+      <ul style="font-size: 16px; color: #1f2937; line-height: 1.8;">
+        <li>Dental benefits</li>
+        <li>Vision coverage</li>
+        <li>Gym memberships</li>
+        <li>Healthy incentives</li>
+        <li>Over-the-counter allowances</li>
+        <li>And more</li>
       </ul>
 
-      <p><a href="{livestream_link}" style="display: inline-block; background-color: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Grab Your Spot Before It's Full</a></p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;"><strong>But here's the key:</strong> Every plan is different, and what you're eligible for depends on your specific situation and location.</p>
 
-      <p><strong>When:</strong> This Friday, 10:00 AM MT<br>
-      <strong>Format:</strong> Live Q&A included<br>
-      <strong>Duration:</strong> 45 minutes</p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">That's why a personalized, sit-down review matters.</p>
 
-      <p>No sales pitch. No pressure. Just education.</p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">I help you see what options actually exist in your area, based on your unique needs. We can meet in person, by phone, or video — whatever works best for you.</p>
 
-      <p>See you Friday,<br>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;"><strong>Let me show you what you might be eligible for.</strong></p>
+
+      <p><a href="{booking_link}" style="display: inline-block; background-color: #dc2626; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">Schedule Your Free In-Person Review</a></p>
+
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6; margin-top: 15px;">No generic advice. Just real answers for YOUR situation, from a local advisor who's here when you need me.</p>
+
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">Best,<br>
       {agent_name}<br>
       {agent_phone}</p>
 
-      <p style="font-size: 12px; color: #666; margin-top: 30px;">
-        P.S. — Rather talk one-on-one? <a href="{booking_link}">Book a private call here</a>.
+      <p style="font-size: 16px; color: #1f2937; margin-top: 30px; font-weight: 500;">
+        P.S. — You might be eligible for benefits you didn't even know existed. Let's find out.
       </p>
 
       <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
 
       <p style="font-size: 11px; color: #9ca3af; line-height: 1.6;">
+        <strong>Marc Anthony Spagnuolo</strong><br>
         Right Hand Retirement<br>
-        13034 E 14th Ave, Aurora, CO 80011<br>
-        720-447-4966 | marcanthony@righthandretirement.com
+        P.O. Box [TBD], Aurora, CO 80011<br>
+        720-447-4966 | marcanthony@righthandretirement.com<br><br>
+        <a href="{unsubscribe_link}" style="color: #9ca3af; text-decoration: underline;">Unsubscribe</a> | <a href="https://righthandretirement.com" style="color: #9ca3af; text-decoration: underline;">Visit Our Website</a>
+      </p>
+
+      <p style="font-size: 10px; color: #9ca3af; line-height: 1.5; margin-top: 15px; padding: 10px; background-color: #f9fafb; border-left: 3px solid #dc2626;">
+        <strong>CMS Disclaimer:</strong> We do not offer every plan available in your area. Any information we provide is limited to those plans we do offer in your area. Please contact Medicare.gov or 1-800-MEDICARE to get information on all of your options.<br><br>
+        For more information on our carrier options:<br>
+        • <a href="https://www.medicareenroll.com/?purl=undefined" style="color: #9ca3af; text-decoration: underline;">Medicare Enroll</a><br>
+        • <a href="https://www.planenroll.com/?purl=1DwkmXow" style="color: #9ca3af; text-decoration: underline;">Plan Enroll</a>
       </p>
     `,
     bodyText: `Hi {first_name},
 
-Just a quick heads up — our free Medicare workshop is this Friday at 10:00 AM MT.
+I want to share something that surprises most people I work with.
 
-We're at 47/50 seats filled. Once we hit capacity, registration closes.
+When it comes to Medicare Advantage plans, many people don't realize the kinds of benefits that can be included.
 
-Here's what you'll walk away with:
+In my experience, I've seen plans that include things like:
 
-✓ A clear Medicare enrollment timeline (no more confusion)
-✓ How to compare plans apples-to-apples
-✓ 3 ways to cut your prescription costs in half
-✓ The #1 mistake that costs retirees $1,500+/year
+• Dental benefits
+• Vision coverage
+• Gym memberships
+• Healthy incentives
+• Over-the-counter allowances
+• And more
 
-Grab Your Spot Before It's Full: {livestream_link}
+But here's the key: Every plan is different, and what you're eligible for depends on your specific situation and location.
 
-When: This Friday, 10:00 AM MT
-Format: Live Q&A included
-Duration: 45 minutes
+That's why a personalized, sit-down review matters.
 
-No sales pitch. No pressure. Just education.
+I help you see what options actually exist in your area, based on your unique needs. We can meet in person, by phone, or video — whatever works best for you.
 
-See you Friday,
+Let me show you what you might be eligible for.
+
+Schedule Your Free In-Person Review: {booking_link}
+
+No generic advice. Just real answers for YOUR situation, from a local advisor who's here when you need me.
+
+Best,
 {agent_name}
 {agent_phone}
 
-P.S. — Rather talk one-on-one? Book a private call here: {booking_link}`
+P.S. — You might be eligible for benefits you didn't even know existed. Let's find out.
+
+---
+Marc Anthony Spagnuolo
+Right Hand Retirement
+P.O. Box [TBD], Aurora, CO 80011
+720-447-4966 | marcanthony@righthandretirement.com
+
+Unsubscribe: {unsubscribe_link}
+
+---
+CMS Disclaimer: We do not offer every plan available in your area. Any information we provide is limited to those plans we do offer in your area. Please contact Medicare.gov or 1-800-MEDICARE to get information on all of your options.
+
+For more information on our carrier options:
+• Medicare Enroll: https://www.medicareenroll.com/?purl=undefined
+• Plan Enroll: https://www.planenroll.com/?purl=1DwkmXow`
   },
 
-  // EMAIL 5: Personal Touch + Last Chance (Day 14)
+  // EMAIL 4: The Costly Mistake (Day 10)
+  {
+    stepOrder: 4,
+    delayDays: 10,
+    subjectLine: "The #1 mistake people make with Medicare",
+    bodyHtml: `
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">Hi {first_name},</p>
+
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">Let me tell you about Sarah.</p>
+
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">She picked a Medicare plan that looked great on paper. Low premium. Good benefits.</p>
+
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;"><strong>Then she found out her doctor wasn't covered.</strong></p>
+
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">And two of her medications weren't on the plan's formulary.</p>
+
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">This is the #1 mistake people make: <strong>Not checking coverage before enrolling.</strong></p>
+
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">You need to know:</p>
+
+      <ul style="font-size: 16px; color: #1f2937; line-height: 1.8;">
+        <li>Are your doctors in-network?</li>
+        <li>Are your medications covered?</li>
+        <li>What will your actual out-of-pocket costs be?</li>
+      </ul>
+
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;"><strong>This is exactly what I help with.</strong></p>
+
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">Join my free Medicare workshop this Friday where I'll show you exactly how to check if your doctors and medications are covered — so you can avoid Sarah's mistake.</p>
+
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;"><strong>Plus live Q&A to get all your questions answered.</strong></p>
+
+      <p><a href="{livestream_link}" style="display: inline-block; background-color: #dc2626; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">Register for Free Workshop</a></p>
+
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6; margin-top: 15px;">Don't make the same mistake Sarah did. Learn how to check coverage before you enroll.</p>
+
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">See you soon,<br>
+      {agent_name}<br>
+      {agent_phone}</p>
+
+      <p style="font-size: 16px; color: #1f2937; margin-top: 30px; font-weight: 500;">
+        P.S. — A 15-minute call now can save you thousands in unexpected costs later.
+      </p>
+
+      <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+
+      <p style="font-size: 11px; color: #9ca3af; line-height: 1.6;">
+        <strong>Marc Anthony Spagnuolo</strong><br>
+        Right Hand Retirement<br>
+        P.O. Box [TBD], Aurora, CO 80011<br>
+        720-447-4966 | marcanthony@righthandretirement.com<br><br>
+        <a href="{unsubscribe_link}" style="color: #9ca3af; text-decoration: underline;">Unsubscribe</a> | <a href="https://righthandretirement.com" style="color: #9ca3af; text-decoration: underline;">Visit Our Website</a>
+      </p>
+
+      <p style="font-size: 10px; color: #9ca3af; line-height: 1.5; margin-top: 15px; padding: 10px; background-color: #f9fafb; border-left: 3px solid #dc2626;">
+        <strong>CMS Disclaimer:</strong> We do not offer every plan available in your area. Any information we provide is limited to those plans we do offer in your area. Please contact Medicare.gov or 1-800-MEDICARE to get information on all of your options.<br><br>
+        For more information on our carrier options:<br>
+        • <a href="https://www.medicareenroll.com/?purl=undefined" style="color: #9ca3af; text-decoration: underline;">Medicare Enroll</a><br>
+        • <a href="https://www.planenroll.com/?purl=1DwkmXow" style="color: #9ca3af; text-decoration: underline;">Plan Enroll</a>
+      </p>
+    `,
+    bodyText: `Hi {first_name},
+
+Let me tell you about Sarah.
+
+She picked a Medicare plan that looked great on paper. Low premium. Good benefits.
+
+Then she found out her doctor wasn't covered.
+
+And two of her medications weren't on the plan's formulary.
+
+This is the #1 mistake people make: Not checking coverage before enrolling.
+
+You need to know:
+
+• Are your doctors in-network?
+• Are your medications covered?
+• What will your actual out-of-pocket costs be?
+
+This is exactly what I help with.
+
+Join my free Medicare workshop this Friday where I'll show you exactly how to check if your doctors and medications are covered — so you can avoid Sarah's mistake.
+
+Plus live Q&A to get all your questions answered.
+
+Register for Free Workshop: {livestream_link}
+
+Don't make the same mistake Sarah did. Learn how to check coverage before you enroll.
+
+See you soon,
+{agent_name}
+{agent_phone}
+
+P.S. — A 15-minute call now can save you thousands in unexpected costs later.
+
+---
+Marc Anthony Spagnuolo
+Right Hand Retirement
+P.O. Box [TBD], Aurora, CO 80011
+720-447-4966 | marcanthony@righthandretirement.com
+
+Unsubscribe: {unsubscribe_link}
+
+---
+CMS Disclaimer: We do not offer every plan available in your area. Any information we provide is limited to those plans we do offer in your area. Please contact Medicare.gov or 1-800-MEDICARE to get information on all of your options.
+
+For more information on our carrier options:
+• Medicare Enroll: https://www.medicareenroll.com/?purl=undefined
+• Plan Enroll: https://www.planenroll.com/?purl=1DwkmXow`
+  },
+
+  // EMAIL 5: I'm Here to Help (Day 14)
   {
     stepOrder: 5,
     delayDays: 14,
-    subjectLine: "{first_name}, can I help?",
+    subjectLine: "{first_name}, I'm here when you're ready",
     bodyHtml: `
-      <p>Hi {first_name},</p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">Hi {first_name},</p>
 
-      <p>I've sent you a few emails about Medicare planning, but haven't heard back.</p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">I've sent you a few emails about Medicare, but haven't heard back.</p>
 
-      <p>That's totally fine — I know your inbox is probably packed.</p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">That's totally fine — I know your inbox is probably packed.</p>
 
-      <p>But I wanted to reach out one more time because <strong>Medicare enrollment deadlines are unforgiving</strong>.</p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">But I wanted to reach out one more time because <strong>Medicare can be confusing</strong>, and you're not alone in feeling overwhelmed.</p>
 
-      <p>Miss your window, and you could face:</p>
-      <ul>
-        <li>❌ Late enrollment penalties (for life)</li>
-        <li>❌ Coverage gaps that leave you exposed</li>
-        <li>❌ Higher monthly premiums you'll never get back</li>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">As your local Medicare advisor, here's what I do:</p>
+
+      <ul style="font-size: 16px; color: #1f2937; line-height: 1.8;">
+        <li>Help you understand how Medicare actually works</li>
+        <li>Show you what your real costs will be</li>
+        <li>Explain what you're eligible for in your area</li>
+        <li>Make sure your doctors and medications are covered</li>
       </ul>
 
-      <p>I don't want that to happen to you.</p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;"><strong>And I'm here year-round</strong> — not just during enrollment season.</p>
 
-      <p><strong>So here's what I'm offering:</strong></p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">Whether you're turning 65 for the first time or you've been on Medicare for years, I can help. We can meet in person, by phone, or video — whatever is most comfortable for you.</p>
 
-      <p>Book a quick call with me — even just 15 minutes — and I'll:</p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;"><strong>Let's sit down and get you the clarity you need.</strong></p>
 
-      <ul>
-        <li>✓ Review your current situation</li>
-        <li>✓ Answer any Medicare questions you have</li>
-        <li>✓ Show you exactly what steps to take next</li>
-      </ul>
+      <p><a href="{booking_link}" style="display: inline-block; background-color: #dc2626; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">Schedule Your Free Sit-Down Meeting</a></p>
 
-      <p>Zero cost. Zero obligation. Just clarity.</p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6; margin-top: 15px;">A personal guide, right here in {city}. A real person you can count on.</p>
 
-      <p><a href="{booking_link}" style="display: inline-block; background-color: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Book Your Free Call Here</a></p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">No hard feelings if this isn't for you — just click "unsubscribe" below and you won't hear from me again.</p>
 
-      <p><strong>Or join our next livestream workshop:</strong></p>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">But if you need help navigating Medicare, I'm just one click away.</p>
 
-      <p><a href="{livestream_link}" style="display: inline-block; background-color: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 10px;">Register for Friday's Workshop</a></p>
-
-      <p>Either way, I'm here to help.</p>
-
-      <p>No hard feelings if this isn't for you — just click "unsubscribe" below and you won't hear from me again.</p>
-
-      <p>But if you need help navigating Medicare, I'm just one click away.</p>
-
-      <p>Rooting for you,<br>
+      <p style="font-size: 16px; color: #1f2937; line-height: 1.6;">Rooting for you,<br>
       {agent_name}<br>
       Licensed Medicare Advisor<br>
       {agent_phone}</p>
 
-      <p style="font-size: 12px; color: #666; margin-top: 30px;">
-        P.S. — Still on the fence? Check out what others are saying: <a href="https://righthandretirement.com">Visit our website</a>
+      <p style="font-size: 16px; color: #1f2937; margin-top: 30px; font-weight: 500;">
+        P.S. — You don't have to figure this out alone. Let me help.
       </p>
 
       <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
 
       <p style="font-size: 11px; color: #9ca3af; line-height: 1.6;">
+        <strong>Marc Anthony Spagnuolo</strong><br>
         Right Hand Retirement<br>
-        13034 E 14th Ave, Aurora, CO 80011<br>
-        720-447-4966 | marcanthony@righthandretirement.com
+        P.O. Box [TBD], Aurora, CO 80011<br>
+        720-447-4966 | marcanthony@righthandretirement.com<br><br>
+        <a href="{unsubscribe_link}" style="color: #9ca3af; text-decoration: underline;">Unsubscribe</a> | <a href="https://righthandretirement.com" style="color: #9ca3af; text-decoration: underline;">Visit Our Website</a>
+      </p>
+
+      <p style="font-size: 10px; color: #9ca3af; line-height: 1.5; margin-top: 15px; padding: 10px; background-color: #f9fafb; border-left: 3px solid #dc2626;">
+        <strong>CMS Disclaimer:</strong> We do not offer every plan available in your area. Any information we provide is limited to those plans we do offer in your area. Please contact Medicare.gov or 1-800-MEDICARE to get information on all of your options.<br><br>
+        For more information on our carrier options:<br>
+        • <a href="https://www.medicareenroll.com/?purl=undefined" style="color: #9ca3af; text-decoration: underline;">Medicare Enroll</a><br>
+        • <a href="https://www.planenroll.com/?purl=1DwkmXow" style="color: #9ca3af; text-decoration: underline;">Plan Enroll</a>
       </p>
     `,
     bodyText: `Hi {first_name},
 
-I've sent you a few emails about Medicare planning, but haven't heard back.
+I've sent you a few emails about Medicare, but haven't heard back.
 
 That's totally fine — I know your inbox is probably packed.
 
-But I wanted to reach out one more time because Medicare enrollment deadlines are unforgiving.
+But I wanted to reach out one more time because Medicare can be confusing, and you're not alone in feeling overwhelmed.
 
-Miss your window, and you could face:
-❌ Late enrollment penalties (for life)
-❌ Coverage gaps that leave you exposed
-❌ Higher monthly premiums you'll never get back
+As your local Medicare advisor, here's what I do:
 
-I don't want that to happen to you.
+• Help you understand how Medicare actually works
+• Show you what your real costs will be
+• Explain what you're eligible for in your area
+• Make sure your doctors and medications are covered
 
-So here's what I'm offering:
+And I'm here year-round — not just during enrollment season.
 
-Book a quick call with me — even just 15 minutes — and I'll:
+Whether you're turning 65 for the first time or you've been on Medicare for years, I can help. We can meet in person, by phone, or video — whatever is most comfortable for you.
 
-✓ Review your current situation
-✓ Answer any Medicare questions you have
-✓ Show you exactly what steps to take next
+Let's sit down and get you the clarity you need.
 
-Zero cost. Zero obligation. Just clarity.
+Schedule Your Free Sit-Down Meeting: {booking_link}
 
-Book Your Free Call Here: {booking_link}
+A personal guide, right here in {city}. A real person you can count on.
 
-Or join our next livestream workshop: {livestream_link}
-
-Either way, I'm here to help.
-
-No hard feelings if this isn't for you — just unsubscribe below and you won't hear from me again.
+No hard feelings if this isn't for you — just click "unsubscribe" below and you won't hear from me again.
 
 But if you need help navigating Medicare, I'm just one click away.
 
@@ -441,6 +562,21 @@ Rooting for you,
 Licensed Medicare Advisor
 {agent_phone}
 
-P.S. — Still on the fence? Check out what others are saying at [your testimonials page]`
+P.S. — You don't have to figure this out alone. Let me help.
+
+---
+Marc Anthony Spagnuolo
+Right Hand Retirement
+P.O. Box [TBD], Aurora, CO 80011
+720-447-4966 | marcanthony@righthandretirement.com
+
+Unsubscribe: {unsubscribe_link}
+
+---
+CMS Disclaimer: We do not offer every plan available in your area. Any information we provide is limited to those plans we do offer in your area. Please contact Medicare.gov or 1-800-MEDICARE to get information on all of your options.
+
+For more information on our carrier options:
+• Medicare Enroll: https://www.medicareenroll.com/?purl=undefined
+• Plan Enroll: https://www.planenroll.com/?purl=1DwkmXow`
   }
 ];

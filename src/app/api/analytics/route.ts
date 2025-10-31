@@ -22,7 +22,10 @@ export async function GET(request: NextRequest) {
     let dateFilter = '';
     let daysBack = 30;
 
-    if (period === 'week') {
+    if (period === 'today') {
+      daysBack = 1;
+      dateFilter = `AND date(la.created_at) = date('now')`;
+    } else if (period === 'week') {
       daysBack = 7;
       dateFilter = `AND datetime(la.created_at) >= datetime('now', '-7 days')`;
     } else if (period === 'month') {

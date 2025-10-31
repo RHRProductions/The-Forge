@@ -532,6 +532,7 @@ function HomeContent() {
   const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
   const [showFollowUpModal, setShowFollowUpModal] = useState(false);
   const [actualSalesRevenue, setActualSalesRevenue] = useState<number>(0);
+  const [paidLeadRevenue, setPaidLeadRevenue] = useState<number>(0);
   const [emailStats, setEmailStats] = useState<{ leadsWithEmails: number; percentage: number }>({ leadsWithEmails: 0, percentage: 0 });
   const [formData, setFormData] = useState({
     first_name: '',
@@ -552,7 +553,7 @@ function HomeContent() {
     income: '',
     household_size: 0,
     status: 'appointment_set' as LeadStatus,
-    contact_method: '' as ContactMethod,
+    contact_method: 'phone' as ContactMethod,
     lead_type: 'other' as LeadType,
     cost_per_lead: 0,
     sales_amount: 0,
@@ -690,6 +691,7 @@ function HomeContent() {
       if (response.ok) {
         const data = await response.json();
         setActualSalesRevenue(data.totalRevenue || 0);
+        setPaidLeadRevenue(data.paidLeadRevenue || 0);
       }
     } catch (error) {
       console.error('Error fetching sales revenue:', error);
@@ -870,7 +872,7 @@ function HomeContent() {
       income: '',
       household_size: 0,
       status: 'appointment_set',
-      contact_method: '' as ContactMethod,
+      contact_method: 'phone' as ContactMethod,
       cost_per_lead: 0,
       sales_amount: 0,
       notes: '',
@@ -1103,8 +1105,9 @@ Type "DELETE ALL" to confirm:`;
 
   const totalLeads = overallTotalCount; // Use overallTotalCount from API (unfiltered total)
   // totalCost is now set from API response (all leads)
-  const totalSales = actualSalesRevenue; // Use actual commission totals from policies
-  const roi = totalCost > 0 ? ((totalSales - totalCost) / totalCost * 100).toFixed(1) : '0';
+  const totalSales = actualSalesRevenue; // Use actual commission totals from policies (all leads)
+  // ROI calculation uses only revenue from paid leads (cost_per_lead > 0)
+  const roi = totalCost > 0 ? ((paidLeadRevenue - totalCost) / totalCost * 100).toFixed(1) : '0';
 
   // Show loading while checking auth
   if (status === 'loading') {
@@ -1293,11 +1296,6 @@ Type "DELETE ALL" to confirm:`;
             <h3 className="text-sm font-medium text-gray-600">Leads with Emails</h3>
             <p className="text-2xl font-bold">{emailStats.leadsWithEmails}</p>
             <p className="text-xs text-gray-500 mt-1">{emailStats.percentage}% of total</p>
-          </div>
-          <div className="bg-white p-4 rounded border-l-4 border-yellow-600 shadow">
-            <h3 className="text-sm font-medium text-gray-600">Wrong Info</h3>
-            <p className="text-2xl font-bold">{wrongInfoCount}</p>
-            <p className="text-xs text-gray-500 mt-1">{totalLeads > 0 ? ((wrongInfoCount / totalLeads) * 100).toFixed(1) : '0'}% of total</p>
           </div>
           {(session.user as any).role !== 'setter' && (
             <>

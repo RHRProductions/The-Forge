@@ -55,13 +55,20 @@ export default function AnalyticsPage() {
   const router = useRouter();
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [timeFilter, setTimeFilter] = useState<'week' | 'month' | 'all'>('month');
+  const [timeFilter, setTimeFilter] = useState<'today' | 'week' | 'month' | 'all'>('month');
   const [showInsights, setShowInsights] = useState(false);
-  const [showLocations, setShowLocations] = useState(true);
-  const [showPowerHours, setShowPowerHours] = useState(true);
-  const [showAgeGroups, setShowAgeGroups] = useState(true);
-  const [showSourcePerformance, setShowSourcePerformance] = useState(true);
+  const [showLocations, setShowLocations] = useState(false);
+  const [showPowerHours, setShowPowerHours] = useState(false);
+  const [showAgeGroups, setShowAgeGroups] = useState(false);
+  const [showSourcePerformance, setShowSourcePerformance] = useState(false);
+  const [showBestTimes, setShowBestTimes] = useState(false);
+  const [showBestDays, setShowBestDays] = useState(false);
+  const [showDialingAttempts, setShowDialingAttempts] = useState(false);
+  const [showTemperature, setShowTemperature] = useState(false);
+  const [showOutcomes, setShowOutcomes] = useState(false);
+  const [showDailyActivity, setShowDailyActivity] = useState(false);
   const [emailStats, setEmailStats] = useState<{ leadsWithEmails: number; leadsWithoutEmails: number; percentage: number; totalLeads: number }>({ leadsWithEmails: 0, leadsWithoutEmails: 0, percentage: 0, totalLeads: 0 });
+  const [hasLoadedFromStorage, setHasLoadedFromStorage] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -75,6 +82,145 @@ export default function AnalyticsPage() {
       fetchEmailStats();
     }
   }, [session, timeFilter]);
+
+  // Load collapsible section states from localStorage on mount
+  useEffect(() => {
+    // Check if we need to reset old values (one-time migration)
+    const hasResetSections = localStorage.getItem('analytics_sections_reset_v3');
+    if (!hasResetSections) {
+      // Clear ALL section values and old reset flags
+      localStorage.removeItem('analytics_showLocations');
+      localStorage.removeItem('analytics_showPowerHours');
+      localStorage.removeItem('analytics_showAgeGroups');
+      localStorage.removeItem('analytics_showSourcePerformance');
+      localStorage.removeItem('analytics_showBestTimes');
+      localStorage.removeItem('analytics_showBestDays');
+      localStorage.removeItem('analytics_showDialingAttempts');
+      localStorage.removeItem('analytics_showTemperature');
+      localStorage.removeItem('analytics_showOutcomes');
+      localStorage.removeItem('analytics_showDailyActivity');
+      localStorage.removeItem('analytics_sections_reset_v1');
+      localStorage.removeItem('analytics_sections_reset_v2');
+      localStorage.setItem('analytics_sections_reset_v3', 'true');
+      // All sections will remain at their default state (false/collapsed)
+      return;
+    }
+
+    // Load saved states from localStorage
+    const loadShowLocations = localStorage.getItem('analytics_showLocations');
+    if (loadShowLocations !== null) {
+      setShowLocations(JSON.parse(loadShowLocations));
+    }
+
+    const loadShowPowerHours = localStorage.getItem('analytics_showPowerHours');
+    if (loadShowPowerHours !== null) {
+      setShowPowerHours(JSON.parse(loadShowPowerHours));
+    }
+
+    const loadShowAgeGroups = localStorage.getItem('analytics_showAgeGroups');
+    if (loadShowAgeGroups !== null) {
+      setShowAgeGroups(JSON.parse(loadShowAgeGroups));
+    }
+
+    const loadShowSourcePerformance = localStorage.getItem('analytics_showSourcePerformance');
+    if (loadShowSourcePerformance !== null) {
+      setShowSourcePerformance(JSON.parse(loadShowSourcePerformance));
+    }
+
+    const loadShowBestTimes = localStorage.getItem('analytics_showBestTimes');
+    if (loadShowBestTimes !== null) {
+      setShowBestTimes(JSON.parse(loadShowBestTimes));
+    }
+
+    const loadShowBestDays = localStorage.getItem('analytics_showBestDays');
+    if (loadShowBestDays !== null) {
+      setShowBestDays(JSON.parse(loadShowBestDays));
+    }
+
+    const loadShowDialingAttempts = localStorage.getItem('analytics_showDialingAttempts');
+    if (loadShowDialingAttempts !== null) {
+      setShowDialingAttempts(JSON.parse(loadShowDialingAttempts));
+    }
+
+    const loadShowTemperature = localStorage.getItem('analytics_showTemperature');
+    if (loadShowTemperature !== null) {
+      setShowTemperature(JSON.parse(loadShowTemperature));
+    }
+
+    const loadShowOutcomes = localStorage.getItem('analytics_showOutcomes');
+    if (loadShowOutcomes !== null) {
+      setShowOutcomes(JSON.parse(loadShowOutcomes));
+    }
+
+    const loadShowDailyActivity = localStorage.getItem('analytics_showDailyActivity');
+    if (loadShowDailyActivity !== null) {
+      setShowDailyActivity(JSON.parse(loadShowDailyActivity));
+    }
+
+    // Mark that we've finished loading from storage
+    setHasLoadedFromStorage(true);
+  }, []);
+
+  // Persist collapsible section states to localStorage (only after initial load)
+  useEffect(() => {
+    if (hasLoadedFromStorage) {
+      localStorage.setItem('analytics_showLocations', JSON.stringify(showLocations));
+    }
+  }, [showLocations, hasLoadedFromStorage]);
+
+  useEffect(() => {
+    if (hasLoadedFromStorage) {
+      localStorage.setItem('analytics_showPowerHours', JSON.stringify(showPowerHours));
+    }
+  }, [showPowerHours, hasLoadedFromStorage]);
+
+  useEffect(() => {
+    if (hasLoadedFromStorage) {
+      localStorage.setItem('analytics_showAgeGroups', JSON.stringify(showAgeGroups));
+    }
+  }, [showAgeGroups, hasLoadedFromStorage]);
+
+  useEffect(() => {
+    if (hasLoadedFromStorage) {
+      localStorage.setItem('analytics_showSourcePerformance', JSON.stringify(showSourcePerformance));
+    }
+  }, [showSourcePerformance, hasLoadedFromStorage]);
+
+  useEffect(() => {
+    if (hasLoadedFromStorage) {
+      localStorage.setItem('analytics_showBestTimes', JSON.stringify(showBestTimes));
+    }
+  }, [showBestTimes, hasLoadedFromStorage]);
+
+  useEffect(() => {
+    if (hasLoadedFromStorage) {
+      localStorage.setItem('analytics_showBestDays', JSON.stringify(showBestDays));
+    }
+  }, [showBestDays, hasLoadedFromStorage]);
+
+  useEffect(() => {
+    if (hasLoadedFromStorage) {
+      localStorage.setItem('analytics_showDialingAttempts', JSON.stringify(showDialingAttempts));
+    }
+  }, [showDialingAttempts, hasLoadedFromStorage]);
+
+  useEffect(() => {
+    if (hasLoadedFromStorage) {
+      localStorage.setItem('analytics_showTemperature', JSON.stringify(showTemperature));
+    }
+  }, [showTemperature, hasLoadedFromStorage]);
+
+  useEffect(() => {
+    if (hasLoadedFromStorage) {
+      localStorage.setItem('analytics_showOutcomes', JSON.stringify(showOutcomes));
+    }
+  }, [showOutcomes, hasLoadedFromStorage]);
+
+  useEffect(() => {
+    if (hasLoadedFromStorage) {
+      localStorage.setItem('analytics_showDailyActivity', JSON.stringify(showDailyActivity));
+    }
+  }, [showDailyActivity, hasLoadedFromStorage]);
 
   const fetchAnalytics = async () => {
     setLoading(true);
@@ -138,6 +284,14 @@ export default function AnalyticsPage() {
         {/* Time Filter */}
         <div className="flex gap-2 mb-6">
           <button
+            onClick={() => setTimeFilter('today')}
+            className={`px-4 py-2 rounded font-bold ${
+              timeFilter === 'today' ? 'bg-black text-white' : 'bg-gray-200'
+            }`}
+          >
+            Today
+          </button>
+          <button
             onClick={() => setTimeFilter('week')}
             className={`px-4 py-2 rounded font-bold ${
               timeFilter === 'week' ? 'bg-black text-white' : 'bg-gray-200'
@@ -175,31 +329,6 @@ export default function AnalyticsPage() {
           ) : (
             <AIInsights />
           )}
-        </div>
-
-        {/* Lead Data Quality */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold mb-4">Lead Data Quality</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white p-6 rounded-lg border-2 border-gray-300">
-              <div className="text-sm font-bold text-gray-600 uppercase">Total Leads</div>
-              <div className="text-4xl font-black mt-2">{emailStats.totalLeads}</div>
-            </div>
-            <div className="bg-blue-500 text-white p-6 rounded-lg border-4 border-blue-700">
-              <div className="text-sm font-bold uppercase opacity-90">Leads with Emails</div>
-              <div className="text-4xl font-black mt-2">{emailStats.leadsWithEmails}</div>
-              <div className="text-sm mt-2">
-                {emailStats.percentage}% of total leads
-              </div>
-            </div>
-            <div className="bg-gray-100 p-6 rounded-lg border-2 border-gray-300">
-              <div className="text-sm font-bold text-gray-600 uppercase">Missing Email Data</div>
-              <div className="text-4xl font-black mt-2">{emailStats.leadsWithoutEmails}</div>
-              <div className="text-sm mt-2 text-gray-600">
-                {100 - emailStats.percentage}% of total leads
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Personal Metrics */}
@@ -462,8 +591,16 @@ export default function AnalyticsPage() {
 
             {/* Best Times to Call */}
             <div className="mb-8">
-              <h3 className="text-2xl font-bold mb-4">📞 Best Times to Call</h3>
-              {analytics.aggregateInsights.timeOfDay.length > 0 ? (
+              <div
+                onClick={() => setShowBestTimes(!showBestTimes)}
+                className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors mb-4"
+              >
+                <h3 className="text-2xl font-bold">📞 Best Times to Call</h3>
+                <span className="text-2xl font-bold">
+                  {showBestTimes ? '▼' : '▶'}
+                </span>
+              </div>
+              {showBestTimes && analytics.aggregateInsights.timeOfDay.length > 0 && (
                 <div className="bg-white border-2 border-gray-300 rounded-lg p-6">
                   <div className="mb-4 text-sm text-gray-600">
                     Contact rates by hour of day • Hover over bars for details • <span className="text-red-600 font-bold">Red = Illegal calling hours</span>
@@ -517,7 +654,8 @@ export default function AnalyticsPage() {
                     💡 Tip: Focus your calling during legal hours (8AM-8PM) with the highest contact rates
                   </div>
                 </div>
-              ) : (
+              )}
+              {showBestTimes && analytics.aggregateInsights.timeOfDay.length === 0 && (
                 <div className="bg-white border-2 border-gray-300 rounded-lg p-8 text-center">
                   <div className="text-4xl mb-3">📊</div>
                   <p className="text-gray-600 mb-2">Not enough calling data yet to analyze best times</p>
@@ -529,10 +667,18 @@ export default function AnalyticsPage() {
             </div>
 
             {/* Day of Week Performance */}
-            {analytics.aggregateInsights.dayOfWeek.length > 0 && (
-              <div className="mb-8">
-                <h3 className="text-2xl font-bold mb-4">Best Days of the Week</h3>
-                <div className="bg-white border-2 border-gray-300 rounded-lg p-6">
+            <div className="mb-8">
+              <div
+                onClick={() => setShowBestDays(!showBestDays)}
+                className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors mb-4"
+              >
+                <h3 className="text-2xl font-bold">Best Days of the Week</h3>
+                <span className="text-2xl font-bold">
+                  {showBestDays ? '▼' : '▶'}
+                </span>
+              </div>
+              {showBestDays && analytics.aggregateInsights.dayOfWeek.length > 0 && (
+                  <div className="bg-white border-2 border-gray-300 rounded-lg p-6">
                   <div className="grid grid-cols-7 gap-4">
                     {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((dayName, index) => {
                       const dayData = analytics.aggregateInsights!.dayOfWeek.find(d => d.dayOfWeek === index) || { dials: 0, contacts: 0, appointments: 0 };
@@ -551,9 +697,9 @@ export default function AnalyticsPage() {
                       );
                     })}
                   </div>
-                </div>
-              </div>
-            )}
+                  </div>
+                )}
+            </div>
 
             {/* Geographic Performance */}
             {analytics.aggregateInsights.geoPerformance.length > 0 && (
@@ -610,10 +756,18 @@ export default function AnalyticsPage() {
             )}
 
             {/* Dialing Patterns */}
-            {analytics.aggregateInsights.dialingPatterns.length > 0 && (
-              <div className="mb-8">
-                <h3 className="text-2xl font-bold mb-4">Optimal Dialing Attempts</h3>
-                <div className="bg-white border-2 border-gray-300 rounded-lg p-6">
+            <div className="mb-8">
+              <div
+                onClick={() => setShowDialingAttempts(!showDialingAttempts)}
+                className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors mb-4"
+              >
+                <h3 className="text-2xl font-bold">Optimal Dialing Attempts</h3>
+                <span className="text-2xl font-bold">
+                  {showDialingAttempts ? '▼' : '▶'}
+                </span>
+              </div>
+              {showDialingAttempts && analytics.aggregateInsights.dialingPatterns.length > 0 && (
+                  <div className="bg-white border-2 border-gray-300 rounded-lg p-6">
                   <div className="space-y-3">
                     {analytics.aggregateInsights.dialingPatterns.map((pattern) => {
                       const contactRate = pattern.leads > 0 ? (pattern.contacted / pattern.leads) * 100 : 0;
@@ -653,15 +807,23 @@ export default function AnalyticsPage() {
                       );
                     })}
                   </div>
-                </div>
-              </div>
-            )}
+                  </div>
+                )}
+            </div>
 
             {/* Lead Temperature Performance */}
-            {analytics.aggregateInsights.temperaturePerformance.length > 0 && (
-              <div className="mb-8">
-                <h3 className="text-2xl font-bold mb-4">Lead Temperature Conversion</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="mb-8">
+              <div
+                onClick={() => setShowTemperature(!showTemperature)}
+                  className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors mb-4"
+                >
+                  <h3 className="text-2xl font-bold">Lead Temperature Conversion</h3>
+                  <span className="text-2xl font-bold">
+                    {showTemperature ? '▼' : '▶'}
+                  </span>
+                </div>
+                {showTemperature && analytics.aggregateInsights.temperaturePerformance.length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {analytics.aggregateInsights.temperaturePerformance.map((temp, index) => {
                     const apptRate = temp.totalLeads > 0 ? (temp.appointments / temp.totalLeads) * 100 : 0;
                     const closeRate = temp.totalLeads > 0 ? (temp.sales / temp.totalLeads) * 100 : 0;
@@ -684,9 +846,9 @@ export default function AnalyticsPage() {
                       </div>
                     );
                   })}
-                </div>
-              </div>
-            )}
+                  </div>
+                )}
+            </div>
 
             {/* Age Group Performance */}
             {analytics.aggregateInsights.ageGroupPerformance && analytics.aggregateInsights.ageGroupPerformance.length > 0 && (
@@ -809,10 +971,18 @@ export default function AnalyticsPage() {
             )}
 
             {/* Outcome Analysis */}
-            {analytics.aggregateInsights.outcomeAnalysis && analytics.aggregateInsights.outcomeAnalysis.length > 0 && (
-              <div className="mb-8">
-                <h3 className="text-2xl font-bold mb-4">📊 Call Outcome Breakdown</h3>
-                <div className="bg-white border-2 border-gray-300 rounded-lg p-6">
+            <div className="mb-8">
+              <div
+                onClick={() => setShowOutcomes(!showOutcomes)}
+                className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors mb-4"
+              >
+                <h3 className="text-2xl font-bold">📊 Call Outcome Breakdown</h3>
+                <span className="text-2xl font-bold">
+                  {showOutcomes ? '▼' : '▶'}
+                </span>
+              </div>
+              {showOutcomes && analytics.aggregateInsights.outcomeAnalysis && analytics.aggregateInsights.outcomeAnalysis.length > 0 && (
+                  <div className="bg-white border-2 border-gray-300 rounded-lg p-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {analytics.aggregateInsights.outcomeAnalysis.map((outcome:any, index:number) => {
                       const total = analytics.aggregateInsights!.outcomeAnalysis.reduce((sum:number, o:any) => sum + o.count, 0);
@@ -847,16 +1017,25 @@ export default function AnalyticsPage() {
                       <strong>Insight:</strong> Track the "Answered - No Appointment" category to identify opportunities for improving your booking skills and script!
                     </p>
                   </div>
-                </div>
-              </div>
-            )}
+                  </div>
+                )}
+            </div>
           </>
         )}
 
         {/* Daily Activity Chart */}
         <div className="mb-8">
-          <h2 className="text-2xl font-bold mb-4">Daily Activity</h2>
-          <div className="bg-white border-2 border-gray-300 rounded-lg p-6">
+          <div
+            onClick={() => setShowDailyActivity(!showDailyActivity)}
+            className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors mb-4"
+          >
+            <h2 className="text-2xl font-bold">Daily Activity</h2>
+            <span className="text-2xl font-bold">
+              {showDailyActivity ? '▼' : '▶'}
+            </span>
+          </div>
+          {showDailyActivity && (
+            <div className="bg-white border-2 border-gray-300 rounded-lg p-6">
             {(() => {
               const hasAnyData = analytics.timeSeriesData.some(d => d.dials > 0 || d.contacts > 0 || d.appointments > 0 || d.sales > 0);
 
@@ -991,7 +1170,8 @@ export default function AnalyticsPage() {
                 </div>
               );
             })()}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

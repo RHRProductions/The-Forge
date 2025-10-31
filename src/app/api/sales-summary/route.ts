@@ -6,13 +6,23 @@ export async function GET() {
     const db = getDatabase();
 
     // Get total revenue from all policies (sum of commission_amount)
-    const result = db.prepare(`
+    const totalResult = db.prepare(`
       SELECT COALESCE(SUM(commission_amount), 0) as totalRevenue
       FROM lead_policies
     `).get() as { totalRevenue: number };
 
+    // Get revenue only from leads that had a cost (cost_per_lead > 0)
+    // This is used for ROI calculation
+    const paidLeadResult = db.prepare(`
+      SELECT COALESCE(SUM(lp.commission_amount), 0) as paidLeadRevenue
+      FROM lead_policies lp
+      JOIN leads l ON lp.lead_id = l.id
+      WHERE l.cost_per_lead > 0
+    `).get() as { paidLeadRevenue: number };
+
     return NextResponse.json({
-      totalRevenue: result.totalRevenue || 0
+      totalRevenue: totalResult.totalRevenue || 0,
+      paidLeadRevenue: paidLeadResult.paidLeadRevenue || 0
     });
   } catch (error) {
     console.error('Error fetching sales summary:', error);

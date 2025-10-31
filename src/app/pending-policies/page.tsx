@@ -38,6 +38,7 @@ export default function PendingPoliciesPage() {
   const [loading, setLoading] = useState(true);
   const [selectedPolicy, setSelectedPolicy] = useState<PendingPolicy | null>(null);
   const [issuingPolicy, setIssuingPolicy] = useState(false);
+  const [editedNotes, setEditedNotes] = useState('');
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -113,6 +114,42 @@ export default function PendingPoliciesPage() {
     }
   };
 
+  const handleSaveNotes = async () => {
+    if (!selectedPolicy) return;
+
+    setIssuingPolicy(true);
+    try {
+      const response = await fetch(`/api/leads/${selectedPolicy.lead_id}/policies/${selectedPolicy.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          policy_type: selectedPolicy.policy_type,
+          policy_number: selectedPolicy.policy_number,
+          coverage_amount: selectedPolicy.coverage_amount,
+          premium_amount: selectedPolicy.premium_amount,
+          commission_amount: selectedPolicy.commission_amount,
+          start_date: selectedPolicy.start_date,
+          end_date: selectedPolicy.end_date,
+          status: selectedPolicy.status,
+          notes: editedNotes
+        })
+      });
+
+      if (response.ok) {
+        setSelectedPolicy({ ...selectedPolicy, notes: editedNotes });
+        await fetchPolicies(); // Refresh the list
+        alert('Notes saved successfully!');
+      } else {
+        alert('Failed to save notes');
+      }
+    } catch (error) {
+      console.error('Error saving notes:', error);
+      alert('Error saving notes');
+    } finally {
+      setIssuingPolicy(false);
+    }
+  };
+
   const handleMarkPolicyStatus = async (newStatus: string, statusLabel: string) => {
     if (!selectedPolicy) return;
 
@@ -134,7 +171,7 @@ export default function PendingPoliciesPage() {
           start_date: selectedPolicy.start_date,
           end_date: selectedPolicy.end_date,
           status: newStatus,
-          notes: selectedPolicy.notes
+          notes: editedNotes
         })
       });
 
@@ -208,7 +245,10 @@ export default function PendingPoliciesPage() {
                     <tr
                       key={policy.id}
                       className="border-b hover:bg-gray-50 cursor-pointer"
-                      onClick={() => setSelectedPolicy(policy)}
+                      onClick={() => {
+                        setSelectedPolicy(policy);
+                        setEditedNotes(policy.notes || '');
+                      }}
                     >
                       <td className="p-2 sm:p-4">
                         <div>
@@ -371,12 +411,25 @@ export default function PendingPoliciesPage() {
             </div>
 
             {/* Notes */}
-            {selectedPolicy.notes && (
-              <div className="bg-gray-50 rounded p-4 mb-6">
-                <h3 className="font-bold text-lg mb-3">Notes</h3>
-                <div className="whitespace-pre-wrap">{selectedPolicy.notes}</div>
+            <div className="bg-gray-50 rounded p-4 mb-6">
+              <h3 className="font-bold text-lg mb-3">Steps to Issue Policy</h3>
+              <textarea
+                value={editedNotes}
+                onChange={(e) => setEditedNotes(e.target.value)}
+                placeholder="Enter steps needed to get this policy issued (e.g., need medical records, waiting on underwriting, etc.)"
+                className="w-full p-3 border border-gray-300 rounded focus:border-red-600 focus:outline-none min-h-[120px]"
+                disabled={issuingPolicy}
+              />
+              <div className="flex justify-end mt-3">
+                <button
+                  onClick={handleSaveNotes}
+                  disabled={issuingPolicy}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium transition-colors disabled:opacity-50"
+                >
+                  {issuingPolicy ? 'Saving...' : '💾 Save Notes'}
+                </button>
               </div>
-            )}
+            </div>
 
             {/* Action Buttons */}
             <div className="border-t pt-4">

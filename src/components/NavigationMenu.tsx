@@ -70,7 +70,8 @@ export default function NavigationMenu({ currentPage }: NavigationMenuProps) {
                 👥 Clients
               </button>
             )}
-            {currentPage !== 'emails' && (
+            {/* TEMPORARILY HIDDEN - Email/Seminar Features - Can be restored later */}
+            {/* {currentPage !== 'emails' && (
               <button
                 onClick={() => {
                   router.push('/emails');
@@ -91,7 +92,7 @@ export default function NavigationMenu({ currentPage }: NavigationMenuProps) {
               >
                 🎥 Seminars
               </button>
-            )}
+            )} */}
 
             {/* Analytics Section */}
             <div className="border-t border-gray-200 my-2"></div>
@@ -107,7 +108,8 @@ export default function NavigationMenu({ currentPage }: NavigationMenuProps) {
                 📊 Overview
               </button>
             )}
-            {currentPage !== 'email-analytics' && (
+            {/* TEMPORARILY HIDDEN - Email/Seminar Analytics - Can be restored later */}
+            {/* {currentPage !== 'email-analytics' && (
               <button
                 onClick={() => {
                   router.push('/email-analytics');
@@ -128,7 +130,7 @@ export default function NavigationMenu({ currentPage }: NavigationMenuProps) {
               >
                 🎯 Seminar Analytics
               </button>
-            )}
+            )} */}
 
             {/* Utilities Section */}
             <div className="border-t border-gray-200 my-2"></div>
@@ -143,7 +145,8 @@ export default function NavigationMenu({ currentPage }: NavigationMenuProps) {
                 🔍 Find Duplicates
               </button>
             )}
-            {currentPage !== 'bounced-emails' && (
+            {/* TEMPORARILY HIDDEN - Bounced Emails - Can be restored later */}
+            {/* {currentPage !== 'bounced-emails' && (
               <button
                 onClick={() => {
                   router.push('/bounced-emails');
@@ -153,7 +156,7 @@ export default function NavigationMenu({ currentPage }: NavigationMenuProps) {
               >
                 ⚠️ Bounced Emails
               </button>
-            )}
+            )} */}
             {session && (session.user as any).role === 'admin' && (
               <>
                 <div className="border-t border-gray-200 my-2"></div>

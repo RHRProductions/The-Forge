@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '../../../../../../../auth';
-import { getDatabase } from '../../../../../../../lib/database/connection';
-import { sendEmail, addUnsubscribeLink } from '../../../../../../../lib/email/sendgrid';
+import { auth } from '../../../../../../auth';
+import { getDatabase } from '../../../../../../lib/database/connection';
+import { sendEmail, addUnsubscribeLink } from '../../../../../../lib/email/sendgrid';
 
 // Generate seminar invitation email HTML
 function generateSeminarEmail(seminar: any, registrationLink: string): string {

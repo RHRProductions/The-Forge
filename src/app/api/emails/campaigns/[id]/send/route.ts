@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '../../../../../../../../auth';
-import { getDatabase } from '../../../../../../../../lib/database/connection';
-import { sendEmail, addUnsubscribeLink } from '../../../../../../../../lib/email/sendgrid';
+import { auth } from '../../../../../../../auth';
+import { getDatabase } from '../../../../../../../lib/database/connection';
+import { sendEmail, addUnsubscribeLink } from '../../../../../../../lib/email/sendgrid';
 
 // POST /api/emails/campaigns/[id]/send - Send campaign to leads
 export async function POST(

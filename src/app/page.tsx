@@ -1191,7 +1191,8 @@ Type "DELETE ALL" to confirm:`;
                       >
                         👥 Clients
                       </button>
-                      <button
+                      {/* TEMPORARILY HIDDEN - Email/Seminar Features - Can be restored later */}
+                      {/* <button
                         onClick={() => {
                           router.push('/emails');
                           setShowNavMenu(false);
@@ -1208,7 +1209,7 @@ Type "DELETE ALL" to confirm:`;
                         className="w-full text-left px-4 py-2 hover:bg-gray-100 text-black font-semibold transition-colors flex items-center gap-2"
                       >
                         🎥 Seminars
-                      </button>
+                      </button> */}
 
                       {/* Analytics Section */}
                       <div className="border-t border-gray-200 my-2"></div>
@@ -1222,7 +1223,8 @@ Type "DELETE ALL" to confirm:`;
                       >
                         📊 Overview
                       </button>
-                      <button
+                      {/* TEMPORARILY HIDDEN - Email/Seminar Analytics - Can be restored later */}
+                      {/* <button
                         onClick={() => {
                           router.push('/email-analytics');
                           setShowNavMenu(false);
@@ -1239,7 +1241,7 @@ Type "DELETE ALL" to confirm:`;
                         className="w-full text-left px-4 py-2 hover:bg-gray-100 text-black font-semibold transition-colors flex items-center gap-2"
                       >
                         🎯 Seminar Analytics
-                      </button>
+                      </button> */}
 
                       {/* Utilities Section */}
                       <div className="border-t border-gray-200 my-2"></div>
@@ -1287,16 +1289,17 @@ Type "DELETE ALL" to confirm:`;
 
       {/* Dashboard Stats */}
       <div className="bg-gray-100 p-6 border-b-2 border-red-600">
-        <div className={`max-w-7xl mx-auto grid grid-cols-1 ${(session.user as any).role === 'setter' ? 'md:grid-cols-3' : 'md:grid-cols-6'} gap-6`}>
+        <div className={`max-w-7xl mx-auto grid grid-cols-1 ${(session.user as any).role === 'setter' ? 'md:grid-cols-1' : 'md:grid-cols-4'} gap-6`}>
           <div className="bg-white p-4 rounded border-l-4 border-red-600 shadow">
             <h3 className="text-sm font-medium text-gray-600">Total Leads</h3>
             <p className="text-2xl font-bold">{totalLeads}</p>
           </div>
-          <div className="bg-white p-4 rounded border-l-4 border-blue-600 shadow">
+          {/* TEMPORARILY HIDDEN - Email Stats Card - Can be restored later */}
+          {/* <div className="bg-white p-4 rounded border-l-4 border-blue-600 shadow">
             <h3 className="text-sm font-medium text-gray-600">Leads with Emails</h3>
             <p className="text-2xl font-bold">{emailStats.leadsWithEmails}</p>
             <p className="text-xs text-gray-500 mt-1">{emailStats.percentage}% of total</p>
-          </div>
+          </div> */}
           {(session.user as any).role !== 'setter' && (
             <>
               <div className="bg-white p-4 rounded border-l-4 border-red-600 shadow">

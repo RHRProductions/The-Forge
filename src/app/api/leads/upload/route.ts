@@ -13,20 +13,20 @@ const COLUMN_MAPPINGS = {
   last_name: ['last_name', 'lastname', 'lname', 'surname', 'family_name', 'LastName'],
   
   // Name (when combined) - will need splitting
-  full_name: ['name', 'full_name', 'fullname', 'contact_name', 'lead_name'],
+  full_name: ['name', 'full_name', 'fullname', 'contact_name', 'lead_name', 'applicant_name'],
   
   // Email variations
-  email: ['email', 'email_address', 'e_mail', 'contact_email'],
+  email: ['email', 'email_address', 'e_mail', 'contact_email', 'email_combo', 'recent_email_1'],
   
   // Phone variations
-  phone: ['phone', 'phone_number', 'phonenumber', 'primary_phone', 'home_phone', 'contact_phone', 'telephone', 'cell', 'other_phone_1', 'mobile', 'work'],
-  phone_2: ['phone_2', 'phone2', 'secondary_phone', 'work_phone', 'other_phone_2', 'home'],
+  phone: ['phone', 'phone_number', 'phonenumber', 'primary_phone', 'home_phone', 'contact_phone', 'telephone', 'cell', 'other_phone_1', 'mobile', 'work', 'landline_cell_combo', 'cell_combo', 'cell_phone'],
+  phone_2: ['phone_2', 'phone2', 'secondary_phone', 'work_phone', 'other_phone_2', 'home', 'landline', 'recent_landline_1', 'recent_cell_phone_1'],
   
   // Address variations
   address: ['address', 'address1', 'addressline1', 'street_address', 'home_address', 'mailing_address'],
   city: ['city', 'town', 'municipality'],
   state: ['state', 'province', 'region', 'st'],
-  zip_code: ['zip_code', 'zip', 'zipcode', 'postal_code', 'postcode'],
+  zip_code: ['zip_code', 'zip', 'zipcode', 'postal_code', 'postcode', 'zip_plus_four'],
   
   // Age and DOB variations
   age: ['age', 'est_age', 'estimated_age', 'current_age'],
@@ -81,23 +81,23 @@ function parseNameField(nameField: string): { firstName: string; lastName: strin
 
 function parseBirthDate(birthField: string): { dateOfBirth: string; calculatedAge: number | null } {
   if (!birthField) return { dateOfBirth: '', calculatedAge: null };
-  
+
   // Handle different birth date formats
   let dateOfBirth = '';
   let calculatedAge = null;
-  
-  // Check if it's a month/day/year format like "6/7/1959"
-  if (birthField.includes('/')) {
-    const parts = birthField.split('/');
+
+  // Check if it's a YYYY-MM-DD format like "1959-02-11"
+  if (birthField.includes('-')) {
+    const parts = birthField.split('-');
     if (parts.length === 3) {
-      const month = parseInt(parts[0]);
-      const day = parseInt(parts[1]);
-      const year = parseInt(parts[2]);
-      
+      const year = parseInt(parts[0]);
+      const month = parseInt(parts[1]);
+      const day = parseInt(parts[2]);
+
       // Create proper date format
       if (year > 1900 && year < 2030 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
         dateOfBirth = `${month}/${day}/${year}`;
-        
+
         // Calculate age
         const today = new Date();
         const birthDate = new Date(year, month - 1, day);
@@ -109,7 +109,30 @@ function parseBirthDate(birthField: string): { dateOfBirth: string; calculatedAg
       }
     }
   }
-  
+  // Check if it's a month/day/year format like "6/7/1959"
+  else if (birthField.includes('/')) {
+    const parts = birthField.split('/');
+    if (parts.length === 3) {
+      const month = parseInt(parts[0]);
+      const day = parseInt(parts[1]);
+      const year = parseInt(parts[2]);
+
+      // Create proper date format
+      if (year > 1900 && year < 2030 && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+        dateOfBirth = `${month}/${day}/${year}`;
+
+        // Calculate age
+        const today = new Date();
+        const birthDate = new Date(year, month - 1, day);
+        calculatedAge = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          calculatedAge--;
+        }
+      }
+    }
+  }
+
   return { dateOfBirth, calculatedAge };
 }
 

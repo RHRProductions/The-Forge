@@ -25,6 +25,8 @@ interface CalendarEvent {
   lead_status?: string;
   pending_policies?: number;
   active_policies?: number;
+  thank_you_card_sent?: boolean;
+  thank_you_card_sent_date?: string;
 }
 
 export default function CalendarPage() {
@@ -1366,6 +1368,57 @@ export default function CalendarPage() {
                         <span className="text-sm text-gray-500 italic">Using automatic status-based color</span>
                       )}
                     </div>
+                  )}
+                </div>
+
+                {/* Thank You Card Tracking Section */}
+                <div className="border-t-2 border-gray-200 pt-4 mt-4">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-sm font-bold text-gray-700">Thank You Card</label>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const newValue = !selectedEvent.thank_you_card_sent;
+                          const sentDate = newValue ? new Date().toISOString().split('T')[0] : null;
+
+                          const response = await fetch(`/api/calendar/${selectedEvent.id}`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              thank_you_card_sent: newValue,
+                              thank_you_card_sent_date: sentDate,
+                            }),
+                          });
+
+                          if (response.ok) {
+                            setSelectedEvent({
+                              ...selectedEvent,
+                              thank_you_card_sent: newValue,
+                              thank_you_card_sent_date: sentDate || undefined,
+                            });
+                            await fetchEvents();
+                          }
+                        } catch (error) {
+                          console.error('Error updating thank you card status:', error);
+                        }
+                      }}
+                      className={`px-4 py-2 rounded text-sm font-bold transition-colors ${
+                        selectedEvent.thank_you_card_sent
+                          ? 'bg-green-600 text-white hover:bg-green-700'
+                          : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                      }`}
+                    >
+                      {selectedEvent.thank_you_card_sent ? '✓ Sent' : 'Mark as Sent'}
+                    </button>
+                  </div>
+                  {selectedEvent.thank_you_card_sent && selectedEvent.thank_you_card_sent_date && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      Sent on: {new Date(selectedEvent.thank_you_card_sent_date).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </p>
                   )}
                 </div>
 

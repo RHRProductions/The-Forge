@@ -379,7 +379,7 @@ function processCSVData(results: any, totalSpent: number, userId: number, vendor
         findColumnValue(row, COLUMN_MAPPINGS.occupation),
         findColumnValue(row, COLUMN_MAPPINGS.income),
         parseInt(findColumnValue(row, COLUMN_MAPPINGS.household_size)) || null,
-        findColumnValue(row, COLUMN_MAPPINGS.status) || 'new',
+        (findColumnValue(row, COLUMN_MAPPINGS.status) || 'new').toLowerCase(),
         contactMethod,
         leadType,
         parseFloat(findColumnValue(row, COLUMN_MAPPINGS.cost_per_lead)) || costPerLead,

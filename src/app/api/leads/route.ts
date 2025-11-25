@@ -43,7 +43,8 @@ export async function GET(request: NextRequest) {
         const searchDigits = search.replace(/\D/g, '');
 
         if (searchDigits.length > 0) {
-          where += ` AND (LOWER(first_name || ' ' || last_name) LIKE ? OR phone LIKE ? OR phone_2 LIKE ?)`;
+          // Strip all non-numeric characters from database phone numbers for comparison
+          where += ` AND (LOWER(first_name || ' ' || last_name) LIKE ? OR REPLACE(REPLACE(REPLACE(REPLACE(phone, '-', ''), '(', ''), ')', ''), ' ', '') LIKE ? OR REPLACE(REPLACE(REPLACE(REPLACE(phone_2, '-', ''), '(', ''), ')', ''), ' ', '') LIKE ?)`;
           params.push(`%${searchLower}%`, `%${searchDigits}%`, `%${searchDigits}%`);
         } else {
           where += ` AND LOWER(first_name || ' ' || last_name) LIKE ?`;

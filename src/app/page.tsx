@@ -1090,7 +1090,7 @@ Type "DELETE ALL" to confirm:`;
       });
 
       if (response.ok) {
-        fetchLeads();
+        await fetchLeads(); // Wait for the list to refresh before continuing
       }
     } catch (error) {
       console.error('Error updating lead:', error);
@@ -2052,6 +2052,10 @@ Type "DELETE ALL" to confirm:`;
                 const newLeads = prevLeads.map(l => l.id === updatedLead.id ? updatedLead : l);
                 console.log('Updated leads array');
                 return newLeads;
+              });
+              // CRITICAL: Also update filteredLeads so next/prev navigation works correctly
+              setFilteredLeads(prevFiltered => {
+                return prevFiltered.map(l => l.id === updatedLead.id ? updatedLead : l);
               });
             }}
           />

@@ -150,6 +150,8 @@ export async function GET(request: NextRequest) {
       `).all() as any[];
 
       // Lead source performance
+      // For date filtering: if period is set, only count leads that had activities in that period
+      // If period is 'all', show all leads regardless of activity date
       const sourcePerformance = db.prepare(`
         SELECT
           l.source,
@@ -163,9 +165,9 @@ export async function GET(request: NextRequest) {
           COALESCE(SUM(lp.commission_amount), 0) as totalRevenue,
           SUM(CASE WHEN l.wrong_info = 1 THEN 1 ELSE 0 END) as wrongInfo
         FROM leads l
-        LEFT JOIN lead_activities la ON l.id = la.lead_id
+        LEFT JOIN lead_activities la ON l.id = la.lead_id ${period !== 'all' ? dateFilter : ''}
         LEFT JOIN lead_policies lp ON l.id = lp.lead_id
-        WHERE l.source IS NOT NULL AND l.source != '' ${dateFilter.replace('la.created_at', 'l.created_at')}
+        WHERE l.source IS NOT NULL AND l.source != ''
         GROUP BY l.source
         ORDER BY totalLeads DESC
       `).all() as any[];
@@ -202,9 +204,9 @@ export async function GET(request: NextRequest) {
           COUNT(DISTINCT CASE WHEN la.outcome = 'scheduled' THEN l.id END) as appointments,
           COUNT(DISTINCT lp.lead_id) as sales
         FROM leads l
-        LEFT JOIN lead_activities la ON l.id = la.lead_id
+        LEFT JOIN lead_activities la ON l.id = la.lead_id ${period !== 'all' ? dateFilter : ''}
         LEFT JOIN lead_policies lp ON l.id = lp.lead_id
-        WHERE l.city IS NOT NULL AND l.city != '' ${dateFilter.replace('la.created_at', 'l.created_at')}
+        WHERE l.city IS NOT NULL AND l.city != ''
         GROUP BY 1, 2
         HAVING totalLeads >= 3
         ORDER BY sales DESC, contacted DESC
@@ -219,8 +221,8 @@ export async function GET(request: NextRequest) {
           COUNT(DISTINCT CASE WHEN la.outcome IN ('answered', 'scheduled') THEN l.id END) as contacted,
           COUNT(DISTINCT CASE WHEN la.outcome = 'scheduled' THEN l.id END) as appointments
         FROM leads l
-        LEFT JOIN lead_activities la ON l.id = la.lead_id
-        WHERE l.contact_attempt_count > 0 ${dateFilter.replace('la.created_at', 'l.created_at')}
+        LEFT JOIN lead_activities la ON l.id = la.lead_id ${period !== 'all' ? dateFilter : ''}
+        WHERE l.contact_attempt_count > 0
         GROUP BY attempts
         ORDER BY attempts
         LIMIT 15
@@ -247,9 +249,9 @@ export async function GET(request: NextRequest) {
           COUNT(DISTINCT CASE WHEN la.outcome = 'scheduled' THEN l.id END) as appointments,
           COUNT(DISTINCT lp.lead_id) as sales
         FROM leads l
-        LEFT JOIN lead_activities la ON l.id = la.lead_id
+        LEFT JOIN lead_activities la ON l.id = la.lead_id ${period !== 'all' ? dateFilter : ''}
         LEFT JOIN lead_policies lp ON l.id = lp.lead_id
-        WHERE l.lead_temperature IS NOT NULL ${dateFilter.replace('la.created_at', 'l.created_at')}
+        WHERE l.lead_temperature IS NOT NULL
         GROUP BY l.lead_temperature
       `).all() as any[];
 
@@ -271,9 +273,9 @@ export async function GET(request: NextRequest) {
           COUNT(DISTINCT CASE WHEN la.outcome = 'scheduled' THEN l.id END) as appointments,
           COUNT(DISTINCT lp.lead_id) as sales
         FROM leads l
-        LEFT JOIN lead_activities la ON l.id = la.lead_id
+        LEFT JOIN lead_activities la ON l.id = la.lead_id ${period !== 'all' ? dateFilter : ''}
         LEFT JOIN lead_policies lp ON l.id = lp.lead_id
-        WHERE l.age IS NOT NULL ${dateFilter.replace('la.created_at', 'l.created_at')}
+        WHERE l.age IS NOT NULL
         GROUP BY ageGroup
         ORDER BY MIN(l.age)
       `).all() as any[];

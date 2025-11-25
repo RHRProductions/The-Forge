@@ -50,7 +50,7 @@ export async function PATCH(
     const { id } = await params;
     const eventId = parseInt(id);
     const body = await request.json();
-    const { title, description, start_time, end_time, event_type, color } = body;
+    const { title, description, start_time, end_time, event_type, color, thank_you_card_sent, thank_you_card_sent_date } = body;
 
     const db = getDatabase();
 
@@ -92,6 +92,16 @@ export async function PATCH(
     if (color !== undefined) {
       updates.push('color = ?');
       values.push(color);
+    }
+
+    if (thank_you_card_sent !== undefined) {
+      updates.push('thank_you_card_sent = ?');
+      values.push(thank_you_card_sent ? 1 : 0);
+    }
+
+    if (thank_you_card_sent_date !== undefined) {
+      updates.push('thank_you_card_sent_date = ?');
+      values.push(thank_you_card_sent_date);
     }
 
     updates.push('updated_at = CURRENT_TIMESTAMP');

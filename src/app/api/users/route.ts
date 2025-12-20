@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '../../../../lib/database/connection';
 import { auth } from '../../../../auth';
 import bcrypt from 'bcryptjs';
+import { validatePassword } from '../../../../lib/security/password-validator';
 
 // GET /api/users - List all users (admin only)
 export async function GET() {
@@ -56,6 +57,15 @@ export async function POST(request: NextRequest) {
     // Validate role
     if (!['admin', 'agent', 'setter'].includes(role)) {
       return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
+    }
+
+    // Validate password strength
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      return NextResponse.json({
+        error: 'Password does not meet security requirements',
+        details: passwordValidation.errors
+      }, { status: 400 });
     }
 
     const db = getDatabase();

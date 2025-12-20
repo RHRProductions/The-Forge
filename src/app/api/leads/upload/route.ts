@@ -3,6 +3,7 @@ import { getDatabase } from '../../../../../lib/database/connection';
 import { formatPhoneNumber, formatName, formatLocation } from '../../../../../lib/utils';
 import { auth } from '../../../../../auth';
 import * as Papa from 'papaparse';
+import { logAuditFromRequest } from '../../../../../lib/security/audit-logger';
 
 // Column mapping for different vendor formats
 const COLUMN_MAPPINGS = {
@@ -524,6 +525,20 @@ export async function POST(request: NextRequest) {
         console.log('Using Lead Hero format with injected headers - Headers:', results.meta?.fields);
 
         const response = processCSVData(results, totalSpent, userId, vendorName, leadTemperature);
+
+        // AUDIT LOG: Data import
+        await logAuditFromRequest(request, {
+          action: 'data_import',
+          resourceType: 'lead',
+          details: {
+            vendor: vendorName,
+            totalImported: response.successCount,
+            totalSpent,
+            duplicatesSkipped: response.duplicateCount
+          },
+          severity: 'warning'
+        });
+
         return NextResponse.json(response);
       }
 
@@ -558,6 +573,20 @@ export async function POST(request: NextRequest) {
 
       // Use existing parsing logic for standard CSVs
       const response = processCSVData(results, totalSpent, userId, vendorName, leadTemperature);
+
+      // AUDIT LOG: Data import
+      await logAuditFromRequest(request, {
+        action: 'data_import',
+        resourceType: 'lead',
+        details: {
+          vendor: vendorName,
+          totalImported: response.successCount,
+          totalSpent,
+          duplicatesSkipped: response.duplicateCount
+        },
+        severity: 'warning'
+      });
+
       return NextResponse.json(response);
     }
     
@@ -589,6 +618,20 @@ export async function POST(request: NextRequest) {
 
     // Process the cleaned Lead Hero CSV data
     const response = processCSVData(results, totalSpent, userId, vendorName, leadTemperature);
+
+    // AUDIT LOG: Data import
+    await logAuditFromRequest(request, {
+      action: 'data_import',
+      resourceType: 'lead',
+      details: {
+        vendor: vendorName,
+        totalImported: response.successCount,
+        totalSpent,
+        duplicatesSkipped: response.duplicateCount
+      },
+      severity: 'warning'
+    });
+
     return NextResponse.json(response);
 
   } catch (error) {

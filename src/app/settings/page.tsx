@@ -29,6 +29,7 @@ export default function SettingsPage() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
 
   // Redirect if not admin
   useEffect(() => {
@@ -56,6 +57,22 @@ export default function SettingsPage() {
     } catch (error) {
       console.error('Error fetching users:', error);
     }
+  };
+
+  const validatePasswordStrength = (password: string) => {
+    if (!password) {
+      setPasswordErrors([]);
+      return;
+    }
+
+    const errors: string[] = [];
+    if (password.length < 8) errors.push('At least 8 characters long');
+    if (!/[A-Z]/.test(password)) errors.push('Contains uppercase letter (A-Z)');
+    if (!/[a-z]/.test(password)) errors.push('Contains lowercase letter (a-z)');
+    if (!/[0-9]/.test(password)) errors.push('Contains number (0-9)');
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) errors.push('Contains special character (!@#$%^&* etc.)');
+
+    setPasswordErrors(errors);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -94,9 +111,14 @@ export default function SettingsPage() {
         setShowAddForm(false);
         setEditingUser(null);
         setFormData({ name: '', email: '', password: '', role: 'setter', agent_id: '' });
+        setPasswordErrors([]);
       } else {
         const data = await response.json();
-        setError(data.error || 'Failed to save user');
+        if (data.details && Array.isArray(data.details)) {
+          setError(data.error + ': ' + data.details.join(', '));
+        } else {
+          setError(data.error || 'Failed to save user');
+        }
       }
     } catch (error) {
       setError('An error occurred. Please try again.');
@@ -114,6 +136,7 @@ export default function SettingsPage() {
       role: user.role,
       agent_id: user.agent_id?.toString() || '',
     });
+    setPasswordErrors([]);
     setShowAddForm(true);
   };
 
@@ -143,6 +166,7 @@ export default function SettingsPage() {
     setEditingUser(null);
     setFormData({ name: '', email: '', password: '', role: 'setter', agent_id: '' });
     setError('');
+    setPasswordErrors([]);
   };
 
   const handleResetAnalytics = async () => {
@@ -236,6 +260,12 @@ Type "RESET" to confirm:`;
               + Add New User
             </button>
             <button
+              onClick={() => router.push('/admin/audit-logs')}
+              className="bg-blue-600 text-white px-6 py-3 rounded font-bold hover:bg-blue-700 transition-colors"
+            >
+              🔒 Audit Logs
+            </button>
+            <button
               onClick={() => router.push('/admin/bulk-source-update')}
               className="bg-purple-600 text-white px-6 py-3 rounded font-bold hover:bg-purple-700 transition-colors"
             >
@@ -294,17 +324,42 @@ Type "RESET" to confirm:`;
                   />
                 </div>
 
-                <div>
+                <div className="md:col-span-2">
                   <label className="block text-sm font-medium mb-2">
                     Password {editingUser && '(leave blank to keep current)'}
                   </label>
                   <input
                     type="password"
                     value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, password: e.target.value });
+                      validatePasswordStrength(e.target.value);
+                    }}
                     required={!editingUser}
                     className="w-full px-4 py-2 border-2 border-gray-300 rounded focus:border-red-600 focus:outline-none"
                   />
+                  {formData.password && (
+                    <div className="mt-2">
+                      <p className="text-xs font-semibold text-gray-700 mb-1">Password Requirements:</p>
+                      <ul className="text-xs space-y-1">
+                        <li className={passwordErrors.includes('At least 8 characters long') ? 'text-red-600' : 'text-green-600'}>
+                          {passwordErrors.includes('At least 8 characters long') ? '✗' : '✓'} At least 8 characters long
+                        </li>
+                        <li className={passwordErrors.includes('Contains uppercase letter (A-Z)') ? 'text-red-600' : 'text-green-600'}>
+                          {passwordErrors.includes('Contains uppercase letter (A-Z)') ? '✗' : '✓'} Contains uppercase letter (A-Z)
+                        </li>
+                        <li className={passwordErrors.includes('Contains lowercase letter (a-z)') ? 'text-red-600' : 'text-green-600'}>
+                          {passwordErrors.includes('Contains lowercase letter (a-z)') ? '✗' : '✓'} Contains lowercase letter (a-z)
+                        </li>
+                        <li className={passwordErrors.includes('Contains number (0-9)') ? 'text-red-600' : 'text-green-600'}>
+                          {passwordErrors.includes('Contains number (0-9)') ? '✗' : '✓'} Contains number (0-9)
+                        </li>
+                        <li className={passwordErrors.includes('Contains special character (!@#$%^&* etc.)') ? 'text-red-600' : 'text-green-600'}>
+                          {passwordErrors.includes('Contains special character (!@#$%^&* etc.)') ? '✗' : '✓'} Contains special character (!@#$%^&* etc.)
+                        </li>
+                      </ul>
+                    </div>
+                  )}
                 </div>
 
                 <div>

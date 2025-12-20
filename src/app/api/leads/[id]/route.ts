@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '../../../../../lib/database/connection';
 import { Lead } from '../../../../../types/lead';
+import { logAuditFromRequest, AuditPresets } from '../../../../../lib/security/audit-logger';
 
 export async function GET(
   request: NextRequest,
@@ -9,11 +10,14 @@ export async function GET(
   try {
     const { id } = await params;
     const db = getDatabase();
-    const lead = db.prepare('SELECT * FROM leads WHERE id = ?').get(parseInt(id));
+    const lead = db.prepare('SELECT * FROM leads WHERE id = ?').get(parseInt(id)) as Lead;
 
     if (!lead) {
       return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
     }
+
+    // AUDIT LOG: Viewing sensitive lead data (PII/PHI)
+    await logAuditFromRequest(request, AuditPresets.viewLead(parseInt(id)));
 
     return NextResponse.json(lead);
   } catch (error) {
@@ -84,6 +88,9 @@ export async function PUT(
     if (updates.length > 1) { // More than just updated_at
       const query = `UPDATE leads SET ${updates.join(', ')} WHERE id = ?`;
       db.prepare(query).run(...values);
+
+      // AUDIT LOG: Lead data modified
+      await logAuditFromRequest(request, AuditPresets.updateLead(parseInt(id), leadData));
     }
 
     const updatedLead = db.prepare('SELECT * FROM leads WHERE id = ?').get(id);
@@ -101,7 +108,16 @@ export async function DELETE(
   try {
     const { id } = await params;
     const db = getDatabase();
+
+    // Get lead name before deleting for audit log
+    const lead = db.prepare('SELECT first_name, last_name FROM leads WHERE id = ?').get(id) as any;
+    const leadName = lead ? `${lead.first_name} ${lead.last_name}` : 'Unknown';
+
     db.prepare('DELETE FROM leads WHERE id = ?').run(id);
+
+    // AUDIT LOG: Critical - lead deletion
+    await logAuditFromRequest(request, AuditPresets.deleteLead(parseInt(id), leadName));
+
     return NextResponse.json({ message: 'Lead deleted successfully' });
   } catch (error) {
     console.error('Error deleting lead:', error);

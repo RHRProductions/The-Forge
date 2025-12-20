@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '../../../../../lib/database/connection';
 import { auth } from '../../../../../auth';
+import { logAuditFromRequest } from '../../../../../lib/security/audit-logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -57,6 +58,19 @@ export async function POST(request: NextRequest) {
       // Delete the merged lead
       db.prepare('DELETE FROM leads WHERE id = ?').run(mergeLeadId);
     }
+
+    // AUDIT LOG: Critical operation - merge leads
+    await logAuditFromRequest(request, {
+      action: 'lead_merge',
+      resourceType: 'lead',
+      resourceId: keepLeadId,
+      details: {
+        keptLeadId: keepLeadId,
+        mergedLeadIds: mergeLeadIds,
+        mergedCount: mergeLeadIds.length
+      },
+      severity: 'warning'
+    });
 
     return NextResponse.json({ success: true, message: 'Leads merged successfully' });
   } catch (error) {

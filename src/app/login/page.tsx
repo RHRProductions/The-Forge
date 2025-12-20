@@ -25,6 +25,22 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      // Check rate limit before attempting login
+      const rateLimitResponse = await fetch('/api/auth/check-rate-limit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      const rateLimitData = await rateLimitResponse.json();
+
+      if (!rateLimitResponse.ok) {
+        setError(rateLimitData.message || 'Too many login attempts. Please try again later.');
+        setLoading(false);
+        return;
+      }
+
+      // Proceed with login
       const result = await signIn('credentials', {
         email,
         password,
@@ -35,6 +51,13 @@ export default function LoginPage() {
         setError('Invalid email or password');
         setLoading(false);
       } else {
+        // Reset rate limit on successful login
+        await fetch('/api/auth/check-rate-limit', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+
         router.push('/');
         router.refresh();
       }

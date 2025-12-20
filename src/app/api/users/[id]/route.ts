@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '../../../../../lib/database/connection';
 import { auth } from '../../../../../auth';
 import bcrypt from 'bcryptjs';
+import { validatePassword } from '../../../../../lib/security/password-validator';
 
 // DELETE /api/users/[id] - Delete a user (admin only)
 export async function DELETE(
@@ -96,6 +97,14 @@ export async function PATCH(
     }
 
     if (password !== undefined && password !== '') {
+      // Validate password strength
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.valid) {
+        return NextResponse.json({
+          error: 'Password does not meet security requirements',
+          details: passwordValidation.errors
+        }, { status: 400 });
+      }
       const hashedPassword = await bcrypt.hash(password, 10);
       updates.push('password = ?');
       values.push(hashedPassword);

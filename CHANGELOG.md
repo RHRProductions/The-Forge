@@ -9,6 +9,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.1] - 2025-12-20
+
+### Added - Phase 4 (Extended Rate Limiting & Data Protection)
+- **Automated Database Backup System**
+  - Daily backups at 2 AM via cron job
+  - SQLite WAL checkpoint for clean snapshots
+  - Gzip compression to save disk space
+  - 30-day retention policy with automatic cleanup
+  - Backup location: `/var/backups/the-forge/`
+  - Script: `/var/www/the-forge/scripts/backup-database.sh`
+- **Extended Rate Limiting Coverage**
+  - Password reset endpoint: 3 attempts per hour (prevents brute force)
+  - User creation endpoint: 10 users per hour (prevents account spam)
+  - Bulk delete endpoint: 5 operations per hour (prevents abuse)
+  - All endpoints return HTTP 429 with retry timing
+- **Enhanced Password Reset Security**
+  - Strong password requirements enforced (matches user creation standards)
+  - Audit logging for failed and successful reset attempts
+  - Rate limit counter reset on successful password change
+  - Detailed validation error messages
+- **Bulk Delete Endpoint Hardening**
+  - Added authentication check (was missing - **CRITICAL FIX**)
+  - Restricted to admin role only
+  - Combined rate limiting with existing audit logging
+
+### Security
+- Fixed critical vulnerability: bulk delete endpoint was unauthenticated
+- Environment variable security audit: verified `.env*` files in `.gitignore`, no hardcoded secrets
+- 0 npm vulnerabilities maintained
+
+### Changed
+- Updated backup script to modern format with better error handling and logging
+
+---
+
 ## [0.3.0] - 2025-12-20
 
 ### Security - CRITICAL UPDATE
@@ -190,6 +225,7 @@ All security features verified and working:
 
 | Version | Date | Major Changes |
 |---------|------|---------------|
+| 0.3.1 | 2025-12-20 | **SECURITY PATCH:** Extended rate limiting, automated backups, critical bulk delete auth fix |
 | 0.3.0 | 2025-12-20 | **SECURITY UPDATE:** Malware removal, audit logging, rate limiting, password enforcement, security headers |
 | 0.2.0 | 2025-10-07 | Production stability fixes, Turbopack disabled, PM2 auto-startup |
 | 0.1.0 | 2025-10-01 | Authentication, multi-user, calendar, analytics |

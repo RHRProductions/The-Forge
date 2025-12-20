@@ -1,14 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '../../../../../lib/database/connection';
 import bcrypt from 'bcryptjs';
+import { rateLimiter, getClientIp, RateLimitPresets } from '../../../../../lib/security/rate-limiter';
+import { validatePassword } from '../../../../../lib/security/password-validator';
+import { createAuditLog } from '../../../../../lib/security/audit-logger';
 
 // Admin reset code - change this to a secure code of your choice
 // For production, consider using environment variables
 const ADMIN_RESET_CODE = 'FORGE2025RESET';
 
 export async function POST(request: NextRequest) {
+  const clientIp = getClientIp(request);
+
   try {
     const { email, resetCode, newPassword } = await request.json();
+
+    // Apply rate limiting: 3 attempts per hour
+    const rateLimitKey = `password-reset:${clientIp}:${email || 'unknown'}`;
+    const rateLimit = rateLimiter.check(
+      rateLimitKey,
+      RateLimitPresets.PASSWORD_RESET.maxAttempts,
+      RateLimitPresets.PASSWORD_RESET.windowMs,
+      RateLimitPresets.PASSWORD_RESET.blockDurationMs
+    );
+
+    if (!rateLimit.allowed) {
+      const blockedMinutes = rateLimit.blockedUntil
+        ? Math.ceil((rateLimit.blockedUntil - Date.now()) / 60000)
+        : 0;
+
+      // Log suspicious activity
+      await createAuditLog({
+        action: 'password_reset_rate_limit',
+        userId: null,
+        userEmail: email || null,
+        ipAddress: clientIp,
+        userAgent: request.headers.get('user-agent') || undefined,
+        resourceType: 'password_reset',
+        resourceId: email,
+        details: `Rate limit exceeded - blocked for ${blockedMinutes} minutes`,
+        severity: 'warning',
+      });
+
+      return NextResponse.json(
+        {
+          error: `Too many password reset attempts. Please try again in ${blockedMinutes} minutes.`,
+          blockedUntil: rateLimit.blockedUntil
+        },
+        { status: 429 }
+      );
+    }
 
     // Validate inputs
     if (!email || !resetCode || !newPassword) {
@@ -20,16 +61,33 @@ export async function POST(request: NextRequest) {
 
     // Verify reset code
     if (resetCode !== ADMIN_RESET_CODE) {
+      // Log failed reset attempt
+      await createAuditLog({
+        action: 'password_reset_failed',
+        userId: null,
+        userEmail: email,
+        ipAddress: clientIp,
+        userAgent: request.headers.get('user-agent') || undefined,
+        resourceType: 'password_reset',
+        resourceId: email,
+        details: 'Invalid reset code provided',
+        severity: 'warning',
+      });
+
       return NextResponse.json(
         { error: 'Invalid reset code' },
         { status: 401 }
       );
     }
 
-    // Validate password length
-    if (newPassword.length < 4) {
+    // Validate password strength
+    const passwordValidation = validatePassword(newPassword);
+    if (!passwordValidation.valid) {
       return NextResponse.json(
-        { error: 'Password must be at least 4 characters' },
+        {
+          error: 'Password does not meet security requirements',
+          details: passwordValidation.errors
+        },
         { status: 400 }
       );
     }
@@ -57,6 +115,22 @@ export async function POST(request: NextRequest) {
     `);
 
     stmt.run(hashedPassword, email);
+
+    // Reset rate limit on successful password reset
+    rateLimiter.reset(rateLimitKey);
+
+    // Log successful password reset
+    await createAuditLog({
+      action: 'password_reset_success',
+      userId: user.id,
+      userEmail: user.email,
+      ipAddress: clientIp,
+      userAgent: request.headers.get('user-agent') || undefined,
+      resourceType: 'user',
+      resourceId: user.id.toString(),
+      details: `Password reset successfully for ${user.email}`,
+      severity: 'info',
+    });
 
     return NextResponse.json({
       success: true,

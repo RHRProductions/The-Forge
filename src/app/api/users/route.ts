@@ -3,6 +3,7 @@ import { getDatabase } from '../../../../lib/database/connection';
 import { auth } from '../../../../auth';
 import bcrypt from 'bcryptjs';
 import { validatePassword } from '../../../../lib/security/password-validator';
+import { rateLimiter, getClientIp } from '../../../../lib/security/rate-limiter';
 
 // GET /api/users - List all users (admin only)
 export async function GET() {
@@ -34,6 +35,8 @@ export async function GET() {
 
 // POST /api/users - Create a new user (admin only)
 export async function POST(request: NextRequest) {
+  const clientIp = getClientIp(request);
+
   try {
     const session = await auth();
 
@@ -44,6 +47,23 @@ export async function POST(request: NextRequest) {
     // Only admins can create users
     if ((session.user as any).role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // Apply rate limiting: 10 user creations per hour per IP
+    const rateLimitKey = `user-creation:${clientIp}`;
+    const rateLimit = rateLimiter.check(rateLimitKey, 10, 60 * 60 * 1000, 60 * 60 * 1000);
+
+    if (!rateLimit.allowed) {
+      const blockedMinutes = rateLimit.blockedUntil
+        ? Math.ceil((rateLimit.blockedUntil - Date.now()) / 60000)
+        : 0;
+
+      return NextResponse.json(
+        {
+          error: `Too many user creation attempts. Please try again in ${blockedMinutes} minutes.`,
+        },
+        { status: 429 }
+      );
     }
 
     const body = await request.json();

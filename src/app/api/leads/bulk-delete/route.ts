@@ -1,9 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '../../../../../lib/database/connection';
 import { logAuditFromRequest, AuditPresets } from '../../../../../lib/security/audit-logger';
+import { auth } from '../../../../../auth';
+import { rateLimiter, getClientIp } from '../../../../../lib/security/rate-limiter';
 
 export async function DELETE(request: NextRequest) {
+  const clientIp = getClientIp(request);
+
   try {
+    // Authentication check
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Only admins can bulk delete
+    if ((session.user as any).role !== 'admin') {
+      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
+    }
+
+    // Apply rate limiting: 5 bulk delete operations per hour
+    const rateLimitKey = `bulk-delete:${clientIp}:${(session.user as any).id}`;
+    const rateLimit = rateLimiter.check(rateLimitKey, 5, 60 * 60 * 1000, 60 * 60 * 1000);
+
+    if (!rateLimit.allowed) {
+      const blockedMinutes = rateLimit.blockedUntil
+        ? Math.ceil((rateLimit.blockedUntil - Date.now()) / 60000)
+        : 0;
+
+      return NextResponse.json(
+        {
+          error: `Too many bulk delete operations. Please try again in ${blockedMinutes} minutes.`,
+        },
+        { status: 429 }
+      );
+    }
+
     const db = getDatabase();
 
     // Check if request has a body with specific lead IDs

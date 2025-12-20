@@ -3,7 +3,7 @@ import { getDatabase } from '../../../../../lib/database/connection';
 import bcrypt from 'bcryptjs';
 import { rateLimiter, getClientIp, RateLimitPresets } from '../../../../../lib/security/rate-limiter';
 import { validatePassword } from '../../../../../lib/security/password-validator';
-import { createAuditLog } from '../../../../../lib/security/audit-logger';
+import { logAudit } from '../../../../../lib/security/audit-logger';
 
 // Admin reset code - change this to a secure code of your choice
 // For production, consider using environment variables
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
         : 0;
 
       // Log suspicious activity
-      await createAuditLog({
+      await logAudit({
         action: 'password_reset_rate_limit',
         userId: null,
         userEmail: email || null,
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     // Verify reset code
     if (resetCode !== ADMIN_RESET_CODE) {
       // Log failed reset attempt
-      await createAuditLog({
+      await logAudit({
         action: 'password_reset_failed',
         userId: null,
         userEmail: email,
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
     rateLimiter.reset(rateLimitKey);
 
     // Log successful password reset
-    await createAuditLog({
+    await logAudit({
       action: 'password_reset_success',
       userId: user.id,
       userEmail: user.email,

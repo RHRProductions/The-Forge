@@ -9,6 +9,97 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.0] - 2025-12-20
+
+### Security - COMPREHENSIVE HARDENING (Phase 5)
+
+**Critical Security Improvements Package:**
+
+### Added - Phase 5 (Final Security Layer)
+
+**1. Localhost-Only Binding**
+- Next.js now binds to 127.0.0.1 (localhost) only
+- Direct IP:port access blocked (http://143.244.185.41:3000)
+- ALL traffic must go through HTTPS via nginx reverse proxy
+- Prevents unencrypted credential/session transmission
+- Modified: `package.json` start script
+
+**2. Image Upload/Delete Authentication & Hardening** 🔴 CRITICAL FIX
+- **FIXED:** Image upload endpoint was completely unauthenticated
+- **FIXED:** Image deletion endpoint was completely unauthenticated
+- **FIXED:** Anyone could upload/delete images to any lead
+- Added authentication checks to all image endpoints
+- Added authorization checks (user must own lead or be agent with access)
+- Added rate limiting: 20 uploads per hour per user
+- Added file size validation: 10MB maximum
+- Added file type validation: extension + MIME type
+- Added audit logging for uploads, deletions, and violations
+- Instrumented: GET, POST, DELETE `/api/leads/[id]/images`
+
+**3. Input Sanitization System (XSS Prevention)**
+- Created comprehensive input sanitizer (`lib/security/input-sanitizer.ts`)
+- Strips HTML tags, JavaScript, event handlers from all user input
+- Removes iframe, object, embed tags
+- Sanitizes: text, emails, phone numbers, notes, numbers
+- Enforces field length limits
+- Applied to ALL user input endpoints:
+  - Lead creation (`/api/leads POST`)
+  - Lead updates (`/api/leads/[id] PUT`)
+  - CSV uploads (`/api/leads/upload`) - CRITICAL for external data
+  - User creation (`/api/users POST`)
+  - User updates (`/api/users/[id] PATCH`)
+  - Notes (`/api/leads/[id]/notes POST`)
+  - Activities (`/api/leads/[id]/activities POST`)
+- Prevents stored XSS attacks from malicious user input
+
+**4. Enhanced File Upload Validation**
+- Created file validator (`lib/security/file-validator.ts`)
+- **Magic number validation:** Checks actual file signatures, not just MIME type
+- **File content verification:** Validates file matches claimed type
+- **Executable detection:** Scans for embedded PHP, scripts, malicious code
+- **Size enforcement:** 10MB images, 50MB CSV files
+- **Binary detection:** Ensures CSV files are actually text
+- Applied to:
+  - Image uploads: validates JPEG, PNG, GIF, WEBP signatures
+  - CSV uploads: validates text content, blocks binary files
+- Logs rejected uploads to audit log
+- Prevents file spoofing and malicious uploads
+
+**5. CORS Policy Configuration**
+- Configured strict Cross-Origin Resource Sharing policy
+- Production: Only `https://the4rge.com` allowed
+- Development: Only `http://localhost:3000` allowed
+- Blocks unauthorized cross-origin API requests
+- Allows credentials for session cookies
+- 24-hour preflight cache for performance
+
+**6. Error Message Sanitization**
+- Created error sanitizer (`lib/security/error-sanitizer.ts`)
+- Production errors are sanitized before sending to client
+- Removes: file paths, database details, connection strings, stack traces
+- Replaces detailed errors with safe generic messages
+- Full error logging server-side for debugging
+- Prevents information disclosure attacks
+- Applied to critical endpoints (leads API, image uploads)
+
+### Security Audit Summary
+All Phase 5 security measures verified and working:
+- ✅ Localhost binding active
+- ✅ Image endpoints authenticated and authorized
+- ✅ Input sanitization on all user inputs
+- ✅ File validation with magic number checking
+- ✅ CORS policy configured
+- ✅ Error messages sanitized in production
+
+### Security Fixes Timeline
+- **Phase 1** (v0.3.0): Authentication, rate limiting, Next.js updates
+- **Phase 2** (v0.3.0): Audit logging, security headers, session security
+- **Phase 3** (v0.3.0): Password strength requirements
+- **Phase 4** (v0.3.1): Extended rate limiting, automated backups, bulk delete auth
+- **Phase 5** (v0.4.0): Localhost binding, image auth, input sanitization, file validation, CORS, error sanitization
+
+---
+
 ## [0.3.1] - 2025-12-20
 
 ### Added - Phase 4 (Extended Rate Limiting & Data Protection)
@@ -225,6 +316,7 @@ All security features verified and working:
 
 | Version | Date | Major Changes |
 |---------|------|---------------|
+| 0.4.0 | 2025-12-20 | **SECURITY HARDENING:** Localhost binding, image auth fixes, input sanitization, file validation, CORS, error sanitization |
 | 0.3.1 | 2025-12-20 | **SECURITY PATCH:** Extended rate limiting, automated backups, critical bulk delete auth fix |
 | 0.3.0 | 2025-12-20 | **SECURITY UPDATE:** Malware removal, audit logging, rate limiting, password enforcement, security headers |
 | 0.2.0 | 2025-10-07 | Production stability fixes, Turbopack disabled, PM2 auto-startup |

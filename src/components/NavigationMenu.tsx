@@ -157,6 +157,7 @@ export default function NavigationMenu({ currentPage }: NavigationMenuProps) {
                 ⚠️ Bounced Emails
               </button>
             )} */}
+            {/* Profile & Security - Available to all users */}
             {currentPage !== 'profile' && (
               <button
                 onClick={() => {

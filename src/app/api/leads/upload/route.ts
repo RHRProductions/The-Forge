@@ -4,6 +4,7 @@ import { formatPhoneNumber, formatName, formatLocation } from '../../../../../li
 import { auth } from '../../../../../auth';
 import * as Papa from 'papaparse';
 import { logAuditFromRequest } from '../../../../../lib/security/audit-logger';
+import { sanitizeLead } from '../../../../../lib/security/input-sanitizer';
 
 // Column mapping for different vendor formats
 const COLUMN_MAPPINGS = {
@@ -385,35 +386,70 @@ function processCSVData(results: any, totalSpent: number, userId: number, vendor
         continue; // Skip this lead
       }
 
+      // Build lead object and sanitize to prevent XSS
+      const rawLead = {
+        first_name: formatName(firstName),
+        last_name: formatName(lastName),
+        email: findColumnValue(row, COLUMN_MAPPINGS.email),
+        phone: formatPhoneNumber(findColumnValue(row, COLUMN_MAPPINGS.phone)),
+        phone_2: formatPhoneNumber(findColumnValue(row, COLUMN_MAPPINGS.phone_2)),
+        company: findColumnValue(row, COLUMN_MAPPINGS.company),
+        address: findColumnValue(row, COLUMN_MAPPINGS.address),
+        city: formatLocation(findColumnValue(row, COLUMN_MAPPINGS.city)),
+        state: formatLocation(findColumnValue(row, COLUMN_MAPPINGS.state)),
+        zip_code: findColumnValue(row, COLUMN_MAPPINGS.zip_code),
+        date_of_birth: dateOfBirth,
+        age: finalAge,
+        gender: findColumnValue(row, COLUMN_MAPPINGS.gender),
+        marital_status: findColumnValue(row, COLUMN_MAPPINGS.marital_status),
+        occupation: findColumnValue(row, COLUMN_MAPPINGS.occupation),
+        income: findColumnValue(row, COLUMN_MAPPINGS.income),
+        household_size: parseInt(findColumnValue(row, COLUMN_MAPPINGS.household_size)) || null,
+        status: (findColumnValue(row, COLUMN_MAPPINGS.status) || 'new').toLowerCase(),
+        contact_method: contactMethod,
+        lead_type: leadType,
+        cost_per_lead: parseFloat(findColumnValue(row, COLUMN_MAPPINGS.cost_per_lead)) || costPerLead,
+        sales_amount: parseFloat(findColumnValue(row, COLUMN_MAPPINGS.sales_amount)) || 0,
+        notes: notes,
+        source: source,
+        lead_score: parseInt(findColumnValue(row, COLUMN_MAPPINGS.lead_score)) || 0,
+        lead_temperature: leadTemperature,
+        last_contact_date: findColumnValue(row, ['last_contact_date', 'got_on']),
+        next_follow_up: findColumnValue(row, ['next_follow_up']),
+      };
+
+      // Sanitize all fields to prevent XSS
+      const sanitizedLead = sanitizeLead(rawLead);
+
       insertStmt.run(
-        formatName(firstName),
-        formatName(lastName),
-        findColumnValue(row, COLUMN_MAPPINGS.email),
-        formatPhoneNumber(findColumnValue(row, COLUMN_MAPPINGS.phone)),
-        formatPhoneNumber(findColumnValue(row, COLUMN_MAPPINGS.phone_2)),
-        findColumnValue(row, COLUMN_MAPPINGS.company),
-        findColumnValue(row, COLUMN_MAPPINGS.address),
-        formatLocation(findColumnValue(row, COLUMN_MAPPINGS.city)),
-        formatLocation(findColumnValue(row, COLUMN_MAPPINGS.state)),
-        findColumnValue(row, COLUMN_MAPPINGS.zip_code),
-        dateOfBirth,
-        finalAge,
-        findColumnValue(row, COLUMN_MAPPINGS.gender),
-        findColumnValue(row, COLUMN_MAPPINGS.marital_status),
-        findColumnValue(row, COLUMN_MAPPINGS.occupation),
-        findColumnValue(row, COLUMN_MAPPINGS.income),
-        parseInt(findColumnValue(row, COLUMN_MAPPINGS.household_size)) || null,
-        (findColumnValue(row, COLUMN_MAPPINGS.status) || 'new').toLowerCase(),
-        contactMethod,
-        leadType,
-        parseFloat(findColumnValue(row, COLUMN_MAPPINGS.cost_per_lead)) || costPerLead,
-        parseFloat(findColumnValue(row, COLUMN_MAPPINGS.sales_amount)) || 0,
-        notes,
-        source,
-        parseInt(findColumnValue(row, COLUMN_MAPPINGS.lead_score)) || 0,
-        leadTemperature,
-        findColumnValue(row, ['last_contact_date', 'got_on']),
-        findColumnValue(row, ['next_follow_up']),
+        sanitizedLead.first_name,
+        sanitizedLead.last_name,
+        sanitizedLead.email,
+        sanitizedLead.phone,
+        sanitizedLead.phone_2,
+        sanitizedLead.company,
+        sanitizedLead.address,
+        sanitizedLead.city,
+        sanitizedLead.state,
+        sanitizedLead.zip_code,
+        sanitizedLead.date_of_birth,
+        sanitizedLead.age,
+        sanitizedLead.gender,
+        sanitizedLead.marital_status,
+        sanitizedLead.occupation,
+        sanitizedLead.income,
+        sanitizedLead.household_size,
+        sanitizedLead.status,
+        sanitizedLead.contact_method,
+        sanitizedLead.lead_type,
+        sanitizedLead.cost_per_lead,
+        sanitizedLead.sales_amount,
+        sanitizedLead.notes,
+        sanitizedLead.source,
+        sanitizedLead.lead_score,
+        sanitizedLead.lead_temperature,
+        sanitizedLead.last_contact_date,
+        sanitizedLead.next_follow_up,
         userId
       );
       successCount++;

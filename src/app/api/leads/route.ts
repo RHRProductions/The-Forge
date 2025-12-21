@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '../../../../lib/database/connection';
 import { Lead } from '../../../../types/lead';
 import { auth } from '../../../../auth';
+import { sanitizeLead } from '../../../../lib/security/input-sanitizer';
 
 export async function GET(request: NextRequest) {
   try {
@@ -297,7 +298,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const lead: Omit<Lead, 'id'> = await request.json();
+    const rawLead: Omit<Lead, 'id'> = await request.json();
+
+    // Sanitize all user inputs to prevent XSS attacks
+    const lead = sanitizeLead(rawLead);
+
     const db = getDatabase();
     const userId = parseInt((session.user as any).id);
 

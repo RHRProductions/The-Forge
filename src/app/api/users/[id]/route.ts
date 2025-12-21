@@ -3,6 +3,7 @@ import { getDatabase } from '../../../../../lib/database/connection';
 import { auth } from '../../../../../auth';
 import bcrypt from 'bcryptjs';
 import { validatePassword } from '../../../../../lib/security/password-validator';
+import { sanitizeUser } from '../../../../../lib/security/input-sanitizer';
 
 // DELETE /api/users/[id] - Delete a user (admin only)
 export async function DELETE(
@@ -66,8 +67,12 @@ export async function PATCH(
 
     const { id } = await params;
     const userId = parseInt(id);
-    const body = await request.json();
-    const { name, email, password, role, agent_id } = body;
+    const rawBody = await request.json();
+
+    // Sanitize user inputs to prevent XSS
+    const sanitized = sanitizeUser(rawBody);
+    const { name, email, role, agent_id } = sanitized;
+    const password = rawBody.password; // Password is not sanitized, only validated
 
     const db = getDatabase();
 

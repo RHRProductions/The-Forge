@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '../../../../../../lib/database/connection';
 import { LeadActivity } from '../../../../../../types/lead';
 import { auth } from '../../../../../../auth';
+import { sanitizeActivity } from '../../../../../../lib/security/input-sanitizer';
 
 export async function GET(
   request: NextRequest,
@@ -33,7 +34,12 @@ export async function POST(
     }
 
     const { id } = await params;
-    const activity: Omit<LeadActivity, 'id' | 'created_at'> = await request.json();
+    const rawActivity: Omit<LeadActivity, 'id' | 'created_at'> = await request.json();
+
+    // Sanitize activity data to prevent XSS
+    const sanitized = sanitizeActivity(rawActivity);
+    const activity = { ...rawActivity, ...sanitized };
+
     const db = getDatabase();
     const leadId = parseInt(id);
     const userId = parseInt((session.user as any).id);

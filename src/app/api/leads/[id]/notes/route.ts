@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '../../../../../../lib/database/connection';
+import { sanitizeNotes } from '../../../../../../lib/security/input-sanitizer';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -37,16 +38,19 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     const { note } = await request.json();
-    
+
     if (!note || typeof note !== 'string' || note.trim().length === 0) {
       return NextResponse.json({ error: 'Note content is required' }, { status: 400 });
     }
 
+    // Sanitize note content to prevent XSS
+    const sanitizedNote = sanitizeNotes(note);
+
     const db = getDatabase();
     const insertResult = db.prepare(`
-      INSERT INTO lead_notes (lead_id, note) 
+      INSERT INTO lead_notes (lead_id, note)
       VALUES (?, ?)
-    `).run(leadId, note.trim());
+    `).run(leadId, sanitizedNote);
 
     const newNote = db.prepare(`
       SELECT * FROM lead_notes WHERE id = ?

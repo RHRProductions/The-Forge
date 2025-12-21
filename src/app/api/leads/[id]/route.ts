@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDatabase } from '../../../../../lib/database/connection';
 import { Lead } from '../../../../../types/lead';
 import { logAuditFromRequest, AuditPresets } from '../../../../../lib/security/audit-logger';
+import { sanitizeLead } from '../../../../../lib/security/input-sanitizer';
 
 export async function GET(
   request: NextRequest,
@@ -32,7 +33,11 @@ export async function PUT(
 ) {
   try {
     const { id } = await params;
-    const leadData: Partial<Lead> = await request.json();
+    const rawLeadData: Partial<Lead> = await request.json();
+
+    // Sanitize all user inputs to prevent XSS attacks
+    const leadData = sanitizeLead(rawLeadData);
+
     const db = getDatabase();
 
     // Build dynamic UPDATE query based on provided fields

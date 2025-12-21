@@ -6,6 +6,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { auth } from '../../../../../../auth';
 import { rateLimiter, getClientIp } from '../../../../../../lib/security/rate-limiter';
 import { logAudit } from '../../../../../../lib/security/audit-logger';
+import { validateImageFile } from '../../../../../../lib/security/file-validator';
+import { createErrorResponse } from '../../../../../../lib/security/error-sanitizer';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -51,11 +53,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     return NextResponse.json(images);
   } catch (error) {
-    console.error('Error fetching images:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch images' },
-      { status: 500 }
-    );
+    const errorResponse = createErrorResponse(error, 'GET /api/leads/[id]/images');
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }
 
@@ -133,15 +132,25 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: 'No image file provided' }, { status: 400 });
     }
 
-    // Validate file type (MIME type)
-    if (!file.type.startsWith('image/')) {
-      return NextResponse.json({ error: 'File must be an image' }, { status: 400 });
-    }
+    // Enhanced file validation (checks file content, not just MIME type)
+    const validation = await validateImageFile(file);
+    if (!validation.valid) {
+      // Log failed upload attempt
+      await logAudit({
+        action: 'image_upload_rejected',
+        userId: userId,
+        userEmail: (session.user as any).email,
+        ipAddress: clientIp,
+        userAgent: request.headers.get('user-agent') || undefined,
+        resourceType: 'image',
+        resourceId: leadId.toString(),
+        details: `File validation failed: ${validation.error}`,
+        severity: 'warning',
+      });
 
-    // Validate file size (max 10MB)
-    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-    if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json({ error: 'File size must be less than 10MB' }, { status: 400 });
+      return NextResponse.json({
+        error: validation.error || 'File validation failed'
+      }, { status: 400 });
     }
 
     // Validate file extension
@@ -196,10 +205,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     return NextResponse.json(newImage);
   } catch (error) {
-    console.error('Error uploading image:', error);
-    return NextResponse.json(
-      { error: 'Failed to upload image' },
-      { status: 500 }
-    );
+    const errorResponse = createErrorResponse(error, 'POST /api/leads/[id]/images');
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }

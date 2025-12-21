@@ -3,6 +3,7 @@ import { getDatabase } from '../../../../lib/database/connection';
 import { Lead } from '../../../../types/lead';
 import { auth } from '../../../../auth';
 import { sanitizeLead } from '../../../../lib/security/input-sanitizer';
+import { createErrorResponse } from '../../../../lib/security/error-sanitizer';
 
 export async function GET(request: NextRequest) {
   try {
@@ -285,8 +286,8 @@ export async function GET(request: NextRequest) {
       followUpLeads: followUpLeads || []
     });
   } catch (error) {
-    console.error('Error fetching leads:', error);
-    return NextResponse.json({ error: 'Failed to fetch leads' }, { status: 500 });
+    const errorResponse = createErrorResponse(error, 'GET /api/leads');
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }
 
@@ -348,7 +349,7 @@ export async function POST(request: NextRequest) {
     const newLead = db.prepare('SELECT * FROM leads WHERE id = ?').get(result.lastInsertRowid);
     return NextResponse.json(newLead, { status: 201 });
   } catch (error) {
-    console.error('Error creating lead:', error);
-    return NextResponse.json({ error: 'Failed to create lead' }, { status: 500 });
+    const errorResponse = createErrorResponse(error, 'POST /api/leads');
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }

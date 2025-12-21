@@ -5,6 +5,7 @@ import { auth } from '../../../../../auth';
 import * as Papa from 'papaparse';
 import { logAuditFromRequest } from '../../../../../lib/security/audit-logger';
 import { sanitizeLead } from '../../../../../lib/security/input-sanitizer';
+import { validateCSVFile } from '../../../../../lib/security/file-validator';
 
 // Column mapping for different vendor formats
 const COLUMN_MAPPINGS = {
@@ -486,6 +487,14 @@ export async function POST(request: NextRequest) {
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+    }
+
+    // Enhanced CSV file validation
+    const validation = await validateCSVFile(file);
+    if (!validation.valid) {
+      return NextResponse.json({
+        error: validation.error || 'CSV file validation failed'
+      }, { status: 400 });
     }
 
     const text = await file.text();

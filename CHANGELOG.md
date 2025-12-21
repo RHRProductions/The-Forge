@@ -30,13 +30,14 @@ Implemented comprehensive two-factor authentication using Time-based One-Time Pa
   - Auto-invalidated after use
   - Prevents lockout if authenticator device is lost
 
-- **Profile & Security Page** (`/profile`)
-  - New user profile page accessible to all roles
+- **Settings Page Enhancement**
+  - Settings now accessible to ALL user roles (previously admin-only)
+  - 2FA section at top of page (visible to everyone)
   - Self-service 2FA enable/disable
   - QR code display and secret text
   - Backup code management
   - Password-protected 2FA disable
-  - Added to navigation menu (👤 Profile & Security)
+  - Admin features (user management, audit logs, etc.) remain below for admin-only access
 
 - **Enhanced Login Flow**
   - Automatic 2FA detection on login
@@ -63,12 +64,8 @@ Implemented comprehensive two-factor authentication using Time-based One-Time Pa
   - `validateBackupCode()` - Verification and invalidation
   - `encryptSecret()` / `decryptSecret()` - AES-256-GCM encryption
 
-- `src/app/profile/page.tsx` - Profile & Security UI
-  - Account information display
-  - 2FA setup wizard (3 steps: QR, backup codes, verification)
-  - 2FA status badge
-  - Enable/disable controls
-  - Backup code download/copy
+- `src/app/profile/page.tsx` - Profile & Security page (created but not used in final implementation)
+  - Note: 2FA functionality moved to Settings page for better accessibility
 
 - `src/app/api/auth/2fa/setup/route.ts` - 2FA Setup
   - Generates TOTP secret
@@ -108,8 +105,15 @@ Implemented comprehensive two-factor authentication using Time-based One-Time Pa
   - Backup code toggle
   - Disabled password field when 2FA active
 
+- `src/app/settings/page.tsx` - Major restructure
+  - Made accessible to ALL users (removed admin-only restriction)
+  - Added complete 2FA section at top (3-step wizard, QR codes, backup codes)
+  - Admin features moved below with conditional rendering
+  - All existing admin functionality preserved unchanged
+
 - `src/components/NavigationMenu.tsx`
-  - Added "👤 Profile & Security" link
+  - Attempted to add "👤 Profile & Security" link (browser caching prevented visibility)
+  - Final solution: Users access 2FA through existing Settings menu item
 
 - `lib/database/connection.ts`
   - Added 2FA columns to users table
@@ -154,9 +158,9 @@ All 2FA events logged to audit system:
 ### User Experience
 
 **Setup Flow:**
-1. Navigate to Profile & Security
+1. Navigate to Settings (⚙️ from menu)
 2. Click "Enable Two-Factor Authentication"
-3. Scan QR code with authenticator app
+3. Scan QR code with authenticator app (Google Authenticator, Authy, etc.)
 4. Save 8 backup codes (download or copy)
 5. Enter TOTP code to verify
 6. 2FA enabled!
@@ -164,13 +168,13 @@ All 2FA events logged to audit system:
 **Login Flow:**
 1. Enter email and password
 2. If 2FA enabled, show TOTP field
-3. Enter 6-digit code from app (or backup code)
+3. Enter 6-digit code from app (or use backup code)
 4. Sign in successfully
 
 **Disable Flow:**
-1. Navigate to Profile & Security
-2. Enter password
-3. Confirm disable
+1. Navigate to Settings (⚙️ from menu)
+2. Scroll to Two-Factor Authentication section
+3. Enter password to confirm
 4. 2FA disabled
 
 ### Recommendations

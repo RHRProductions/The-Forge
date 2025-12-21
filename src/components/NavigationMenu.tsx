@@ -70,6 +70,17 @@ export default function NavigationMenu({ currentPage }: NavigationMenuProps) {
                 👥 Clients
               </button>
             )}
+            {currentPage !== 'profile' && (
+              <button
+                onClick={() => {
+                  router.push('/profile');
+                  setShowNavMenu(false);
+                }}
+                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-black font-semibold transition-colors flex items-center gap-2"
+              >
+                👤 Profile & Security
+              </button>
+            )}
             {/* TEMPORARILY HIDDEN - Email/Seminar Features - Can be restored later */}
             {/* {currentPage !== 'emails' && (
               <button
@@ -157,18 +168,8 @@ export default function NavigationMenu({ currentPage }: NavigationMenuProps) {
                 ⚠️ Bounced Emails
               </button>
             )} */}
-            {/* Profile & Security - Available to all users */}
-            {currentPage !== 'profile' && (
-              <button
-                onClick={() => {
-                  router.push('/profile');
-                  setShowNavMenu(false);
-                }}
-                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-black font-semibold transition-colors flex items-center gap-2"
-              >
-                👤 Profile & Security
-              </button>
-            )}
+
+            {/* Admin Section */}
             {session && (session.user as any).role === 'admin' && (
               <>
                 <div className="border-t border-gray-200 my-2"></div>

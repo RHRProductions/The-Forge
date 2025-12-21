@@ -9,6 +9,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.1] - 2025-12-21
+
+### Security - EMERGENCY PRODUCTION CLEANUP
+
+**Additional Malware Discovered on Production Server**
+
+During deployment verification on December 21, 2025, **three additional malware backdoors** were discovered on the production server that were NOT present in the GitHub repository. These backdoors were injected directly onto the production server during the initial compromise (Dec 5-6, 2025).
+
+### Removed - Critical Backdoors
+
+**1. Remote Code Execution Backdoor - poss.cjs** 🔴 CRITICAL
+- **File:** `src/app/api/poss.cjs`
+- **Type:** Node.js HTTP server hijack backdoor
+- **Method:** Intercepted all HTTP requests, executed shell commands via `/_proxy/decode` endpoint
+- **API Key:** `oxoeL1A7RNPpape5Il5n8czf`
+- **Capability:** Full remote command execution on server
+- **Impact:** Attackers could run any shell command with root privileges
+- **Status:** REMOVED
+
+**2. Remote Code Execution Backdoor - sinicize-swanskins** 🔴 CRITICAL
+- **File:** `src/app/sinicize-swanskins/route.ts`
+- **Type:** Next.js API route backdoor
+- **Method:** Legitimate-looking API route that executed shell commands via query parameter
+- **API Key:** `nulFFsDwKHn8PwueisB6hqfX`
+- **Capability:** Remote command execution via GET request
+- **Impact:** Attackers could execute arbitrary commands through HTTPS endpoint
+- **Status:** REMOVED
+
+**3. Malware Marker File**
+- **File:** `.pwned`
+- **Content:** "pwned"
+- **Purpose:** Marker file indicating successful server compromise
+- **Created:** December 5, 2025
+- **Status:** REMOVED
+
+### Fixed - Production Server
+
+**Post-Deployment Actions:**
+- Scanned production server source code for malware
+- Removed all three backdoor files from production
+- Deleted infected build directory (`.next`)
+- Rebuilt application from clean source code
+- Restarted application with PM2
+- Verified all security checks passing
+
+**Key Insight:**
+These backdoors were ONLY on the production server, not in GitHub repository. This confirms:
+1. Initial compromise occurred on production server directly (Dec 5-6, 2025)
+2. Attackers had direct access to production filesystem
+3. Malware was injected after repository code was deployed
+4. GitHub repository remained clean throughout infection
+
+### Security Verification
+- ✅ All backdoor files removed from production
+- ✅ Clean build deployed
+- ✅ Application running on clean v0.4.0 codebase
+- ✅ Security monitoring active (6/6 checks passing)
+- ✅ No malware detected in source code or running processes
+
+### Total Malware Components Removed (Dec 20-21, 2025)
+**18+ malware components eliminated:**
+- Phase 1 (Dec 20): 15 components (miners, backdoors, rootkits, persistence)
+- Phase 2 (Dec 21): 3 components (RCE backdoors, marker file)
+
+---
+
 ## [0.4.0] - 2025-12-20
 
 ### Security - COMPREHENSIVE HARDENING (Phase 5)
@@ -316,6 +382,7 @@ All security features verified and working:
 
 | Version | Date | Major Changes |
 |---------|------|---------------|
+| 0.4.1 | 2025-12-21 | **EMERGENCY CLEANUP:** Removed 3 additional RCE backdoors from production server, clean rebuild deployed |
 | 0.4.0 | 2025-12-20 | **SECURITY HARDENING:** Localhost binding, image auth fixes, input sanitization, file validation, CORS, error sanitization |
 | 0.3.1 | 2025-12-20 | **SECURITY PATCH:** Extended rate limiting, automated backups, critical bulk delete auth fix |
 | 0.3.0 | 2025-12-20 | **SECURITY UPDATE:** Malware removal, audit logging, rate limiting, password enforcement, security headers |

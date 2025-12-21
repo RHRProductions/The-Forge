@@ -9,6 +9,178 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.0] - 2025-12-21
+
+### Added - Two-Factor Authentication (2FA)
+
+**TOTP-Based Security Layer**
+Implemented comprehensive two-factor authentication using Time-based One-Time Passwords (TOTP), adding an optional security layer to user accounts.
+
+**Core Features:**
+- **Authenticator App Support**
+  - Compatible with Google Authenticator, Authy, 1Password, Microsoft Authenticator, etc.
+  - Standard TOTP implementation (SHA1, 6 digits, 30-second period)
+  - QR code generation for easy setup
+  - Manual secret entry option as fallback
+
+- **Backup Codes**
+  - 8 one-time backup codes generated during setup
+  - Hashed with bcrypt for secure storage
+  - Downloadable and copyable for safe keeping
+  - Auto-invalidated after use
+  - Prevents lockout if authenticator device is lost
+
+- **Profile & Security Page** (`/profile`)
+  - New user profile page accessible to all roles
+  - Self-service 2FA enable/disable
+  - QR code display and secret text
+  - Backup code management
+  - Password-protected 2FA disable
+  - Added to navigation menu (👤 Profile & Security)
+
+- **Enhanced Login Flow**
+  - Automatic 2FA detection on login
+  - Conditional TOTP input field
+  - Support for both authenticator codes and backup codes
+  - Toggle between code types
+  - "Back to login" option
+  - Maintained rate limiting (5 attempts/15 min)
+
+### Technical Implementation
+
+**Database Schema Changes:**
+- `users.two_factor_enabled` - INTEGER (0/1 flag)
+- `users.two_factor_secret` - TEXT (encrypted TOTP secret)
+- `users.backup_codes` - TEXT (JSON array of hashed codes)
+
+**New Files Created:**
+- `lib/security/totp-manager.ts` - Core TOTP logic
+  - `generateSecret()` - Create new TOTP secret
+  - `generateQRCode()` - QR code generation
+  - `verifyToken()` - TOTP validation with clock drift tolerance
+  - `generateBackupCodes()` - Random alphanumeric codes (XXXX-XXXX format)
+  - `hashBackupCodes()` - Bcrypt hashing for storage
+  - `validateBackupCode()` - Verification and invalidation
+  - `encryptSecret()` / `decryptSecret()` - AES-256-GCM encryption
+
+- `src/app/profile/page.tsx` - Profile & Security UI
+  - Account information display
+  - 2FA setup wizard (3 steps: QR, backup codes, verification)
+  - 2FA status badge
+  - Enable/disable controls
+  - Backup code download/copy
+
+- `src/app/api/auth/2fa/setup/route.ts` - 2FA Setup
+  - Generates TOTP secret
+  - Creates QR code
+  - Returns 8 backup codes
+  - Rate limited (10 attempts/hour)
+  - Audit logged
+
+- `src/app/api/auth/2fa/verify/route.ts` - 2FA Verification
+  - Validates TOTP token
+  - Encrypts and saves secret
+  - Hashes and stores backup codes
+  - Enables 2FA flag
+  - Rate limited (5 attempts/15 min)
+  - Audit logged
+
+- `src/app/api/auth/2fa/disable/route.ts` - 2FA Disable
+  - Requires password confirmation
+  - Clears all 2FA data
+  - Audit logged
+
+- `src/app/api/auth/check-2fa/route.ts` - Login Helper
+  - Checks if user requires 2FA
+  - Password pre-validation
+  - Prevents user enumeration
+
+**Modified Files:**
+- `auth.ts` - NextAuth integration
+  - Added `totp` and `backupCode` credentials
+  - 2FA verification in authorize()
+  - Automatic backup code invalidation after use
+  - Decryption of stored secrets
+
+- `src/app/login/page.tsx` - Enhanced login
+  - 2FA detection flow
+  - Conditional TOTP input
+  - Backup code toggle
+  - Disabled password field when 2FA active
+
+- `src/components/NavigationMenu.tsx`
+  - Added "👤 Profile & Security" link
+
+- `lib/database/connection.ts`
+  - Added 2FA columns to users table
+
+**Dependencies Added:**
+- `otpauth` (v11.x) - TOTP generation and verification
+- `qrcode` (v1.x) - QR code generation
+- `@types/qrcode` - TypeScript definitions
+
+### Security Features
+
+**Encryption:**
+- TOTP secrets encrypted with AES-256-GCM before storage
+- PBKDF2 key derivation (100,000 iterations)
+- Random salt and IV for each encryption
+- Authentication tags for integrity verification
+- Environment variable for encryption key (`TOTP_ENCRYPTION_KEY`)
+
+**Rate Limiting:**
+- Setup: 10 attempts per hour
+- Verification: 5 attempts per 15 minutes
+- Integrates with existing rate limiting system
+
+**Audit Logging:**
+All 2FA events logged to audit system:
+- `2fa_setup_initiated` - Setup process started
+- `2fa_setup_rate_limit` - Too many setup attempts
+- `2fa_verify_failed` - Invalid TOTP provided
+- `2fa_enabled` - Successfully enabled
+- `2fa_disabled` - Successfully disabled
+- `2fa_disable_failed` - Invalid password on disable
+
+**Best Practices:**
+- ✅ Clock drift tolerance (±30 seconds)
+- ✅ One-time use backup codes
+- ✅ Hashed backup codes (bcrypt)
+- ✅ Encrypted TOTP secrets
+- ✅ Password confirmation for disable
+- ✅ Comprehensive audit trail
+- ✅ Industry-standard TOTP (RFC 6238)
+
+### User Experience
+
+**Setup Flow:**
+1. Navigate to Profile & Security
+2. Click "Enable Two-Factor Authentication"
+3. Scan QR code with authenticator app
+4. Save 8 backup codes (download or copy)
+5. Enter TOTP code to verify
+6. 2FA enabled!
+
+**Login Flow:**
+1. Enter email and password
+2. If 2FA enabled, show TOTP field
+3. Enter 6-digit code from app (or backup code)
+4. Sign in successfully
+
+**Disable Flow:**
+1. Navigate to Profile & Security
+2. Enter password
+3. Confirm disable
+4. 2FA disabled
+
+### Recommendations
+- **Admin accounts:** Enable 2FA for all admin users
+- **High-value accounts:** Recommended for agents handling sensitive data
+- **Backup codes:** Store securely (password manager, encrypted file, physical copy)
+- **Encryption key:** Set `TOTP_ENCRYPTION_KEY` environment variable in production
+
+---
+
 ## [0.4.1] - 2025-12-21
 
 ### Security - EMERGENCY PRODUCTION CLEANUP
@@ -382,6 +554,7 @@ All security features verified and working:
 
 | Version | Date | Major Changes |
 |---------|------|---------------|
+| 0.5.0 | 2025-12-21 | **2FA IMPLEMENTATION:** TOTP-based two-factor authentication, backup codes, profile page, encrypted secrets, comprehensive security |
 | 0.4.1 | 2025-12-21 | **EMERGENCY CLEANUP:** Removed 3 additional RCE backdoors from production server, clean rebuild deployed |
 | 0.4.0 | 2025-12-20 | **SECURITY HARDENING:** Localhost binding, image auth fixes, input sanitization, file validation, CORS, error sanitization |
 | 0.3.1 | 2025-12-20 | **SECURITY PATCH:** Extended rate limiting, automated backups, critical bulk delete auth fix |

@@ -3,13 +3,16 @@ import Credentials from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import { getDatabase } from './lib/database/connection';
 import { User } from './types/lead';
+import { verifyToken, decryptSecret, validateBackupCode } from './lib/security/totp-manager';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Credentials({
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        password: { label: "Password", type: "password" },
+        totp: { label: "TOTP", type: "text" },
+        backupCode: { label: "Backup Code", type: "text" }
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
@@ -17,7 +20,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
 
         const db = getDatabase();
-        const user = db.prepare('SELECT * FROM users WHERE email = ?').get(credentials.email as string) as User | undefined;
+        const user = db.prepare('SELECT * FROM users WHERE email = ?').get(credentials.email as string) as any;
 
         if (!user || !user.password) {
           return null;
@@ -27,6 +30,42 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         if (!isPasswordValid) {
           return null;
+        }
+
+        // Check if 2FA is enabled for this user
+        if (user.two_factor_enabled) {
+          const totp = credentials.totp as string | undefined;
+          const backupCode = credentials.backupCode as string | undefined;
+
+          // User has 2FA enabled but didn't provide TOTP or backup code
+          if (!totp && !backupCode) {
+            return null;
+          }
+
+          // Decrypt the user's TOTP secret
+          const secret = decryptSecret(user.two_factor_secret);
+
+          // Verify TOTP if provided
+          if (totp) {
+            const isValid = verifyToken(secret, totp);
+            if (!isValid) {
+              return null;
+            }
+          }
+          // Verify backup code if provided
+          else if (backupCode) {
+            const hashedBackupCodes = JSON.parse(user.backup_codes || '[]');
+            const codeIndex = await validateBackupCode(hashedBackupCodes, backupCode);
+
+            if (codeIndex === -1) {
+              return null;
+            }
+
+            // Remove the used backup code
+            hashedBackupCodes.splice(codeIndex, 1);
+            db.prepare('UPDATE users SET backup_codes = ? WHERE id = ?')
+              .run(JSON.stringify(hashedBackupCodes), user.id);
+          }
         }
 
         // Return user without password

@@ -95,6 +95,25 @@ function initializeDatabase() {
     }
   });
 
+  // Add 2FA columns to users table
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN two_factor_enabled INTEGER DEFAULT 0;`);
+  } catch (error) {
+    // Column already exists, ignore error
+  }
+
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN two_factor_secret TEXT;`);
+  } catch (error) {
+    // Column already exists, ignore error
+  }
+
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN backup_codes TEXT;`);
+  } catch (error) {
+    // Column already exists, ignore error
+  }
+
   // Create related tables
   db.exec(`
     CREATE TABLE IF NOT EXISTS lead_notes (
@@ -464,6 +483,23 @@ function initializeDatabase() {
       FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE,
       FOREIGN KEY (invitation_id) REFERENCES seminar_invitations(id) ON DELETE SET NULL
     );
+
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      user_email TEXT NOT NULL,
+      user_name TEXT,
+      user_role TEXT,
+      action TEXT NOT NULL,
+      resource_type TEXT NOT NULL,
+      resource_id INTEGER,
+      details TEXT,
+      ip_address TEXT,
+      user_agent TEXT,
+      severity TEXT DEFAULT 'info',
+      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+    );
   `);
 
   // Create indexes
@@ -536,6 +572,12 @@ function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_email_sequence_sends_enrollment_id ON email_sequence_sends(enrollment_id);
     CREATE INDEX IF NOT EXISTS idx_email_sequence_sends_lead_id ON email_sequence_sends(lead_id);
     CREATE INDEX IF NOT EXISTS idx_email_sequence_sends_converted ON email_sequence_sends(converted);
+
+    CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
+    CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
+    CREATE INDEX IF NOT EXISTS idx_audit_logs_resource ON audit_logs(resource_type, resource_id);
+    CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp);
+    CREATE INDEX IF NOT EXISTS idx_audit_logs_severity ON audit_logs(severity);
   `);
 }
 

@@ -19,6 +19,11 @@ export default function LoginPage() {
   const [resetLoading, setResetLoading] = useState(false);
   const router = useRouter();
 
+  // 2FA State
+  const [requires2FA, setRequires2FA] = useState(false);
+  const [totpInput, setTotpInput] = useState('');
+  const [useBackupCode, setUseBackupCode] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -40,15 +45,49 @@ export default function LoginPage() {
         return;
       }
 
-      // Proceed with login
-      const result = await signIn('credentials', {
+      // If we haven't checked for 2FA yet, check now
+      if (!requires2FA && !totpInput) {
+        const check2FAResponse = await fetch('/api/auth/check-2fa', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+
+        if (check2FAResponse.ok) {
+          const data = await check2FAResponse.json();
+          if (data.requires2FA) {
+            setRequires2FA(true);
+            setLoading(false);
+            return; // Show 2FA input field
+          }
+        }
+      }
+
+      // Proceed with login (with or without 2FA)
+      const credentials: any = {
         email,
         password,
         redirect: false,
-      });
+      };
+
+      // Add 2FA token if required
+      if (requires2FA) {
+        if (useBackupCode) {
+          credentials.backupCode = totpInput;
+        } else {
+          credentials.totp = totpInput;
+        }
+      }
+
+      const result = await signIn('credentials', credentials);
 
       if (result?.error) {
-        setError('Invalid email or password');
+        if (requires2FA) {
+          setError('Invalid verification code');
+          setTotpInput('');
+        } else {
+          setError('Invalid email or password');
+        }
         setLoading(false);
       } else {
         // Reset rate limit on successful login
@@ -172,15 +211,67 @@ export default function LoginPage() {
               required
               className="w-full px-4 py-3 border-2 border-gray-300 rounded focus:border-red-600 focus:outline-none text-black"
               placeholder="••••••••"
+              disabled={requires2FA}
             />
           </div>
 
+          {/* 2FA Input Field */}
+          {requires2FA && (
+            <div>
+              <label htmlFor="totp" className="block text-sm font-medium text-gray-700 mb-2">
+                {useBackupCode ? 'Backup Code' : 'Verification Code'}
+              </label>
+              <input
+                id="totp"
+                type="text"
+                value={totpInput}
+                onChange={(e) => {
+                  if (useBackupCode) {
+                    // Allow alphanumeric and hyphens for backup codes
+                    setTotpInput(e.target.value.toUpperCase());
+                  } else {
+                    // Only numbers for TOTP
+                    setTotpInput(e.target.value.replace(/\D/g, '').slice(0, 6));
+                  }
+                }}
+                required
+                maxLength={useBackupCode ? 9 : 6}
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded focus:border-red-600 focus:outline-none text-black font-mono text-center text-2xl tracking-widest"
+                placeholder={useBackupCode ? 'XXXX-XXXX' : '000000'}
+                autoFocus
+              />
+              <div className="mt-2 flex justify-between items-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUseBackupCode(!useBackupCode);
+                    setTotpInput('');
+                  }}
+                  className="text-sm text-red-600 hover:text-red-800 underline"
+                >
+                  {useBackupCode ? 'Use authenticator code' : 'Use backup code'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRequires2FA(false);
+                    setTotpInput('');
+                    setUseBackupCode(false);
+                  }}
+                  className="text-sm text-gray-600 hover:text-gray-800 underline"
+                >
+                  Back to login
+                </button>
+              </div>
+            </div>
+          )}
+
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || (requires2FA && !totpInput)}
             className="w-full bg-black text-white py-3 rounded font-bold hover:bg-gray-800 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? 'Signing in...' : requires2FA ? 'Verify & Sign In' : 'Sign In'}
           </button>
         </form>
 

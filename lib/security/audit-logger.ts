@@ -7,6 +7,16 @@ export type AuditAction =
   | 'login_failed'
   | 'logout'
   | 'password_reset'
+  // 2FA operations
+  | '2fa_setup_initiated'
+  | '2fa_setup_rate_limit'
+  | '2fa_verify_failed'
+  | '2fa_enabled'
+  | '2fa_disabled'
+  | '2fa_disable_failed'
+  | 'image_upload'
+  | 'image_upload_rejected'
+  | 'image_upload_rate_limit'
   // Lead operations
   | 'lead_view'
   | 'lead_view_details'
@@ -50,7 +60,9 @@ export type AuditResourceType =
   | 'user'
   | 'email'
   | 'campaign'
-  | 'system';
+  | 'system'
+  | '2fa'
+  | 'image';
 
 export type AuditSeverity = 'info' | 'warning' | 'critical';
 

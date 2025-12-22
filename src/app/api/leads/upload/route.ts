@@ -220,7 +220,7 @@ function detectLeadType(row: any, source: string, campaign: string = '', notes: 
   return 'other';
 }
 
-function processCSVData(results: any, totalSpent: number, userId: number, vendorName: string, leadTemperature: string = 'cold') {
+function processCSVData(results: any, costPerLead: number, userId: number, vendorName: string, leadTemperature: string = 'cold') {
   const db = getDatabase();
   const insertStmt = db.prepare(`
     INSERT INTO leads (
@@ -244,9 +244,11 @@ function processCSVData(results: any, totalSpent: number, userId: number, vendor
   let successCount = 0;
   let duplicateCount = 0;
   let errors = [];
-  
-  // Calculate cost per lead based on total spent
-  const costPerLead = totalSpent > 0 && results.data.length > 0 ? totalSpent / results.data.length : 0;
+
+  console.log('=== Cost Per Lead ===');
+  console.log('costPerLead (from form):', costPerLead);
+  console.log('Number of leads in CSV:', results.data.length);
+  console.log('Total cost for all leads:', costPerLead * results.data.length);
 
   for (const row of results.data as any[]) {
     try {
@@ -370,6 +372,7 @@ function processCSVData(results: any, totalSpent: number, userId: number, vendor
         console.log('zip:', findColumnValue(row, COLUMN_MAPPINGS.zip_code));
         console.log('age:', finalAge);
         console.log('lead type:', leadType);
+        console.log('cost_per_lead to be saved:', costPerLead);
         console.log('unmapped data:', unmappedData);
         console.log('final notes:', notes);
         console.log('Raw row keys:', Object.keys(row));
@@ -411,7 +414,7 @@ function processCSVData(results: any, totalSpent: number, userId: number, vendor
         status: (findColumnValue(row, COLUMN_MAPPINGS.status) || 'new').toLowerCase(),
         contact_method: contactMethod,
         lead_type: leadType,
-        cost_per_lead: parseFloat(findColumnValue(row, COLUMN_MAPPINGS.cost_per_lead)) || costPerLead,
+        cost_per_lead: costPerLead,
         sales_amount: parseFloat(findColumnValue(row, COLUMN_MAPPINGS.sales_amount)) || 0,
         notes: notes,
         source: source,
@@ -467,7 +470,7 @@ function processCSVData(results: any, totalSpent: number, userId: number, vendor
     successCount,
     duplicateCount,
     costPerLead,
-    totalSpent,
+    totalCost: costPerLead * successCount,
     errors: errors.length > 0 ? errors : undefined
   };
 }
@@ -482,10 +485,18 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
     const file = formData.get('file') as File;
-    const totalSpent = parseFloat(formData.get('totalSpent') as string) || 0;
+    const costPerLeadRaw = formData.get('costPerLead') as string;
+    const costPerLead = parseFloat(costPerLeadRaw) || 0;
     const vendorName = (formData.get('vendorName') as string) || 'Unknown Vendor';
     const leadTemperature = (formData.get('leadTemperature') as string) || 'cold';
     const userId = parseInt((session.user as any).id);
+
+    console.log('=== API: Received CSV Upload Request ===');
+    console.log('costPerLead (raw):', costPerLeadRaw);
+    console.log('costPerLead (parsed):', costPerLead);
+    console.log('vendorName:', vendorName);
+    console.log('leadTemperature:', leadTemperature);
+    console.log('userId:', userId);
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -571,7 +582,7 @@ export async function POST(request: NextRequest) {
 
         console.log('Using Lead Hero format with injected headers - Headers:', results.meta?.fields);
 
-        const response = processCSVData(results, totalSpent, userId, vendorName, leadTemperature);
+        const response = processCSVData(results, costPerLead, userId, vendorName, leadTemperature);
 
         // AUDIT LOG: Data import
         await logAuditFromRequest(request, {
@@ -580,7 +591,8 @@ export async function POST(request: NextRequest) {
           details: {
             vendor: vendorName,
             totalImported: response.successCount,
-            totalSpent,
+            costPerLead: response.costPerLead,
+            totalCost: response.totalCost,
             duplicatesSkipped: response.duplicateCount
           },
           severity: 'warning'
@@ -619,7 +631,7 @@ export async function POST(request: NextRequest) {
       console.log('Using standard CSV parsing - Headers:', results.meta?.fields);
 
       // Use existing parsing logic for standard CSVs
-      const response = processCSVData(results, totalSpent, userId, vendorName, leadTemperature);
+      const response = processCSVData(results, costPerLead, userId, vendorName, leadTemperature);
 
       // AUDIT LOG: Data import
       await logAuditFromRequest(request, {
@@ -628,7 +640,8 @@ export async function POST(request: NextRequest) {
         details: {
           vendor: vendorName,
           totalImported: response.successCount,
-          totalSpent,
+          costPerLead: response.costPerLead,
+          totalCost: response.totalCost,
           duplicatesSkipped: response.duplicateCount
         },
         severity: 'warning'
@@ -664,7 +677,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Process the cleaned Lead Hero CSV data
-    const response = processCSVData(results, totalSpent, userId, vendorName, leadTemperature);
+    const response = processCSVData(results, costPerLead, userId, vendorName, leadTemperature);
 
     // AUDIT LOG: Data import
     await logAuditFromRequest(request, {
@@ -673,7 +686,8 @@ export async function POST(request: NextRequest) {
       details: {
         vendor: vendorName,
         totalImported: response.successCount,
-        totalSpent,
+        costPerLead: response.costPerLead,
+        totalCost: response.totalCost,
         duplicatesSkipped: response.duplicateCount
       },
       severity: 'warning'

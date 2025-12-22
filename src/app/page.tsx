@@ -505,7 +505,7 @@ function HomeContent() {
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [uploadStatus, setUploadStatus] = useState<string>('');
-  const [totalSpent, setTotalSpent] = useState<number>(0);
+  const [costPerLead, setCostPerLead] = useState<number>(0);
   const [vendorName, setVendorName] = useState<string>('');
   const [leadTemperature, setLeadTemperature] = useState<'cold' | 'warm' | 'hot'>('cold');
   const [availableVendors, setAvailableVendors] = useState<any[]>([]);
@@ -952,8 +952,13 @@ function HomeContent() {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
-    // Add total spent, vendor name, and lead temperature to the form data
-    formData.append('totalSpent', totalSpent.toString());
+    // Add cost per lead, vendor name, and lead temperature to the form data
+    console.log('=== CSV Upload Form Submission ===');
+    console.log('costPerLead state value:', costPerLead);
+    console.log('costPerLead toString:', costPerLead.toString());
+    console.log('vendorName:', vendorName);
+    console.log('leadTemperature:', leadTemperature);
+    formData.append('costPerLead', costPerLead.toString());
     formData.append('vendorName', vendorName);
     formData.append('leadTemperature', leadTemperature);
 
@@ -973,7 +978,7 @@ function HomeContent() {
         setTimeout(() => {
           setUploadStatus('');
           setShowUploadForm(false);
-          setTotalSpent(0);
+          setCostPerLead(0);
           setVendorName('');
           setLeadTemperature('cold');
         }, 4000);
@@ -1631,21 +1636,21 @@ Type "DELETE ALL" to confirm:`;
                 </p>
               </div>
               <div>
-                <label htmlFor="total-spent" className="block text-sm font-medium text-gray-700 mb-2">
-                  Total Amount Spent on These Leads
+                <label htmlFor="cost-per-lead" className="block text-sm font-medium text-gray-700 mb-2">
+                  Cost Per Lead
                 </label>
                 <input
                   type="number"
-                  id="total-spent"
+                  id="cost-per-lead"
                   step="0.01"
                   min="0"
-                  value={totalSpent}
-                  onChange={(e) => setTotalSpent(parseFloat(e.target.value) || 0)}
+                  value={costPerLead}
+                  onChange={(e) => setCostPerLead(parseFloat(e.target.value) || 0)}
                   className="block w-full p-3 border border-gray-300 rounded focus:border-black focus:outline-none"
                   placeholder="0.00"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  This will be divided equally among all leads to calculate cost per lead
+                  This cost will be applied to each lead in the upload
                 </p>
               </div>
               <div className="text-sm text-gray-600">

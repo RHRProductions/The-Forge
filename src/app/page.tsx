@@ -1243,6 +1243,17 @@ Type "DELETE ALL" to confirm:`;
                       >
                         📊 Overview
                       </button>
+                      {(session.user as any).role === 'admin' && (
+                        <button
+                          onClick={() => {
+                            router.push('/admin/platform-insights');
+                            setShowNavMenu(false);
+                          }}
+                          className="w-full text-left px-4 py-2 hover:bg-gray-100 text-black font-semibold transition-colors flex items-center gap-2"
+                        >
+                          📈 Platform Insights
+                        </button>
+                      )}
                       {/* TEMPORARILY HIDDEN - Email/Seminar Analytics - Can be restored later */}
                       {/* <button
                         onClick={() => {

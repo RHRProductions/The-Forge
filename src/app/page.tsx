@@ -2767,7 +2767,7 @@ function ActivitiesSection({ leadId, lead, onLeadUpdate, session }: { leadId: nu
       <h4 className="text-lg font-semibold mb-4 text-gray-900">Activity Timeline</h4>
 
       {/* Quick Action Buttons */}
-      <div className="grid grid-cols-3 gap-2 mb-4">
+      <div className="grid grid-cols-2 gap-2 mb-4">
         <button
           onClick={() => {
             setActivityType('call');
@@ -2793,19 +2793,6 @@ function ActivitiesSection({ leadId, lead, onLeadUpdate, session }: { leadId: nu
           }`}
         >
           💬 Text
-        </button>
-        <button
-          onClick={() => {
-            setActivityType('email');
-            setShowActivityForm(true);
-          }}
-          className={`px-2 py-2 rounded text-xs transition-colors ${
-            activityType === 'email'
-              ? 'bg-purple-600 text-white font-bold'
-              : 'bg-purple-50 text-purple-700 hover:bg-purple-100'
-          }`}
-        >
-          📧 Email
         </button>
       </div>
 

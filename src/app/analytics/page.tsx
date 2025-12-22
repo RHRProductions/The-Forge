@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import AIInsights from '../../components/AIInsights';
 import NavigationMenu from '@/components/NavigationMenu';
 
 interface AnalyticsData {
@@ -42,7 +41,7 @@ interface AnalyticsData {
   }[];
   aggregateInsights?: {
     timeOfDay: { hour: number; dials: number; contacts: number; appointments: number }[];
-    sourcePerformance: { source: string; totalLeads: number; contacted: number; appointments: number; disconnected: number; sales: number; avgCost: number; totalRevenue: number }[];
+    sourcePerformance: { source: string; totalLeads: number; totalDials: number; totalTexts: number; totalEmails: number; contacted: number; appointments: number; disconnected: number; sales: number; avgCost: number; totalRevenue: number; wrongInfo: number }[];
     geoPerformance: { city: string; zip_code: string; state: string; totalLeads: number; contacted: number; appointments: number; sales: number }[];
     dialingPatterns: { attempts: number; leads: number; contacted: number; appointments: number }[];
     dayOfWeek: { dayOfWeek: number; dials: number; contacts: number; appointments: number }[];
@@ -56,14 +55,7 @@ export default function AnalyticsPage() {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [timeFilter, setTimeFilter] = useState<'today' | 'week' | 'month' | 'all'>('month');
-  const [showInsights, setShowInsights] = useState(false);
-  const [showLocations, setShowLocations] = useState(false);
-  const [showPowerHours, setShowPowerHours] = useState(false);
-  const [showAgeGroups, setShowAgeGroups] = useState(false);
   const [showSourcePerformance, setShowSourcePerformance] = useState(false);
-  const [showBestTimes, setShowBestTimes] = useState(false);
-  const [showBestDays, setShowBestDays] = useState(false);
-  const [showDialingAttempts, setShowDialingAttempts] = useState(false);
   const [showTemperature, setShowTemperature] = useState(false);
   const [showOutcomes, setShowOutcomes] = useState(false);
   const [showDailyActivity, setShowDailyActivity] = useState(false);
@@ -86,7 +78,7 @@ export default function AnalyticsPage() {
   // Load collapsible section states from localStorage on mount
   useEffect(() => {
     // Check if we need to reset old values (one-time migration)
-    const hasResetSections = localStorage.getItem('analytics_sections_reset_v3');
+    const hasResetSections = localStorage.getItem('analytics_sections_reset_v4');
     if (!hasResetSections) {
       // Clear ALL section values and old reset flags
       localStorage.removeItem('analytics_showLocations');
@@ -101,45 +93,16 @@ export default function AnalyticsPage() {
       localStorage.removeItem('analytics_showDailyActivity');
       localStorage.removeItem('analytics_sections_reset_v1');
       localStorage.removeItem('analytics_sections_reset_v2');
-      localStorage.setItem('analytics_sections_reset_v3', 'true');
+      localStorage.removeItem('analytics_sections_reset_v3');
+      localStorage.setItem('analytics_sections_reset_v4', 'true');
       // All sections will remain at their default state (false/collapsed)
       return;
     }
 
     // Load saved states from localStorage
-    const loadShowLocations = localStorage.getItem('analytics_showLocations');
-    if (loadShowLocations !== null) {
-      setShowLocations(JSON.parse(loadShowLocations));
-    }
-
-    const loadShowPowerHours = localStorage.getItem('analytics_showPowerHours');
-    if (loadShowPowerHours !== null) {
-      setShowPowerHours(JSON.parse(loadShowPowerHours));
-    }
-
-    const loadShowAgeGroups = localStorage.getItem('analytics_showAgeGroups');
-    if (loadShowAgeGroups !== null) {
-      setShowAgeGroups(JSON.parse(loadShowAgeGroups));
-    }
-
     const loadShowSourcePerformance = localStorage.getItem('analytics_showSourcePerformance');
     if (loadShowSourcePerformance !== null) {
       setShowSourcePerformance(JSON.parse(loadShowSourcePerformance));
-    }
-
-    const loadShowBestTimes = localStorage.getItem('analytics_showBestTimes');
-    if (loadShowBestTimes !== null) {
-      setShowBestTimes(JSON.parse(loadShowBestTimes));
-    }
-
-    const loadShowBestDays = localStorage.getItem('analytics_showBestDays');
-    if (loadShowBestDays !== null) {
-      setShowBestDays(JSON.parse(loadShowBestDays));
-    }
-
-    const loadShowDialingAttempts = localStorage.getItem('analytics_showDialingAttempts');
-    if (loadShowDialingAttempts !== null) {
-      setShowDialingAttempts(JSON.parse(loadShowDialingAttempts));
     }
 
     const loadShowTemperature = localStorage.getItem('analytics_showTemperature');
@@ -164,45 +127,9 @@ export default function AnalyticsPage() {
   // Persist collapsible section states to localStorage (only after initial load)
   useEffect(() => {
     if (hasLoadedFromStorage) {
-      localStorage.setItem('analytics_showLocations', JSON.stringify(showLocations));
-    }
-  }, [showLocations, hasLoadedFromStorage]);
-
-  useEffect(() => {
-    if (hasLoadedFromStorage) {
-      localStorage.setItem('analytics_showPowerHours', JSON.stringify(showPowerHours));
-    }
-  }, [showPowerHours, hasLoadedFromStorage]);
-
-  useEffect(() => {
-    if (hasLoadedFromStorage) {
-      localStorage.setItem('analytics_showAgeGroups', JSON.stringify(showAgeGroups));
-    }
-  }, [showAgeGroups, hasLoadedFromStorage]);
-
-  useEffect(() => {
-    if (hasLoadedFromStorage) {
       localStorage.setItem('analytics_showSourcePerformance', JSON.stringify(showSourcePerformance));
     }
   }, [showSourcePerformance, hasLoadedFromStorage]);
-
-  useEffect(() => {
-    if (hasLoadedFromStorage) {
-      localStorage.setItem('analytics_showBestTimes', JSON.stringify(showBestTimes));
-    }
-  }, [showBestTimes, hasLoadedFromStorage]);
-
-  useEffect(() => {
-    if (hasLoadedFromStorage) {
-      localStorage.setItem('analytics_showBestDays', JSON.stringify(showBestDays));
-    }
-  }, [showBestDays, hasLoadedFromStorage]);
-
-  useEffect(() => {
-    if (hasLoadedFromStorage) {
-      localStorage.setItem('analytics_showDialingAttempts', JSON.stringify(showDialingAttempts));
-    }
-  }, [showDialingAttempts, hasLoadedFromStorage]);
 
   useEffect(() => {
     if (hasLoadedFromStorage) {
@@ -315,20 +242,6 @@ export default function AnalyticsPage() {
           >
             All Time
           </button>
-        </div>
-
-        {/* AI Insights Panel */}
-        <div className="mb-6">
-          {!showInsights ? (
-            <button
-              onClick={() => setShowInsights(true)}
-              className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white px-6 py-4 rounded-lg font-bold text-lg transition-all shadow-lg hover:shadow-xl"
-            >
-              💡 Show Data Insights
-            </button>
-          ) : (
-            <AIInsights />
-          )}
         </div>
 
         {/* Personal Metrics */}
@@ -538,7 +451,9 @@ export default function AnalyticsPage() {
                         <tr>
                           <th className="p-3 text-left">Source</th>
                           <th className="p-3 text-center">Total Leads</th>
-                          <th className="p-3 text-center">Dials</th>
+                          <th className="p-3 text-center">Calls</th>
+                          <th className="p-3 text-center">Texts</th>
+                          <th className="p-3 text-center">Emails</th>
                           <th className="p-3 text-center">Contacted</th>
                           <th className="p-3 text-center">Appointments</th>
                           <th className="p-3 text-center">Disconnected</th>
@@ -553,12 +468,15 @@ export default function AnalyticsPage() {
                         {analytics.aggregateInsights.sourcePerformance.map((source, index) => {
                           const totalCost = source.totalLeads * (source.avgCost || 0);
                           const roi = totalCost > 0 ? ((source.totalRevenue - totalCost) / totalCost) * 100 : 0;
-                          const contactRate = source.totalDials > 0 ? ((source.contacted / source.totalDials) * 100) : 0;
+                          const totalContactAttempts = (source.totalDials || 0) + (source.totalTexts || 0) + (source.totalEmails || 0);
+                          const contactRate = totalContactAttempts > 0 ? ((source.contacted / totalContactAttempts) * 100) : 0;
                           return (
                             <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
                               <td className="p-3 font-bold">{source.source}</td>
                               <td className="p-3 text-center">{source.totalLeads}</td>
-                              <td className="p-3 text-center">{source.totalDials}</td>
+                              <td className="p-3 text-center">{source.totalDials || 0}</td>
+                              <td className="p-3 text-center">{source.totalTexts || 0}</td>
+                              <td className="p-3 text-center">{source.totalEmails || 0}</td>
                               <td className="p-3 text-center">
                                 {source.contacted} ({contactRate.toFixed(1)}%)
                               </td>
@@ -588,228 +506,6 @@ export default function AnalyticsPage() {
                 )}
               </div>
             )}
-
-            {/* Best Times to Call */}
-            <div className="mb-8">
-              <div
-                onClick={() => setShowBestTimes(!showBestTimes)}
-                className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors mb-4"
-              >
-                <h3 className="text-2xl font-bold">📞 Best Times to Call</h3>
-                <span className="text-2xl font-bold">
-                  {showBestTimes ? '▼' : '▶'}
-                </span>
-              </div>
-              {showBestTimes && analytics.aggregateInsights.timeOfDay.length > 0 && (
-                <div className="bg-white border-2 border-gray-300 rounded-lg p-6">
-                  <div className="mb-4 text-sm text-gray-600">
-                    Contact rates by hour of day • Hover over bars for details • <span className="text-red-600 font-bold">Red = Illegal calling hours</span>
-                  </div>
-                  <div className="flex gap-2 items-end h-64">
-                    {Array.from({ length: 24 }, (_, i) => i).map(hour => {
-                      const hourData = analytics.aggregateInsights!.timeOfDay.find(h => h.hour === hour);
-                      const dials = hourData?.dials || 0;
-                      const contacts = hourData?.contacts || 0;
-                      const appointments = hourData?.appointments || 0;
-
-                      // Skip hours with no data
-                      if (dials === 0) return null;
-
-                      // Check if hour is legal (8am-8pm)
-                      const isLegal = hour >= 8 && hour <= 20;
-                      const maxContacts = Math.max(...analytics.aggregateInsights!.timeOfDay.map(h => h.contacts), 1);
-                      const height = contacts > 0 ? (contacts / maxContacts) * 100 : 0;
-                      const contactRate = dials > 0 ? (contacts / dials) * 100 : 0;
-                      const apptRate = contacts > 0 ? (appointments / contacts) * 100 : 0;
-
-                      return (
-                        <div key={hour} className="flex-1 flex flex-col justify-end items-center group relative h-full">
-                          <div
-                            className={`w-full rounded-t transition-colors ${
-                              isLegal
-                                ? 'bg-gradient-to-t from-green-600 to-green-400 hover:from-green-700 hover:to-green-500'
-                                : 'bg-gradient-to-t from-red-600 to-red-400 hover:from-red-700 hover:to-red-500'
-                            } cursor-pointer`}
-                            style={{ height: `${Math.max(height, 10)}%` }}
-                            title={`${hour}:00 - ${contacts} contacts (${contactRate.toFixed(1)}% rate)`}
-                          >
-                            <div className="hidden group-hover:block absolute bottom-full mb-2 bg-black text-white text-xs p-3 rounded whitespace-nowrap z-10 shadow-lg">
-                              <div className="font-bold mb-1">
-                                {hour % 12 || 12}:00 {hour >= 12 ? 'PM' : 'AM'}
-                                {!isLegal && <span className="text-red-400 ml-2">⚠️ Illegal</span>}
-                              </div>
-                              <div>Dials: {dials}</div>
-                              <div>Contacts: {contacts} ({contactRate.toFixed(1)}%)</div>
-                              <div>Appointments: {appointments} {contacts > 0 && `(${apptRate.toFixed(1)}%)`}</div>
-                            </div>
-                          </div>
-                          <div className={`text-xs mt-2 font-bold ${!isLegal ? 'text-red-600' : ''}`}>
-                            {hour % 12 || 12}{hour >= 12 ? 'P' : 'A'}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div className="mt-4 text-xs text-gray-600 text-center">
-                    💡 Tip: Focus your calling during legal hours (8AM-8PM) with the highest contact rates
-                  </div>
-                </div>
-              )}
-              {showBestTimes && analytics.aggregateInsights.timeOfDay.length === 0 && (
-                <div className="bg-white border-2 border-gray-300 rounded-lg p-8 text-center">
-                  <div className="text-4xl mb-3">📊</div>
-                  <p className="text-gray-600 mb-2">Not enough calling data yet to analyze best times</p>
-                  <p className="text-sm text-gray-500">
-                    Keep logging call activities with timestamps to see when people pick up most often!
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Day of Week Performance */}
-            <div className="mb-8">
-              <div
-                onClick={() => setShowBestDays(!showBestDays)}
-                className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors mb-4"
-              >
-                <h3 className="text-2xl font-bold">Best Days of the Week</h3>
-                <span className="text-2xl font-bold">
-                  {showBestDays ? '▼' : '▶'}
-                </span>
-              </div>
-              {showBestDays && analytics.aggregateInsights.dayOfWeek.length > 0 && (
-                  <div className="bg-white border-2 border-gray-300 rounded-lg p-6">
-                  <div className="grid grid-cols-7 gap-4">
-                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((dayName, index) => {
-                      const dayData = analytics.aggregateInsights!.dayOfWeek.find(d => d.dayOfWeek === index) || { dials: 0, contacts: 0, appointments: 0 };
-                      const contactRate = dayData.dials > 0 ? (dayData.contacts / dayData.dials) * 100 : 0;
-
-                      return (
-                        <div key={index} className="text-center">
-                          <div className="font-bold mb-2">{dayName}</div>
-                          <div className="bg-gray-100 p-4 rounded border-2 border-gray-300">
-                            <div className="text-2xl font-black text-blue-600">{dayData.dials}</div>
-                            <div className="text-xs text-gray-600">dials</div>
-                            <div className="text-lg font-bold text-green-600 mt-2">{contactRate.toFixed(0)}%</div>
-                            <div className="text-xs text-gray-600">contact rate</div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  </div>
-                )}
-            </div>
-
-            {/* Geographic Performance */}
-            {analytics.aggregateInsights.geoPerformance.length > 0 && (
-              <div className="mb-8">
-                <div
-                  onClick={() => setShowLocations(!showLocations)}
-                  className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors mb-4"
-                >
-                  <h3 className="text-2xl font-bold">Top Performing Locations</h3>
-                  <span className="text-2xl font-bold">
-                    {showLocations ? '▼' : '▶'}
-                  </span>
-                </div>
-                {showLocations && (
-                  <div className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden">
-                    <table className="w-full">
-                      <thead className="bg-black text-white">
-                        <tr>
-                          <th className="p-3 text-left">City</th>
-                          <th className="p-3 text-left">State</th>
-                          <th className="p-3 text-center">Total Leads</th>
-                          <th className="p-3 text-center">Dials</th>
-                          <th className="p-3 text-center">Contact Rate</th>
-                          <th className="p-3 text-center">Appt Rate</th>
-                          <th className="p-3 text-center">Close Rate</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {analytics.aggregateInsights.geoPerformance.map((location, index) => {
-                          const contactRate = location.totalDials > 0 ? ((location.contacted / location.totalDials) * 100) : 0;
-                          return (
-                            <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                              <td className="p-3 font-bold">{location.city}</td>
-                              <td className="p-3">{location.state}</td>
-                              <td className="p-3 text-center">{location.totalLeads}</td>
-                              <td className="p-3 text-center">{location.totalDials}</td>
-                              <td className="p-3 text-center">
-                                {contactRate.toFixed(1)}%
-                              </td>
-                              <td className="p-3 text-center">
-                                {location.totalLeads > 0 ? ((location.appointments / location.totalLeads) * 100).toFixed(1) : 0}%
-                              </td>
-                              <td className="p-3 text-center font-bold text-green-600">
-                                {location.totalLeads > 0 ? ((location.sales / location.totalLeads) * 100).toFixed(1) : 0}%
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Dialing Patterns */}
-            <div className="mb-8">
-              <div
-                onClick={() => setShowDialingAttempts(!showDialingAttempts)}
-                className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors mb-4"
-              >
-                <h3 className="text-2xl font-bold">Optimal Dialing Attempts</h3>
-                <span className="text-2xl font-bold">
-                  {showDialingAttempts ? '▼' : '▶'}
-                </span>
-              </div>
-              {showDialingAttempts && analytics.aggregateInsights.dialingPatterns.length > 0 && (
-                  <div className="bg-white border-2 border-gray-300 rounded-lg p-6">
-                  <div className="space-y-3">
-                    {analytics.aggregateInsights.dialingPatterns.map((pattern) => {
-                      const contactRate = pattern.leads > 0 ? (pattern.contacted / pattern.leads) * 100 : 0;
-                      const apptRate = pattern.leads > 0 ? (pattern.appointments / pattern.leads) * 100 : 0;
-
-                      return (
-                        <div key={pattern.attempts} className="flex items-center gap-4">
-                          <div className="w-24 font-bold text-right">{pattern.attempts} {pattern.attempts === 1 ? 'attempt' : 'attempts'}</div>
-                          <div className="flex-1">
-                            <div className="flex gap-2">
-                              <div className="flex-1">
-                                <div className="text-xs text-gray-600 mb-1">Contact Rate</div>
-                                <div className="bg-gray-200 rounded-full h-6">
-                                  <div
-                                    className="bg-green-500 h-6 rounded-full flex items-center justify-end pr-2"
-                                    style={{ width: `${contactRate}%` }}
-                                  >
-                                    <span className="text-xs font-bold text-white">{contactRate.toFixed(1)}%</span>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="flex-1">
-                                <div className="text-xs text-gray-600 mb-1">Appt Rate</div>
-                                <div className="bg-gray-200 rounded-full h-6">
-                                  <div
-                                    className="bg-purple-500 h-6 rounded-full flex items-center justify-end pr-2"
-                                    style={{ width: `${apptRate}%` }}
-                                  >
-                                    <span className="text-xs font-bold text-white">{apptRate.toFixed(1)}%</span>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="w-32 text-right text-sm text-gray-600">{pattern.leads} leads</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  </div>
-                )}
-            </div>
 
             {/* Lead Temperature Performance */}
             <div className="mb-8">
@@ -849,126 +545,6 @@ export default function AnalyticsPage() {
                   </div>
                 )}
             </div>
-
-            {/* Age Group Performance */}
-            {analytics.aggregateInsights.ageGroupPerformance && analytics.aggregateInsights.ageGroupPerformance.length > 0 && (
-              <div className="mb-8">
-                <div
-                  onClick={() => setShowAgeGroups(!showAgeGroups)}
-                  className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors mb-4"
-                >
-                  <h3 className="text-2xl font-bold">🎯 Performance by Age Group</h3>
-                  <span className="text-2xl font-bold">
-                    {showAgeGroups ? '▼' : '▶'}
-                  </span>
-                </div>
-                {showAgeGroups && (
-                  <div className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden">
-                    <table className="w-full">
-                      <thead className="bg-black text-white">
-                        <tr>
-                          <th className="p-3 text-left">Age Group</th>
-                          <th className="p-3 text-center">Total Leads</th>
-                          <th className="p-3 text-center">Contact Rate</th>
-                          <th className="p-3 text-center">Answered No Appt</th>
-                          <th className="p-3 text-center">Appointment Rate</th>
-                          <th className="p-3 text-center">Close Rate</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {analytics.aggregateInsights.ageGroupPerformance.map((group:any, index:number) => {
-                          const contactRate = group.totalLeads > 0 ? (group.contacted / group.totalLeads) * 100 : 0;
-                          const apptRate = group.totalLeads > 0 ? (group.appointments / group.totalLeads) * 100 : 0;
-                          const closeRate = group.totalLeads > 0 ? (group.sales / group.totalLeads) * 100 : 0;
-                          const answeredNoApptRate = group.totalLeads > 0 ? (group.answeredNoAppt / group.totalLeads) * 100 : 0;
-
-                          return (
-                            <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                              <td className="p-3 font-bold">{group.ageGroup}</td>
-                              <td className="p-3 text-center">{group.totalLeads}</td>
-                              <td className="p-3 text-center">{contactRate.toFixed(1)}%</td>
-                              <td className="p-3 text-center text-orange-600">
-                                {group.answeredNoAppt} ({answeredNoApptRate.toFixed(1)}%)
-                              </td>
-                              <td className="p-3 text-center font-bold text-purple-600">{apptRate.toFixed(1)}%</td>
-                              <td className="p-3 text-center font-bold text-green-600">{closeRate.toFixed(1)}%</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Power Hours - Best Day/Time Combinations */}
-            {analytics.aggregateInsights.powerHours && analytics.aggregateInsights.powerHours.length > 0 && (
-              <div className="mb-8">
-                <div
-                  onClick={() => setShowPowerHours(!showPowerHours)}
-                  className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors mb-4"
-                >
-                  <h3 className="text-2xl font-bold">⚡ Power Hours - Best Day & Time Combinations</h3>
-                  <span className="text-2xl font-bold">
-                    {showPowerHours ? '▼' : '▶'}
-                  </span>
-                </div>
-                {showPowerHours && (
-                  <div className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden">
-                    <table className="w-full">
-                      <thead className="bg-black text-white">
-                        <tr>
-                          <th className="p-3 text-left">Rank</th>
-                          <th className="p-3 text-left">Day & Time</th>
-                          <th className="p-3 text-center">Dials</th>
-                          <th className="p-3 text-center">Contacts</th>
-                          <th className="p-3 text-center">Contact Rate</th>
-                          <th className="p-3 text-center">Appointments</th>
-                          <th className="p-3 text-center">Appt Rate</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {analytics.aggregateInsights.powerHours.map((slot:any, index:number) => {
-                          const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-                          const contactRate = slot.dials > 0 ? (slot.contacts / slot.dials) * 100 : 0;
-                          const apptRate = slot.contacts > 0 ? (slot.appointments / slot.contacts) * 100 : 0;
-                          const hour12 = slot.hour % 12 || 12;
-                          const ampm = slot.hour >= 12 ? 'PM' : 'AM';
-
-                          return (
-                            <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                              <td className="p-3 font-bold text-2xl text-gray-400">#{index + 1}</td>
-                              <td className="p-3 font-bold">
-                                {dayNames[slot.dayOfWeek]} {hour12}:00 {ampm}
-                              </td>
-                              <td className="p-3 text-center">{slot.dials}</td>
-                              <td className="p-3 text-center font-bold">{slot.contacts}</td>
-                              <td className="p-3 text-center">
-                                <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full font-bold">
-                                  {contactRate.toFixed(1)}%
-                                </span>
-                              </td>
-                              <td className="p-3 text-center font-bold">{slot.appointments}</td>
-                              <td className="p-3 text-center">
-                                <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full font-bold">
-                                  {apptRate.toFixed(1)}%
-                                </span>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                    <div className="bg-blue-50 p-4 border-t border-blue-200">
-                      <p className="text-sm text-blue-900">
-                        💡 <strong>Pro Tip:</strong> These are your highest-performing time slots. Schedule your most important calling sessions during these windows to maximize results!
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* Outcome Analysis */}
             <div className="mb-8">

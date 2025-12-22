@@ -156,13 +156,18 @@ export async function GET(request: NextRequest) {
         SELECT
           l.source,
           COUNT(DISTINCT l.id) as totalLeads,
-          COALESCE(SUM(CASE WHEN la.activity_type = 'call' THEN la.dial_count ELSE 0 END), 0) as totalDials,
+          -- Use lead-level total_dials instead of summing activity dial_counts
+          COALESCE(SUM(l.total_dials), 0) as totalDials,
+          COALESCE(SUM(l.total_texts), 0) as totalTexts,
+          COALESCE(SUM(l.total_emails), 0) as totalEmails,
           COUNT(DISTINCT CASE WHEN la.outcome IN ('answered', 'scheduled') THEN l.id END) as contacted,
           COUNT(DISTINCT CASE WHEN la.outcome = 'scheduled' THEN l.id END) as appointments,
           COUNT(DISTINCT CASE WHEN la.outcome = 'disconnected' THEN l.id END) as disconnected,
-          COUNT(DISTINCT lp.lead_id) as sales,
+          -- Count policies created in the time period (or all if period is 'all')
+          COUNT(DISTINCT CASE WHEN lp.status IN ('active', 'pending') ${period !== 'all' ? `AND datetime(lp.created_at) >= datetime('now', '-${daysBack} days')` : ''} THEN lp.lead_id END) as sales,
           AVG(l.cost_per_lead) as avgCost,
-          COALESCE(SUM(lp.commission_amount), 0) as totalRevenue,
+          -- Sum revenue only from policies created in the time period
+          COALESCE(SUM(CASE WHEN lp.status IN ('active', 'pending') ${period !== 'all' ? `AND datetime(lp.created_at) >= datetime('now', '-${daysBack} days')` : ''} THEN lp.commission_amount ELSE 0 END), 0) as totalRevenue,
           SUM(CASE WHEN l.wrong_info = 1 THEN 1 ELSE 0 END) as wrongInfo
         FROM leads l
         LEFT JOIN lead_activities la ON l.id = la.lead_id ${period !== 'all' ? dateFilter : ''}

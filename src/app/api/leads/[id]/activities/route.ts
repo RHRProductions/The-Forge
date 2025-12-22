@@ -45,25 +45,33 @@ export async function POST(
     const userId = parseInt((session.user as any).id);
 
     // Get current lead data
-    const lead = db.prepare('SELECT contact_attempt_count, lead_temperature, total_dials FROM leads WHERE id = ?').get(leadId) as any;
+    const lead = db.prepare('SELECT contact_attempt_count, lead_temperature, total_dials, total_texts, total_emails FROM leads WHERE id = ?').get(leadId) as any;
 
     // Auto-increment contact attempt counter for contact activities
     const contactActivities = ['call', 'text', 'email'];
     const isContactActivity = contactActivities.includes(activity.activity_type);
     const newAttemptNumber = isContactActivity ? (lead?.contact_attempt_count || 0) + 1 : null;
 
-    // Calculate new total dials - ONLY for contact activities (not appointment, note, sale)
-    // Also check dial_count - if it's explicitly 0, don't add to total
+    // Calculate new totals based on activity type
     const currentTotalDials = lead?.total_dials || 0;
-    const dialCountToAdd = activity.dial_count !== undefined ? activity.dial_count : 1;
-    const newTotalDials = (isContactActivity && dialCountToAdd > 0) ? currentTotalDials + dialCountToAdd : currentTotalDials;
+    const currentTotalTexts = lead?.total_texts || 0;
+    const currentTotalEmails = lead?.total_emails || 0;
+
+    // Each activity type counts as 1
+    const newTotalDials = activity.activity_type === 'call' ? currentTotalDials + 1 : currentTotalDials;
+    const newTotalTexts = activity.activity_type === 'text' ? currentTotalTexts + 1 : currentTotalTexts;
+    const newTotalEmails = activity.activity_type === 'email' ? currentTotalEmails + 1 : currentTotalEmails;
+
+    // For dial_count, always use 1 for calls, 0 for everything else
+    const dialCountToAdd = activity.activity_type === 'call' ? 1 : 0;
 
     // Insert the activity
     const result = db.prepare(
       `INSERT INTO lead_activities (
         lead_id, activity_type, activity_detail, outcome,
-        lead_temperature_after, next_follow_up_date, contact_attempt_number, dial_count, total_dials_at_time, created_by_user_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        lead_temperature_after, next_follow_up_date, contact_attempt_number, dial_count,
+        total_dials_at_time, total_texts_at_time, total_emails_at_time, created_by_user_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       leadId,
       activity.activity_type,
@@ -74,6 +82,8 @@ export async function POST(
       newAttemptNumber,
       dialCountToAdd,  // Use the calculated dial count (0 for appointments)
       newTotalDials,
+      newTotalTexts,
+      newTotalEmails,
       userId
     );
 
@@ -86,9 +96,15 @@ export async function POST(
       updates.push(`contact_attempt_count = ${newAttemptNumber}`);
     }
 
-    // Update total dials count (only if it changed)
+    // Update total counts (only if they changed)
     if (newTotalDials !== currentTotalDials) {
       updates.push(`total_dials = ${newTotalDials}`);
+    }
+    if (newTotalTexts !== currentTotalTexts) {
+      updates.push(`total_texts = ${newTotalTexts}`);
+    }
+    if (newTotalEmails !== currentTotalEmails) {
+      updates.push(`total_emails = ${newTotalEmails}`);
     }
 
     // Auto-update lead status to "no_answer" when outcome is "no_answer"

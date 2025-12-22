@@ -2499,7 +2499,6 @@ function ActivitiesSection({ leadId, lead, onLeadUpdate, session }: { leadId: nu
   const [activityOutcome, setActivityOutcome] = useState<ActivityOutcome | ''>('no_answer');
   const [leadTemperature, setLeadTemperature] = useState<LeadTemperature | ''>('');
   const [nextFollowUpDate, setNextFollowUpDate] = useState('');
-  const [dialCount, setDialCount] = useState<number>(1);
   const [isLoading, setIsLoading] = useState(false);
   const [appointmentDateTime, setAppointmentDateTime] = useState('');
   const [appointmentEndDateTime, setAppointmentEndDateTime] = useState('');
@@ -2575,8 +2574,7 @@ function ActivitiesSection({ leadId, lead, onLeadUpdate, session }: { leadId: nu
           activity_detail: detail,
           outcome: activityOutcome || null,
           lead_temperature_after: leadTemperature || null,
-          next_follow_up_date: nextFollowUpDate || null,
-          dial_count: dialCount
+          next_follow_up_date: nextFollowUpDate || null
         })
       });
 
@@ -2620,7 +2618,6 @@ function ActivitiesSection({ leadId, lead, onLeadUpdate, session }: { leadId: nu
         setActivityOutcome('no_answer');
         setLeadTemperature('');
         setNextFollowUpDate('');
-        setDialCount(1);
         setAppointmentDateTime('');
         setAppointmentEndDateTime('');
         setShowActivityForm(false);
@@ -2740,7 +2737,11 @@ function ActivitiesSection({ leadId, lead, onLeadUpdate, session }: { leadId: nu
             setActivityType('call');
             setShowActivityForm(true);
           }}
-          className="px-2 py-2 bg-blue-50 text-blue-700 rounded text-xs hover:bg-blue-100 transition-colors"
+          className={`px-2 py-2 rounded text-xs transition-colors ${
+            activityType === 'call'
+              ? 'bg-blue-600 text-white font-bold'
+              : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+          }`}
         >
           📞 Call
         </button>
@@ -2749,7 +2750,11 @@ function ActivitiesSection({ leadId, lead, onLeadUpdate, session }: { leadId: nu
             setActivityType('text');
             setShowActivityForm(true);
           }}
-          className="px-2 py-2 bg-green-50 text-green-700 rounded text-xs hover:bg-green-100 transition-colors"
+          className={`px-2 py-2 rounded text-xs transition-colors ${
+            activityType === 'text'
+              ? 'bg-green-600 text-white font-bold'
+              : 'bg-green-50 text-green-700 hover:bg-green-100'
+          }`}
         >
           💬 Text
         </button>
@@ -2758,7 +2763,11 @@ function ActivitiesSection({ leadId, lead, onLeadUpdate, session }: { leadId: nu
             setActivityType('email');
             setShowActivityForm(true);
           }}
-          className="px-2 py-2 bg-purple-50 text-purple-700 rounded text-xs hover:bg-purple-100 transition-colors"
+          className={`px-2 py-2 rounded text-xs transition-colors ${
+            activityType === 'email'
+              ? 'bg-purple-600 text-white font-bold'
+              : 'bg-purple-50 text-purple-700 hover:bg-purple-100'
+          }`}
         >
           📧 Email
         </button>
@@ -2767,50 +2776,20 @@ function ActivitiesSection({ leadId, lead, onLeadUpdate, session }: { leadId: nu
       {/* Activity Form */}
       {showActivityForm && (
         <div className="mb-4 bg-gray-50 p-3 rounded border">
-          <div className="mb-2">
-            <label className="block text-xs font-medium text-gray-700 mb-1">Activity Type</label>
+
+          <div className="mb-3">
+            <label className="block text-xs font-medium text-gray-700 mb-1">Outcome</label>
             <select
-              value={activityType}
-              onChange={(e) => setActivityType(e.target.value as ActivityType)}
+              value={activityOutcome}
+              onChange={(e) => setActivityOutcome(e.target.value as ActivityOutcome | '')}
               className="w-full p-2 border border-gray-300 rounded focus:border-red-600 focus:outline-none text-sm"
             >
-              <option value="call">Call</option>
-              <option value="text">Text</option>
-              <option value="email">Email</option>
-              <option value="note">Note</option>
-              <option value="status_change">Status Change</option>
-              <option value="appointment">Appointment</option>
-              <option value="sale">Sale</option>
+              <option value="">Select outcome...</option>
+              <option value="answered">Answered</option>
+              <option value="no_answer">No Answer</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="disconnected">Disconnected</option>
             </select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 mb-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Outcome</label>
-              <select
-                value={activityOutcome}
-                onChange={(e) => setActivityOutcome(e.target.value as ActivityOutcome | '')}
-                className="w-full p-2 border border-gray-300 rounded focus:border-red-600 focus:outline-none text-sm"
-              >
-                <option value="">Select outcome...</option>
-                <option value="answered">Answered</option>
-                <option value="no_answer">No Answer</option>
-                <option value="scheduled">Scheduled</option>
-                <option value="disconnected">Disconnected</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Number of Dials</label>
-              <select
-                value={dialCount}
-                onChange={(e) => setDialCount(parseInt(e.target.value))}
-                className="w-full p-2 border border-gray-300 rounded focus:border-red-600 focus:outline-none text-sm"
-              >
-                <option value="1">1 Dial</option>
-                <option value="2">2 Dials</option>
-              </select>
-            </div>
           </div>
 
           {/* Appointment Date/Time fields - only show when scheduled */}
@@ -3053,14 +3032,19 @@ function ActivitiesSection({ leadId, lead, onLeadUpdate, session }: { leadId: nu
                         {activity.outcome.replace('_', ' ')}
                       </span>
                     )}
-                    {activity.total_dials_at_time && (
+                    {activity.activity_type === 'call' && activity.total_dials_at_time && (
                       <span className="px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-800">
                         Dial #{activity.total_dials_at_time}
                       </span>
                     )}
-                    {activity.dial_count && activity.dial_count > 1 && (
+                    {activity.activity_type === 'text' && activity.total_texts_at_time && (
+                      <span className="px-2 py-0.5 rounded text-xs bg-green-100 text-green-800">
+                        Text #{activity.total_texts_at_time}
+                      </span>
+                    )}
+                    {activity.activity_type === 'email' && activity.total_emails_at_time && (
                       <span className="px-2 py-0.5 rounded text-xs bg-purple-100 text-purple-800">
-                        ({activity.dial_count} dials made)
+                        Email #{activity.total_emails_at_time}
                       </span>
                     )}
                     {activity.lead_temperature_after && (

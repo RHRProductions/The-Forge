@@ -184,9 +184,37 @@ function initializeDatabase() {
     // Column already exists, ignore error
   }
 
+  // Add total_texts_at_time column to existing lead_activities table
+  try {
+    db.exec(`ALTER TABLE lead_activities ADD COLUMN total_texts_at_time INTEGER;`);
+  } catch (error) {
+    // Column already exists, ignore error
+  }
+
+  // Add total_emails_at_time column to existing lead_activities table
+  try {
+    db.exec(`ALTER TABLE lead_activities ADD COLUMN total_emails_at_time INTEGER;`);
+  } catch (error) {
+    // Column already exists, ignore error
+  }
+
   // Add total_dials column to leads table
   try {
     db.exec(`ALTER TABLE leads ADD COLUMN total_dials INTEGER DEFAULT 0;`);
+  } catch (error) {
+    // Column already exists, ignore error
+  }
+
+  // Add total_texts column to leads table
+  try {
+    db.exec(`ALTER TABLE leads ADD COLUMN total_texts INTEGER DEFAULT 0;`);
+  } catch (error) {
+    // Column already exists, ignore error
+  }
+
+  // Add total_emails column to leads table
+  try {
+    db.exec(`ALTER TABLE leads ADD COLUMN total_emails INTEGER DEFAULT 0;`);
   } catch (error) {
     // Column already exists, ignore error
   }

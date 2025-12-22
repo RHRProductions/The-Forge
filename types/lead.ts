@@ -45,6 +45,8 @@ export interface Lead {
   next_follow_up?: string;
   contact_attempt_count?: number;
   total_dials?: number;
+  total_texts?: number;
+  total_emails?: number;
   owner_id?: number;
   worked_by_id?: number;
   wrong_info?: boolean;
@@ -96,6 +98,8 @@ export interface LeadActivity {
   contact_attempt_number?: number;
   dial_count?: number;
   total_dials_at_time?: number;
+  total_texts_at_time?: number;
+  total_emails_at_time?: number;
   created_by_user_id?: number;
   created_at: string;
 }

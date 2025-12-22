@@ -212,10 +212,20 @@ export default function PendingPoliciesPage() {
 
       <div className="max-w-7xl mx-auto p-6">
         {/* Stats */}
-        <div className="mb-6 bg-gray-100 p-4 rounded">
-          <div className="text-2xl font-bold">Total Pending: {policies.length}</div>
-          <div className="text-sm text-gray-600 mt-1">
-            Policies awaiting completion and issue
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-gray-100 p-4 rounded">
+            <div className="text-2xl font-bold">Total Pending: {policies.length}</div>
+            <div className="text-sm text-gray-600 mt-1">
+              Policies awaiting completion and issue
+            </div>
+          </div>
+          <div className="bg-green-50 border-2 border-green-600 p-4 rounded">
+            <div className="text-2xl font-bold text-green-700">
+              Total Pending Commissions: {formatCurrency(policies.reduce((sum, policy) => sum + (policy.commission_amount || 0), 0))}
+            </div>
+            <div className="text-sm text-green-600 mt-1">
+              Expected commission once policies are issued
+            </div>
           </div>
         </div>
 

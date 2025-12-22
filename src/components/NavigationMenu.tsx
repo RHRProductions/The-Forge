@@ -154,32 +154,6 @@ export default function NavigationMenu({ currentPage }: NavigationMenuProps) {
               </button>
             )} */}
 
-            {/* Utilities Section */}
-            <div className="border-t border-gray-200 my-2"></div>
-            {currentPage !== 'duplicates' && (
-              <button
-                onClick={() => {
-                  router.push('/duplicates');
-                  setShowNavMenu(false);
-                }}
-                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-black font-semibold transition-colors flex items-center gap-2"
-              >
-                🔍 Find Duplicates
-              </button>
-            )}
-            {/* TEMPORARILY HIDDEN - Bounced Emails - Can be restored later */}
-            {/* {currentPage !== 'bounced-emails' && (
-              <button
-                onClick={() => {
-                  router.push('/bounced-emails');
-                  setShowNavMenu(false);
-                }}
-                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-black font-semibold transition-colors flex items-center gap-2"
-              >
-                ⚠️ Bounced Emails
-              </button>
-            )} */}
-
             {/* Admin Section */}
             {session && (session.user as any).role === 'admin' && (
               <>

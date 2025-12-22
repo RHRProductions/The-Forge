@@ -791,6 +791,12 @@ Type "RESET" to confirm:`;
                   🏷️ Lead Sources
                 </button>
                 <button
+                  onClick={() => router.push('/duplicates')}
+                  className="bg-yellow-600 text-white px-6 py-3 rounded font-bold hover:bg-yellow-700 transition-colors"
+                >
+                  🔍 Find Duplicates
+                </button>
+                <button
                   onClick={handleResetAnalytics}
                   disabled={loading}
                   className="bg-red-600 text-white px-6 py-3 rounded font-bold hover:bg-red-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"

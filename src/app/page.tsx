@@ -1274,17 +1274,7 @@ Type "DELETE ALL" to confirm:`;
                         🎯 Seminar Analytics
                       </button> */}
 
-                      {/* Utilities Section */}
-                      <div className="border-t border-gray-200 my-2"></div>
-                      <button
-                        onClick={() => {
-                          router.push('/duplicates');
-                          setShowNavMenu(false);
-                        }}
-                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-black font-semibold transition-colors flex items-center gap-2"
-                      >
-                        🔍 Find Duplicates
-                      </button>
+                      {/* Admin Section */}
                       {(session.user as any).role === 'admin' && (
                         <>
                           <div className="border-t border-gray-200 my-2"></div>

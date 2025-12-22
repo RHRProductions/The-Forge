@@ -33,6 +33,11 @@ export default function SettingsPage() {
   const [error, setError] = useState('');
   const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
 
+  // Lead vendor management state
+  const [vendors, setVendors] = useState<any[]>([]);
+  const [showVendorForm, setShowVendorForm] = useState(false);
+  const [newVendorName, setNewVendorName] = useState('');
+
   // 2FA State (available to all users)
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [showSetup, setShowSetup] = useState(false);
@@ -61,6 +66,7 @@ export default function SettingsPage() {
   useEffect(() => {
     if ((session?.user as any)?.role === 'admin') {
       fetchUsers();
+      fetchVendors();
     }
   }, [session]);
 
@@ -85,6 +91,73 @@ export default function SettingsPage() {
       }
     } catch (error) {
       console.error('Error fetching users:', error);
+    }
+  };
+
+  const fetchVendors = async () => {
+    try {
+      const response = await fetch('/api/admin/lead-vendors');
+      if (response.ok) {
+        const data = await response.json();
+        setVendors(data);
+      }
+    } catch (error) {
+      console.error('Error fetching vendors:', error);
+    }
+  };
+
+  const handleAddVendor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newVendorName.trim()) return;
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/admin/lead-vendors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vendor_name: newVendorName.trim() }),
+      });
+
+      if (response.ok) {
+        setNewVendorName('');
+        setShowVendorForm(false);
+        fetchVendors();
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to add vendor');
+      }
+    } catch (error) {
+      setError('Failed to add vendor');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteVendor = async (id: number, name: string) => {
+    if (!confirm(`Are you sure you want to delete "${name}"?`)) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch('/api/admin/lead-vendors', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+
+      if (response.ok) {
+        fetchVendors();
+      } else {
+        const data = await response.json();
+        alert(data.error || 'Failed to delete vendor');
+      }
+    } catch (error) {
+      alert('Failed to delete vendor');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -580,6 +653,108 @@ Type "RESET" to confirm:`;
               </button>
             </div>
           </div>
+        )}
+
+        {/* ADMIN-ONLY SECTION - Lead Vendor Management */}
+        {isAdmin && (
+          <>
+            <div className="border-t-4 border-gray-300 my-8"></div>
+            <h2 className="text-3xl font-black mb-6">🏷️ Lead Vendor Management (Admin Only)</h2>
+
+            <div className="mb-6">
+              <button
+                onClick={() => setShowVendorForm(!showVendorForm)}
+                className="bg-black text-white px-6 py-3 rounded font-bold hover:bg-gray-800 transition-colors"
+              >
+                {showVendorForm ? 'Cancel' : '+ Add New Vendor'}
+              </button>
+            </div>
+
+            {showVendorForm && (
+              <div className="bg-white border-2 border-red-600 rounded-lg p-6 mb-6">
+                <h3 className="text-xl font-bold mb-4">Add New Vendor</h3>
+                <form onSubmit={handleAddVendor} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Vendor Name</label>
+                    <input
+                      type="text"
+                      value={newVendorName}
+                      onChange={(e) => setNewVendorName(e.target.value)}
+                      placeholder="e.g., ABC Leads"
+                      className="w-full p-3 border-2 border-gray-300 rounded focus:border-black focus:outline-none"
+                      required
+                    />
+                  </div>
+                  {error && (
+                    <div className="p-3 bg-red-100 text-red-800 rounded">
+                      {error}
+                    </div>
+                  )}
+                  <div className="flex gap-3">
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="bg-black text-white px-6 py-3 rounded font-bold hover:bg-gray-800 transition-colors disabled:bg-gray-400"
+                    >
+                      {loading ? 'Adding...' : 'Add Vendor'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowVendorForm(false);
+                        setNewVendorName('');
+                        setError('');
+                      }}
+                      className="bg-gray-300 text-black px-6 py-3 rounded font-bold hover:bg-gray-400 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {vendors.length > 0 && (
+              <div className="bg-white border-2 border-black rounded-lg overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-gray-100 border-b-2 border-black">
+                    <tr>
+                      <th className="text-left p-4 font-bold">Vendor Name</th>
+                      <th className="text-right p-4 font-bold">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {vendors.map((vendor) => (
+                      <tr key={vendor.id} className="border-b border-gray-200 hover:bg-gray-50">
+                        <td className="p-4 font-semibold">{vendor.vendor_name}</td>
+                        <td className="p-4 text-right">
+                          <button
+                            onClick={() => handleDeleteVendor(vendor.id, vendor.vendor_name)}
+                            disabled={loading}
+                            className="bg-red-600 text-white px-4 py-2 rounded font-bold hover:bg-red-700 transition-colors disabled:bg-gray-400"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {vendors.length === 0 && !showVendorForm && (
+              <div className="bg-gray-100 p-6 rounded text-center text-gray-600">
+                No vendors configured. Add your first vendor to get started.
+              </div>
+            )}
+
+            <div className="mt-6 p-4 bg-blue-50 border-2 border-blue-300 rounded-lg">
+              <p className="text-sm text-gray-700">
+                <strong>💡 Tip:</strong> These vendor names will appear in the CSV upload dropdown to ensure consistent vendor naming across all users.
+              </p>
+            </div>
+          </>
         )}
 
         {/* ADMIN-ONLY SECTION - User Management */}

@@ -508,6 +508,7 @@ function HomeContent() {
   const [totalSpent, setTotalSpent] = useState<number>(0);
   const [vendorName, setVendorName] = useState<string>('');
   const [leadTemperature, setLeadTemperature] = useState<'cold' | 'warm' | 'hot'>('cold');
+  const [availableVendors, setAvailableVendors] = useState<any[]>([]);
   const [showLeadDetail, setShowLeadDetail] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [currentLeadIndex, setCurrentLeadIndex] = useState<number>(0);
@@ -569,6 +570,13 @@ function HomeContent() {
     fetchSalesRevenue();
     fetchEmailStats();
   }, [currentPage, filters]); // Re-fetch when page OR filters change
+
+  // Fetch vendors when upload form is shown
+  useEffect(() => {
+    if (showUploadForm) {
+      fetchVendors();
+    }
+  }, [showUploadForm]);
 
   // Reset to page 1 when filters change (but not on initial load)
   const isFirstRender = useRef(true);
@@ -647,6 +655,18 @@ function HomeContent() {
   //     setShowFollowUpModal(true);
   //   }
   // }, [session, followUpLeads]);
+
+  const fetchVendors = async () => {
+    try {
+      const response = await fetch('/api/lead-vendors');
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableVendors(data);
+      }
+    } catch (error) {
+      console.error('Error fetching vendors:', error);
+    }
+  };
 
   const fetchLeads = async () => {
     try {
@@ -1581,9 +1601,11 @@ Type "DELETE ALL" to confirm:`;
                   required
                 >
                   <option value="">Select a vendor...</option>
-                  <option value="Marc Publishing Leads">Marc Publishing Leads</option>
-                  <option value="Integrity Leads">Integrity Leads</option>
-                  <option value="Lead Hero Leads">Lead Hero Leads</option>
+                  {availableVendors.map((vendor) => (
+                    <option key={vendor.id} value={vendor.vendor_name}>
+                      {vendor.vendor_name}
+                    </option>
+                  ))}
                 </select>
                 <p className="text-xs text-gray-500 mt-1">
                   Select the vendor source for these leads - ensures consistent tracking across all users

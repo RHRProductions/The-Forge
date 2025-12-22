@@ -607,6 +607,24 @@ function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp);
     CREATE INDEX IF NOT EXISTS idx_audit_logs_severity ON audit_logs(severity);
   `);
+
+  // Create lead_vendors table for managing standardized vendor names
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS lead_vendors (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      vendor_name TEXT UNIQUE NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  // Seed default vendors if table is empty
+  const vendorCount = db.prepare('SELECT COUNT(*) as count FROM lead_vendors').get() as { count: number };
+  if (vendorCount.count === 0) {
+    const insertVendor = db.prepare('INSERT INTO lead_vendors (vendor_name) VALUES (?)');
+    insertVendor.run('Marc Publishing Leads');
+    insertVendor.run('Integrity Leads');
+    insertVendor.run('Lead Hero Leads');
+  }
 }
 
 export function closeDatabase() {

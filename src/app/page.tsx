@@ -1571,19 +1571,22 @@ Type "DELETE ALL" to confirm:`;
               </div>
               <div>
                 <label htmlFor="vendor-name" className="block text-sm font-medium text-gray-700 mb-2">
-                  Vendor Name
+                  Lead Vendor
                 </label>
-                <input
-                  type="text"
+                <select
                   id="vendor-name"
                   value={vendorName}
                   onChange={(e) => setVendorName(e.target.value)}
                   className="block w-full p-3 border border-gray-300 rounded focus:border-black focus:outline-none"
-                  placeholder="e.g., Melissa Medicare, Lead Hero, etc."
                   required
-                />
+                >
+                  <option value="">Select a vendor...</option>
+                  <option value="Marc Publishing Leads">Marc Publishing Leads</option>
+                  <option value="Integrity Leads">Integrity Leads</option>
+                  <option value="Lead Hero Leads">Lead Hero Leads</option>
+                </select>
                 <p className="text-xs text-gray-500 mt-1">
-                  This will be used to track the source of these leads
+                  Select the vendor source for these leads - ensures consistent tracking across all users
                 </p>
               </div>
               <div>

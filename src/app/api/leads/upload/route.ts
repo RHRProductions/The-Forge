@@ -232,12 +232,13 @@ function processCSVData(results: any, totalSpent: number, userId: number, vendor
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
   `);
 
-  // Prepare duplicate check statement
+  // Prepare duplicate check statement - only check within THIS USER's leads
   const duplicateCheckStmt = db.prepare(`
     SELECT id FROM leads
     WHERE LOWER(first_name) = LOWER(?)
     AND LOWER(last_name) = LOWER(?)
     AND phone = ?
+    AND owner_id = ?
   `);
 
   let successCount = 0;
@@ -374,12 +375,13 @@ function processCSVData(results: any, totalSpent: number, userId: number, vendor
         console.log('Raw row keys:', Object.keys(row));
       }
 
-      // Check for duplicates based on name + phone
+      // Check for duplicates based on name + phone within THIS USER's leads
       const phone = formatPhoneNumber(findColumnValue(row, COLUMN_MAPPINGS.phone));
       const duplicate = duplicateCheckStmt.get(
         firstName || '',
         lastName || '',
-        phone
+        phone,
+        userId
       );
 
       if (duplicate) {

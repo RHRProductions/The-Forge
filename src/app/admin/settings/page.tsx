@@ -343,6 +343,31 @@ Type RESET to confirm:`;
           </div>
         )}
 
+        {/* Quick Actions */}
+        <div className="bg-white border-2 border-red-600 rounded-lg p-6 mb-6">
+          <h2 className="text-3xl font-black mb-4">Quick Actions</h2>
+          <div className="flex flex-wrap gap-4">
+            <button
+              onClick={() => router.push('/admin/bulk-assign-leads')}
+              className="bg-black text-white px-6 py-3 rounded font-bold hover:bg-gray-800 transition-colors"
+            >
+              Bulk Assign Leads to Agents
+            </button>
+            <button
+              onClick={() => router.push('/admin/platform-insights')}
+              className="bg-gray-200 text-black px-6 py-3 rounded font-bold hover:bg-gray-300 transition-colors"
+            >
+              Platform Insights
+            </button>
+            <button
+              onClick={() => router.push('/admin/audit-logs')}
+              className="bg-gray-200 text-black px-6 py-3 rounded font-bold hover:bg-gray-300 transition-colors"
+            >
+              Audit Logs
+            </button>
+          </div>
+        </div>
+
         {/* Lead Vendor Management */}
         <div className="bg-white border-2 border-red-600 rounded-lg p-6 mb-6">
           <h2 className="text-3xl font-black mb-6">🏷️ Lead Vendor Management</h2>

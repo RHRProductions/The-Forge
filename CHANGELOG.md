@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.3] - 2025-12-23
+
+### Added
+
+**Bulk Assign Leads (Admin)**
+- New admin tool to distribute leads from CSV files among agents
+- Upload CSV files and parse leads without saving to database
+- Filter uploaded leads by status, lead type, city, state, zip code, temperature, and age range
+- Select lead vendor from existing vendors dropdown
+- Specify exact number of leads to assign (or assign all filtered leads)
+- Assign filtered leads to any agent with one click
+- Remaining leads stay in list for assigning to other agents
+- Duplicate detection when saving leads to prevent duplicates within an agent's pool
+
+### Technical Details
+
+**New Files:**
+- `src/app/admin/bulk-assign-leads/page.tsx` - Admin UI for bulk lead assignment
+- `src/app/api/admin/bulk-assign-leads/route.ts` - GET agents list, POST bulk assign existing leads
+- `src/app/api/admin/parse-csv/route.ts` - Parse CSV and return leads as JSON (no DB save)
+- `src/app/api/admin/save-and-assign-leads/route.ts` - Save parsed leads with owner_id
+
+**Modified Files:**
+- `src/app/admin/settings/page.tsx` - Added link to Bulk Assign Leads in Quick Actions
+
+---
+
 ## [0.5.2] - 2025-12-23
 
 ### Added

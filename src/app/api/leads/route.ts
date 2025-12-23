@@ -106,20 +106,9 @@ export async function GET(request: NextRequest) {
     let totalCount;
     let overallTotalCount;
 
-    if (userRole === 'admin') {
-      const { where, params } = buildWhereClause();
-
-      // Get overall total count (without filters)
-      const overallCountResult = db.prepare('SELECT COUNT(*) as count FROM leads').get() as any;
-      overallTotalCount = overallCountResult.count;
-
-      // Get total count with filters
-      const countResult = db.prepare(`SELECT COUNT(*) as count FROM leads WHERE ${where}`).get(...params) as any;
-      totalCount = countResult.count;
-
-      // Get paginated leads with filters
-      leads = db.prepare(`SELECT * FROM leads WHERE ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`).all(...params, limit, offset);
-    } else if (userRole === 'agent') {
+    // ADMINS and AGENTS both see only their own leads + their setters' leads
+    // Aggregate data is ONLY shown in Platform Insights
+    if (userRole === 'admin' || userRole === 'agent') {
       const { where, params } = buildWhereClause('(l.owner_id = ? OR u.agent_id = ?)');
 
       // Get overall total count (without filters)
@@ -196,10 +185,7 @@ export async function GET(request: NextRequest) {
     // Get total cost from ALL leads (not just current page) - only count leads with cost > 0
     let totalCostResult;
     let wrongInfoCount;
-    if (userRole === 'admin') {
-      totalCostResult = db.prepare('SELECT SUM(cost_per_lead) as totalCost FROM leads WHERE cost_per_lead > 0').get() as any;
-      wrongInfoCount = db.prepare('SELECT COUNT(*) as count FROM leads WHERE wrong_info = 1').get() as any;
-    } else if (userRole === 'agent') {
+    if (userRole === 'admin' || userRole === 'agent') {
       totalCostResult = db.prepare(`
         SELECT SUM(l.cost_per_lead) as totalCost FROM leads l
         LEFT JOIN users u ON l.owner_id = u.id
@@ -231,13 +217,7 @@ export async function GET(request: NextRequest) {
 
     // Get all warm/hot leads for follow-up reminders (regardless of pagination)
     let followUpLeads;
-    if (userRole === 'admin') {
-      followUpLeads = db.prepare(`
-        SELECT * FROM leads
-        WHERE (lead_temperature = 'warm' OR lead_temperature = 'hot') AND next_follow_up IS NOT NULL
-        ORDER BY next_follow_up ASC
-      `).all();
-    } else if (userRole === 'agent') {
+    if (userRole === 'admin' || userRole === 'agent') {
       followUpLeads = db.prepare(`
         SELECT l.* FROM leads l
         LEFT JOIN users u ON l.owner_id = u.id

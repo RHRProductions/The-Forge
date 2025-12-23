@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.2] - 2025-12-23
+
+### Added
+
+**Data Sharing Consent**
+- New "Data Sharing & Privacy" section in Settings
+- Toggle switch for users to opt-in to sharing analytics data
+- Consent stored in database (`data_sharing_consent` field)
+- Enables future features like lead vendor insights and leaderboards
+
+**Profile Self-Service**
+- Users can now update their own email address
+- Users can change their password (requires current password)
+- Live password requirements validation
+- Confirm password matching validation
+
+### Technical Details
+
+**New Files:**
+- `src/app/api/users/consent/route.ts` - GET/POST for consent status
+- `src/app/api/users/profile/route.ts` - PATCH for email/password updates
+
+**Modified Files:**
+- `lib/database/connection.ts` - Added `data_sharing_consent` column
+- `src/app/settings/page.tsx` - Added consent toggle and profile editing UI
+
+---
+
 ## [0.5.1] - 2025-12-22
 
 ### Added

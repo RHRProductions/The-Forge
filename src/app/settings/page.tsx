@@ -22,6 +22,18 @@ export default function SettingsPage() {
   const [passwordInput, setPasswordInput] = useState('');
   const [success, setSuccess] = useState('');
 
+  // Data sharing consent state
+  const [dataSharingConsent, setDataSharingConsent] = useState(false);
+  const [consentLoading, setConsentLoading] = useState(false);
+
+  // Profile edit state
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editEmail, setEditEmail] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [profileLoading, setProfileLoading] = useState(false);
+
   // Team management state (for agents and admins)
   const [setters, setSetters] = useState<any[]>([]);
   const [showSetterForm, setShowSetterForm] = useState(false);
@@ -38,10 +50,11 @@ export default function SettingsPage() {
     }
   }, [status, router]);
 
-  // Fetch user's 2FA status (all users)
+  // Fetch user's 2FA status and consent status (all users)
   useEffect(() => {
     if (session?.user) {
       fetchTwoFactorStatus();
+      fetchConsentStatus();
     }
   }, [session]);
 
@@ -63,6 +76,123 @@ export default function SettingsPage() {
       }
     } catch (error) {
       console.error('Error fetching 2FA status:', error);
+    }
+  };
+
+  const fetchConsentStatus = async () => {
+    try {
+      const response = await fetch('/api/users/consent');
+      if (response.ok) {
+        const data = await response.json();
+        setDataSharingConsent(data.consent);
+      }
+    } catch (error) {
+      console.error('Error fetching consent status:', error);
+    }
+  };
+
+  const handleConsentToggle = async () => {
+    setConsentLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await fetch('/api/users/consent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ consent: !dataSharingConsent }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setDataSharingConsent(data.consent);
+        setSuccess(data.consent
+          ? 'You have opted in to share your analytics data with the platform.'
+          : 'You have opted out of sharing your analytics data.');
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to update consent');
+      }
+    } catch (error) {
+      setError('Failed to update consent');
+    } finally {
+      setConsentLoading(false);
+    }
+  };
+
+  const handleStartEditProfile = () => {
+    setEditEmail((session?.user as any)?.email || '');
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setIsEditingProfile(true);
+  };
+
+  const handleCancelEditProfile = () => {
+    setIsEditingProfile(false);
+    setEditEmail('');
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+  };
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    // Validate passwords match if changing password
+    if (newPassword && newPassword !== confirmPassword) {
+      setError('New passwords do not match');
+      return;
+    }
+
+    // Check if there are any changes
+    const emailChanged = editEmail !== (session?.user as any)?.email;
+    if (!emailChanged && !newPassword) {
+      setError('No changes to save');
+      return;
+    }
+
+    setProfileLoading(true);
+
+    try {
+      const updateData: any = {};
+
+      if (emailChanged) {
+        updateData.email = editEmail;
+      }
+
+      if (newPassword) {
+        updateData.currentPassword = currentPassword;
+        updateData.newPassword = newPassword;
+      }
+
+      const response = await fetch('/api/users/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess('Profile updated successfully! You may need to log out and back in to see email changes.');
+        setIsEditingProfile(false);
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      } else {
+        if (data.details && Array.isArray(data.details)) {
+          setError(data.details.join(', '));
+        } else {
+          setError(data.error || 'Failed to update profile');
+        }
+      }
+    } catch (error) {
+      setError('Failed to update profile');
+    } finally {
+      setProfileLoading(false);
     }
   };
 
@@ -309,12 +439,110 @@ export default function SettingsPage() {
 
         {/* Account Information */}
         <div className="bg-white border-2 border-red-600 rounded-lg p-6 mb-6">
-          <h2 className="text-2xl font-bold mb-4">Account Information</h2>
-          <div className="space-y-2">
-            <p><span className="font-semibold">Name:</span> {(session?.user as any)?.name}</p>
-            <p><span className="font-semibold">Email:</span> {(session?.user as any)?.email}</p>
-            <p><span className="font-semibold">Role:</span> {((session?.user as any)?.role || '').toUpperCase()}</p>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold">Account Information</h2>
+            {!isEditingProfile && (
+              <button
+                onClick={handleStartEditProfile}
+                className="bg-gray-200 text-black px-4 py-2 rounded font-bold hover:bg-gray-300 transition-colors text-sm"
+              >
+                Edit Profile
+              </button>
+            )}
           </div>
+
+          {!isEditingProfile ? (
+            <div className="space-y-2">
+              <p><span className="font-semibold">Name:</span> {(session?.user as any)?.name}</p>
+              <p><span className="font-semibold">Email:</span> {(session?.user as any)?.email}</p>
+              <p><span className="font-semibold">Role:</span> {((session?.user as any)?.role || '').toUpperCase()}</p>
+            </div>
+          ) : (
+            <form onSubmit={handleUpdateProfile} className="space-y-4">
+              <div>
+                <p className="mb-2"><span className="font-semibold">Name:</span> {(session?.user as any)?.name}</p>
+                <p className="mb-4"><span className="font-semibold">Role:</span> {((session?.user as any)?.role || '').toUpperCase()}</p>
+              </div>
+
+              <div className="border-t border-gray-200 pt-4">
+                <h3 className="font-semibold mb-3">Update Email</h3>
+                <input
+                  type="email"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded focus:border-red-600 focus:outline-none"
+                  placeholder="Email address"
+                />
+              </div>
+
+              <div className="border-t border-gray-200 pt-4">
+                <h3 className="font-semibold mb-3">Change Password</h3>
+                <p className="text-sm text-gray-600 mb-3">Leave blank to keep current password</p>
+                <div className="space-y-3">
+                  <input
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded focus:border-red-600 focus:outline-none"
+                    placeholder="Current password"
+                  />
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded focus:border-red-600 focus:outline-none"
+                    placeholder="New password"
+                  />
+                  {newPassword && (
+                    <ul className="text-xs text-gray-500 space-y-1">
+                      <li className={newPassword.length >= 8 ? 'text-green-600' : ''}>
+                        {newPassword.length >= 8 ? '✓' : '○'} At least 8 characters
+                      </li>
+                      <li className={/[A-Z]/.test(newPassword) ? 'text-green-600' : ''}>
+                        {/[A-Z]/.test(newPassword) ? '✓' : '○'} Uppercase letter (A-Z)
+                      </li>
+                      <li className={/[a-z]/.test(newPassword) ? 'text-green-600' : ''}>
+                        {/[a-z]/.test(newPassword) ? '✓' : '○'} Lowercase letter (a-z)
+                      </li>
+                      <li className={/[0-9]/.test(newPassword) ? 'text-green-600' : ''}>
+                        {/[0-9]/.test(newPassword) ? '✓' : '○'} Number (0-9)
+                      </li>
+                      <li className={/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword) ? 'text-green-600' : ''}>
+                        {/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword) ? '✓' : '○'} Special character
+                      </li>
+                    </ul>
+                  )}
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded focus:border-red-600 focus:outline-none"
+                    placeholder="Confirm new password"
+                  />
+                  {confirmPassword && newPassword !== confirmPassword && (
+                    <p className="text-red-500 text-sm">Passwords do not match</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="submit"
+                  disabled={profileLoading}
+                  className="bg-black text-white px-6 py-3 rounded font-bold hover:bg-gray-800 transition-colors disabled:bg-gray-400"
+                >
+                  {profileLoading ? 'Saving...' : 'Save Changes'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancelEditProfile}
+                  className="bg-gray-300 text-black px-6 py-3 rounded font-bold hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          )}
         </div>
 
         {/* 2FA Section - Available to ALL users */}
@@ -498,6 +726,53 @@ export default function SettingsPage() {
             </div>
           </div>
         )}
+
+        {/* DATA SHARING CONSENT SECTION */}
+        <div className="bg-white border-2 border-red-600 rounded-lg p-6 mb-6">
+          <h2 className="text-2xl font-bold mb-4">Data Sharing & Privacy</h2>
+          <div className="space-y-4">
+            <p className="text-gray-700">
+              We collect analytics data to help improve the platform and provide insights into your performance.
+              This includes activity metrics, lead statistics, and usage patterns. By opting in to sharing your
+              data we can collect more accurate information on lead vendors enabling us to identify the leads
+              with the best bang for the buck. We can also build real time leader boards and other fun games
+              we can try later on to make work more fun.
+            </p>
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold text-lg">Share Analytics Data</h3>
+                  <p className="text-sm text-gray-600">
+                    Allow your activity data to be included in platform-wide analytics and insights.
+                  </p>
+                </div>
+                <button
+                  onClick={handleConsentToggle}
+                  disabled={consentLoading}
+                  className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 ${
+                    dataSharingConsent ? 'bg-green-500' : 'bg-gray-300'
+                  } ${consentLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <span
+                    className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-transform ${
+                      dataSharingConsent ? 'translate-x-7' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+              <div className="mt-3 pt-3 border-t border-gray-200">
+                <p className={`text-sm font-medium ${dataSharingConsent ? 'text-green-600' : 'text-gray-500'}`}>
+                  {dataSharingConsent
+                    ? '✓ You are currently sharing your analytics data'
+                    : '○ You are not sharing your analytics data'}
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500">
+              You can change this setting at any time. Your personal information is never shared or sold to third parties.
+            </p>
+          </div>
+        </div>
 
         {/* MY TEAM SECTION - For Agents and Admins */}
         {((session?.user as any)?.role === 'agent' || (session?.user as any)?.role === 'admin') && (

@@ -114,6 +114,13 @@ function initializeDatabase() {
     // Column already exists, ignore error
   }
 
+  // Data sharing consent for analytics (default 0 = not consented, requires opt-in)
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN data_sharing_consent INTEGER DEFAULT 0;`);
+  } catch (error) {
+    // Column already exists, ignore error
+  }
+
   // Create related tables
   db.exec(`
     CREATE TABLE IF NOT EXISTS lead_notes (

@@ -14,37 +14,18 @@ export async function GET(request: NextRequest) {
     const userRole = (session.user as any).role;
     const db = getDatabase();
 
-    let setters;
-
-    if (userRole === 'admin') {
-      // Admins can see all setters
-      setters = db.prepare(`
-        SELECT
-          u.id,
-          u.name,
-          u.email,
-          u.role,
-          u.created_at,
-          agent.name as agent_name
-        FROM users u
-        LEFT JOIN users agent ON u.agent_id = agent.id
-        WHERE u.role = 'setter'
-        ORDER BY u.created_at DESC
-      `).all();
-    } else {
-      // Agents see only their setters
-      setters = db.prepare(`
-        SELECT
-          id,
-          name,
-          email,
-          role,
-          created_at
-        FROM users
-        WHERE role = 'setter' AND agent_id = ?
-        ORDER BY created_at DESC
-      `).all(userId);
-    }
+    // Both admins and agents see only THEIR OWN setters (where agent_id = current user's ID)
+    const setters = db.prepare(`
+      SELECT
+        id,
+        name,
+        email,
+        role,
+        created_at
+      FROM users
+      WHERE role = 'setter' AND agent_id = ?
+      ORDER BY created_at DESC
+    `).all(userId);
 
     return NextResponse.json(setters);
 

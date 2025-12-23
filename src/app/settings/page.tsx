@@ -48,6 +48,13 @@ export default function SettingsPage() {
   const [passwordInput, setPasswordInput] = useState('');
   const [success, setSuccess] = useState('');
 
+  // Team management state (for agents and admins)
+  const [setters, setSetters] = useState<any[]>([]);
+  const [showSetterForm, setShowSetterForm] = useState(false);
+  const [setterName, setSetterName] = useState('');
+  const [setterEmail, setSetterEmail] = useState('');
+  const [newSetterPassword, setNewSetterPassword] = useState('');
+
   // Redirect if not authenticated
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -67,6 +74,14 @@ export default function SettingsPage() {
     if ((session?.user as any)?.role === 'admin') {
       fetchUsers();
       fetchVendors();
+    }
+  }, [session]);
+
+  // Fetch setters (agents and admins)
+  useEffect(() => {
+    const userRole = (session?.user as any)?.role;
+    if (userRole === 'agent' || userRole === 'admin') {
+      fetchSetters();
     }
   }, [session]);
 
@@ -156,6 +171,60 @@ export default function SettingsPage() {
       }
     } catch (error) {
       alert('Failed to delete vendor');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Team Management Functions (for agents and admins)
+  const fetchSetters = async () => {
+    try {
+      const response = await fetch('/api/users/my-setters');
+      if (response.ok) {
+        const data = await response.json();
+        setSetters(data);
+      }
+    } catch (error) {
+      console.error('Error fetching setters:', error);
+    }
+  };
+
+  const handleAddSetter = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!setterName.trim() || !setterEmail.trim()) {
+      setError('Name and email are required');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+    setNewSetterPassword('');
+
+    try {
+      const response = await fetch('/api/users/create-setter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: setterName.trim(),
+          email: setterEmail.trim(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSetterName('');
+        setSetterEmail('');
+        setShowSetterForm(false);
+        setNewSetterPassword(data.tempPassword);
+        setSuccess(`Setter created successfully! Temporary password: ${data.tempPassword}`);
+        fetchSetters();
+      } else {
+        setError(data.error || 'Failed to create setter');
+      }
+    } catch (error) {
+      setError('Failed to create setter');
     } finally {
       setLoading(false);
     }
@@ -653,6 +722,146 @@ Type "RESET" to confirm:`;
               </button>
             </div>
           </div>
+        )}
+
+        {/* MY TEAM SECTION - For Agents and Admins */}
+        {((session?.user as any)?.role === 'agent' || (session?.user as any)?.role === 'admin') && (
+          <>
+            <div className="border-t-4 border-gray-300 my-8"></div>
+            <h2 className="text-3xl font-black mb-6">👥 My Team</h2>
+
+            <div className="mb-6">
+              <button
+                onClick={() => setShowSetterForm(!showSetterForm)}
+                className="bg-black text-white px-6 py-3 rounded font-bold hover:bg-gray-800 transition-colors"
+              >
+                {showSetterForm ? 'Cancel' : '+ Add Setter / Assistant'}
+              </button>
+            </div>
+
+            {showSetterForm && (
+              <div className="bg-white border-2 border-red-600 rounded-lg p-6 mb-6">
+                <h3 className="text-xl font-bold mb-4">Add New Setter / Assistant</h3>
+                <form onSubmit={handleAddSetter} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Name</label>
+                    <input
+                      type="text"
+                      value={setterName}
+                      onChange={(e) => setSetterName(e.target.value)}
+                      className="w-full p-3 border border-gray-300 rounded focus:border-red-600 focus:outline-none"
+                      placeholder="John Doe"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Email</label>
+                    <input
+                      type="email"
+                      value={setterEmail}
+                      onChange={(e) => setSetterEmail(e.target.value)}
+                      className="w-full p-3 border border-gray-300 rounded focus:border-red-600 focus:outline-none"
+                      placeholder="john@example.com"
+                      required
+                    />
+                  </div>
+                  <div className="bg-yellow-50 border border-yellow-300 p-3 rounded">
+                    <p className="text-sm text-yellow-800">
+                      A temporary password will be generated automatically. You'll need to share it with the setter so they can log in and change it.
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="bg-black text-white px-6 py-3 rounded font-bold hover:bg-gray-800 transition-colors disabled:bg-gray-400"
+                    >
+                      {loading ? 'Creating...' : 'Create Setter'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowSetterForm(false)}
+                      className="bg-gray-300 text-black px-6 py-3 rounded font-bold hover:bg-gray-400 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* Display new setter password if just created */}
+            {newSetterPassword && (
+              <div className="bg-green-50 border-2 border-green-600 rounded-lg p-6 mb-6">
+                <h3 className="text-xl font-bold mb-2 text-green-800">Setter Created Successfully!</h3>
+                <p className="text-sm text-green-700 mb-4">
+                  Share this temporary password with your new setter. They will need to change it on first login.
+                </p>
+                <div className="bg-white p-4 rounded border-2 border-green-600">
+                  <div className="flex items-center justify-between">
+                    <code className="text-lg font-mono font-bold">{newSetterPassword}</code>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(newSetterPassword);
+                        alert('Password copied to clipboard!');
+                      }}
+                      className="bg-green-600 text-white px-4 py-2 rounded font-bold hover:bg-green-700 transition-colors ml-4"
+                    >
+                      📋 Copy
+                    </button>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setNewSetterPassword('')}
+                  className="mt-4 bg-gray-300 text-black px-4 py-2 rounded font-bold hover:bg-gray-400 transition-colors"
+                >
+                  I've Saved It
+                </button>
+              </div>
+            )}
+
+            {/* List of Setters */}
+            <div className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gray-100 border-b-2 border-gray-300">
+                  <tr>
+                    <th className="text-left p-4 font-bold">Name</th>
+                    <th className="text-left p-4 font-bold">Email</th>
+                    <th className="text-left p-4 font-bold">Role</th>
+                    <th className="text-left p-4 font-bold">Created</th>
+                    {isAdmin && <th className="text-left p-4 font-bold">Agent</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {setters.length === 0 ? (
+                    <tr>
+                      <td colSpan={isAdmin ? 5 : 4} className="text-center p-8 text-gray-500">
+                        No setters yet. Click "Add Setter / Assistant" to create one.
+                      </td>
+                    </tr>
+                  ) : (
+                    setters.map((setter) => (
+                      <tr key={setter.id} className="border-b border-gray-200 hover:bg-gray-50">
+                        <td className="p-4">{setter.name}</td>
+                        <td className="p-4 text-gray-600">{setter.email}</td>
+                        <td className="p-4">
+                          <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">
+                            {setter.role}
+                          </span>
+                        </td>
+                        <td className="p-4 text-gray-600">
+                          {new Date(setter.created_at).toLocaleDateString()}
+                        </td>
+                        {isAdmin && (
+                          <td className="p-4 text-gray-600">{setter.agent_name || 'N/A'}</td>
+                        )}
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
 
         {/* ADMIN-ONLY SECTION - Lead Vendor Management */}

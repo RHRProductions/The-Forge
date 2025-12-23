@@ -167,6 +167,18 @@ export default function NavigationMenu({ currentPage }: NavigationMenuProps) {
                 ⚙️ Settings
               </button>
             )}
+            {/* Admin Settings - Admin only */}
+            {session && (session.user as any).role === 'admin' && currentPage !== 'admin-settings' && (
+              <button
+                onClick={() => {
+                  router.push('/admin/settings');
+                  setShowNavMenu(false);
+                }}
+                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-black font-semibold transition-colors flex items-center gap-2"
+              >
+                🔧 Admin Settings
+              </button>
+            )}
             <div className="border-t border-gray-200 my-2"></div>
             <button
               onClick={() => {

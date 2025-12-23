@@ -131,9 +131,13 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Get aggregate platform insights (admin only)
+    // Get aggregate platform insights (for agents and admins)
     let aggregateInsights = null;
-    if (userRole === 'admin') {
+    if (userRole === 'admin' || userRole === 'agent') {
+      // For agents, scope data to their own leads/activities
+      const activityUserFilter = userRole === 'agent' ? `AND la.created_by_user_id = ${userId}` : '';
+      const leadOwnerFilter = userRole === 'agent' ? `AND l.owner_id = ${userId}` : '';
+
       // Best performing times of day (hour of day analysis)
       // Convert UTC timestamps to Mountain Time (UTC-6 for MDT, UTC-7 for MST)
       // Using -6 hours for Mountain Daylight Time (March-November)
@@ -144,7 +148,7 @@ export async function GET(request: NextRequest) {
           COUNT(CASE WHEN la.activity_type = 'call' AND la.outcome IN ('answered', 'scheduled') THEN 1 END) as contacts,
           COUNT(CASE WHEN la.outcome = 'scheduled' THEN 1 END) as appointments
         FROM lead_activities la
-        WHERE 1=1 ${dateFilter.replace('la.created_at', 'la.created_at')}
+        WHERE 1=1 ${dateFilter.replace('la.created_at', 'la.created_at')} ${activityUserFilter}
         GROUP BY hour
         ORDER BY hour
       `).all() as any[];
@@ -172,7 +176,7 @@ export async function GET(request: NextRequest) {
         FROM leads l
         LEFT JOIN lead_activities la ON l.id = la.lead_id ${period !== 'all' ? dateFilter : ''}
         LEFT JOIN lead_policies lp ON l.id = lp.lead_id
-        WHERE l.source IS NOT NULL AND l.source != ''
+        WHERE l.source IS NOT NULL AND l.source != '' ${leadOwnerFilter}
         GROUP BY l.source
         ORDER BY totalLeads DESC
       `).all() as any[];
@@ -211,7 +215,7 @@ export async function GET(request: NextRequest) {
         FROM leads l
         LEFT JOIN lead_activities la ON l.id = la.lead_id ${period !== 'all' ? dateFilter : ''}
         LEFT JOIN lead_policies lp ON l.id = lp.lead_id
-        WHERE l.city IS NOT NULL AND l.city != ''
+        WHERE l.city IS NOT NULL AND l.city != '' ${leadOwnerFilter}
         GROUP BY 1, 2
         HAVING totalLeads >= 3
         ORDER BY sales DESC, contacted DESC
@@ -227,7 +231,7 @@ export async function GET(request: NextRequest) {
           COUNT(DISTINCT CASE WHEN la.outcome = 'scheduled' THEN l.id END) as appointments
         FROM leads l
         LEFT JOIN lead_activities la ON l.id = la.lead_id ${period !== 'all' ? dateFilter : ''}
-        WHERE l.contact_attempt_count > 0
+        WHERE l.contact_attempt_count > 0 ${leadOwnerFilter}
         GROUP BY attempts
         ORDER BY attempts
         LIMIT 15
@@ -241,7 +245,7 @@ export async function GET(request: NextRequest) {
           COUNT(CASE WHEN la.activity_type = 'call' AND la.outcome IN ('answered', 'scheduled') THEN 1 END) as contacts,
           COUNT(CASE WHEN la.outcome = 'scheduled' THEN 1 END) as appointments
         FROM lead_activities la
-        WHERE 1=1 ${dateFilter.replace('la.created_at', 'la.created_at')}
+        WHERE 1=1 ${dateFilter.replace('la.created_at', 'la.created_at')} ${activityUserFilter}
         GROUP BY dayOfWeek
         ORDER BY dayOfWeek
       `).all() as any[];
@@ -256,7 +260,7 @@ export async function GET(request: NextRequest) {
         FROM leads l
         LEFT JOIN lead_activities la ON l.id = la.lead_id ${period !== 'all' ? dateFilter : ''}
         LEFT JOIN lead_policies lp ON l.id = lp.lead_id
-        WHERE l.lead_temperature IS NOT NULL
+        WHERE l.lead_temperature IS NOT NULL ${leadOwnerFilter}
         GROUP BY l.lead_temperature
       `).all() as any[];
 
@@ -280,7 +284,7 @@ export async function GET(request: NextRequest) {
         FROM leads l
         LEFT JOIN lead_activities la ON l.id = la.lead_id ${period !== 'all' ? dateFilter : ''}
         LEFT JOIN lead_policies lp ON l.id = lp.lead_id
-        WHERE l.age IS NOT NULL
+        WHERE l.age IS NOT NULL ${leadOwnerFilter}
         GROUP BY ageGroup
         ORDER BY MIN(l.age)
       `).all() as any[];
@@ -294,7 +298,7 @@ export async function GET(request: NextRequest) {
           COUNT(CASE WHEN la.activity_type = 'call' AND la.outcome IN ('answered', 'scheduled') THEN 1 END) as contacts,
           COUNT(CASE WHEN la.outcome = 'scheduled' THEN 1 END) as appointments
         FROM lead_activities la
-        WHERE la.activity_type = 'call' ${dateFilter.replace('la.created_at', 'la.created_at')}
+        WHERE la.activity_type = 'call' ${dateFilter.replace('la.created_at', 'la.created_at')} ${activityUserFilter}
         GROUP BY dayOfWeek, hour
         HAVING dials >= 5
         ORDER BY (CAST(contacts AS REAL) / dials) DESC
@@ -314,7 +318,7 @@ export async function GET(request: NextRequest) {
           COUNT(*) as count,
           COUNT(DISTINCT la.lead_id) as uniqueLeads
         FROM lead_activities la
-        WHERE la.activity_type = 'call' ${dateFilter.replace('la.created_at', 'la.created_at')}
+        WHERE la.activity_type = 'call' ${dateFilter.replace('la.created_at', 'la.created_at')} ${activityUserFilter}
         GROUP BY outcomeCategory
         ORDER BY count DESC
       `).all() as any[];

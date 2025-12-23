@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs';
 import { validatePassword } from '../../../../../lib/security/password-validator';
 import { sanitizeUser } from '../../../../../lib/security/input-sanitizer';
 
-// DELETE /api/users/[id] - Delete a user (admin only)
+// DELETE /api/users/[id] - Delete a user (admin or agent deleting their own setter)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -17,8 +17,11 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Only admins can delete users
-    if ((session.user as any).role !== 'admin') {
+    const currentUserRole = (session.user as any).role;
+    const currentUserId = parseInt((session.user as any).id);
+
+    // Only admins and agents can delete users
+    if (currentUserRole !== 'admin' && currentUserRole !== 'agent') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -26,16 +29,28 @@ export async function DELETE(
     const userId = parseInt(id);
 
     // Prevent deleting yourself
-    if (userId === parseInt((session.user as any).id)) {
+    if (userId === currentUserId) {
       return NextResponse.json({ error: 'Cannot delete your own account' }, { status: 400 });
     }
 
     const db = getDatabase();
 
-    // Check if user exists
-    const user = db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
+    // Check if user exists and get their details
+    const user = db.prepare('SELECT id, role, agent_id FROM users WHERE id = ?').get(userId) as { id: number; role: string; agent_id: number | null } | undefined;
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // If current user is an agent (not admin), they can only delete their own setters
+    if (currentUserRole === 'agent') {
+      // Can only delete setters
+      if (user.role !== 'setter') {
+        return NextResponse.json({ error: 'Agents can only delete setters' }, { status: 403 });
+      }
+      // Can only delete setters assigned to them
+      if (user.agent_id !== currentUserId) {
+        return NextResponse.json({ error: 'You can only delete your own team members' }, { status: 403 });
+      }
     }
 
     // Delete user

@@ -9,6 +9,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.1] - 2025-12-22
+
+### Added
+
+**Agent-Specific Analytics**
+- Agents now see analytics data scoped to their own leads and activities
+- Lead Source Performance, Lead Temperature Conversion, Call Outcome Breakdown, and Daily Activity sections now display agent-specific data
+- Admins continue to see platform-wide aggregate data
+
+**Team Management Enhancements**
+- Agents can now delete/remove setters from their team
+- Added "Remove" button with confirmation modal in Settings > My Team
+- Agents can only delete setters assigned to them (security enforced)
+
+**Custom Setter Passwords**
+- Agents can now assign a password of their choosing when creating a setter
+- Replaced auto-generated temporary password with custom password input
+- Live password requirements validation with visual checklist:
+  - At least 8 characters
+  - Uppercase letter (A-Z)
+  - Lowercase letter (a-z)
+  - Number (0-9)
+  - Special character (!@#$%^&* etc.)
+
+### Changed
+
+**Navigation & Settings Consolidation**
+- Merged "Profile & Security" into the Settings page
+- Added "Account Information" section to Settings (shows name, email, role)
+- Removed "Profile & Security" from navigation menu
+- Profile page now redirects to Settings
+
+### Technical Details
+
+**Modified Files:**
+- `src/app/api/analytics/route.ts` - Added user filtering for agent-scoped analytics
+- `src/app/api/users/[id]/route.ts` - Extended DELETE to allow agents to remove their setters
+- `src/app/api/users/create-setter/route.ts` - Accept custom password with validation
+- `src/app/settings/page.tsx` - Added Account Info, delete setter UI, password input with requirements
+- `src/app/profile/page.tsx` - Now redirects to /settings
+- `src/components/NavigationMenu.tsx` - Removed Profile & Security menu item
+
+---
+
 ## [0.5.0] - 2025-12-21
 
 ### Added - Two-Factor Authentication (2FA)

@@ -3,6 +3,7 @@ import { auth } from '../../../../../auth';
 import { getDatabase } from '../../../../../lib/database/connection';
 import bcrypt from 'bcryptjs';
 import { logAuditFromRequest } from '../../../../../lib/security/audit-logger';
+import { validatePassword } from '../../../../../lib/security/password-validator';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,16 +15,25 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, email } = body;
+    const { name, email, password } = body;
 
-    if (!name || !email) {
-      return NextResponse.json({ error: 'Name and email are required' }, { status: 400 });
+    if (!name || !email || !password) {
+      return NextResponse.json({ error: 'Name, email, and password are required' }, { status: 400 });
     }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
+    }
+
+    // Validate password strength
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      return NextResponse.json({
+        error: 'Password does not meet requirements',
+        details: passwordValidation.errors
+      }, { status: 400 });
     }
 
     const db = getDatabase();
@@ -35,9 +45,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email already exists' }, { status: 400 });
     }
 
-    // Generate a random temporary password (user will need to change it)
-    const tempPassword = Math.random().toString(36).slice(-12) + 'A1!'; // Ensures complexity
-    const hashedPassword = await bcrypt.hash(tempPassword, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create the setter user
     const result = db.prepare(`
@@ -62,7 +70,6 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Setter created successfully',
       userId: result.lastInsertRowid,
-      tempPassword: tempPassword, // Return this so agent can share with setter
       user: {
         id: result.lastInsertRowid,
         name,

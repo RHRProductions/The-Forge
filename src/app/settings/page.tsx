@@ -27,7 +27,9 @@ export default function SettingsPage() {
   const [showSetterForm, setShowSetterForm] = useState(false);
   const [setterName, setSetterName] = useState('');
   const [setterEmail, setSetterEmail] = useState('');
-  const [newSetterPassword, setNewSetterPassword] = useState('');
+  const [setterPassword, setSetterPassword] = useState('');
+  const [setterToDelete, setSetterToDelete] = useState<any>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -79,15 +81,20 @@ export default function SettingsPage() {
 
   const handleAddSetter = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!setterName.trim() || !setterEmail.trim()) {
-      setError('Name and email are required');
+    if (!setterName.trim() || !setterEmail.trim() || !setterPassword) {
+      setError('Name, email, and password are required');
+      return;
+    }
+
+    // Basic client-side validation (full validation on server)
+    if (setterPassword.length < 8) {
+      setError('Password must be at least 8 characters');
       return;
     }
 
     setLoading(true);
     setError('');
     setSuccess('');
-    setNewSetterPassword('');
 
     try {
       const response = await fetch('/api/users/create-setter', {
@@ -96,6 +103,7 @@ export default function SettingsPage() {
         body: JSON.stringify({
           name: setterName.trim(),
           email: setterEmail.trim(),
+          password: setterPassword,
         }),
       });
 
@@ -104,17 +112,48 @@ export default function SettingsPage() {
       if (response.ok) {
         setSetterName('');
         setSetterEmail('');
+        setSetterPassword('');
         setShowSetterForm(false);
-        setNewSetterPassword(data.tempPassword);
-        setSuccess(`Setter created successfully! Temporary password: ${data.tempPassword}`);
+        setSuccess(`${data.user.name} has been added to your team!`);
         fetchSetters();
       } else {
-        setError(data.error || 'Failed to create setter');
+        if (data.details && Array.isArray(data.details)) {
+          setError(data.details.join(', '));
+        } else {
+          setError(data.error || 'Failed to create setter');
+        }
       }
     } catch (error) {
       setError('Failed to create setter');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteSetter = async () => {
+    if (!setterToDelete) return;
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(`/api/users/${setterToDelete.id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setSuccess(`${setterToDelete.name} has been removed from your team.`);
+        fetchSetters();
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to delete setter');
+      }
+    } catch (error) {
+      setError('Failed to delete setter');
+    } finally {
+      setLoading(false);
+      setShowDeleteConfirm(false);
+      setSetterToDelete(null);
     }
   };
 
@@ -267,6 +306,16 @@ export default function SettingsPage() {
             {success}
           </div>
         )}
+
+        {/* Account Information */}
+        <div className="bg-white border-2 border-red-600 rounded-lg p-6 mb-6">
+          <h2 className="text-2xl font-bold mb-4">Account Information</h2>
+          <div className="space-y-2">
+            <p><span className="font-semibold">Name:</span> {(session?.user as any)?.name}</p>
+            <p><span className="font-semibold">Email:</span> {(session?.user as any)?.email}</p>
+            <p><span className="font-semibold">Role:</span> {((session?.user as any)?.role || '').toUpperCase()}</p>
+          </div>
+        </div>
 
         {/* 2FA Section - Available to ALL users */}
         <div className="bg-white border-2 border-red-600 rounded-lg p-6 mb-6">
@@ -491,10 +540,34 @@ export default function SettingsPage() {
                       required
                     />
                   </div>
-                  <div className="bg-yellow-50 border border-yellow-300 p-3 rounded">
-                    <p className="text-sm text-yellow-800">
-                      A temporary password will be generated automatically. You'll need to share it with the setter so they can log in and change it.
-                    </p>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Password</label>
+                    <input
+                      type="password"
+                      value={setterPassword}
+                      onChange={(e) => setSetterPassword(e.target.value)}
+                      className="w-full p-3 border border-gray-300 rounded focus:border-red-600 focus:outline-none"
+                      placeholder="Enter password"
+                      minLength={8}
+                      required
+                    />
+                    <ul className="mt-2 text-xs text-gray-500 space-y-1">
+                      <li className={setterPassword.length >= 8 ? 'text-green-600' : ''}>
+                        {setterPassword.length >= 8 ? '✓' : '○'} At least 8 characters
+                      </li>
+                      <li className={/[A-Z]/.test(setterPassword) ? 'text-green-600' : ''}>
+                        {/[A-Z]/.test(setterPassword) ? '✓' : '○'} Uppercase letter (A-Z)
+                      </li>
+                      <li className={/[a-z]/.test(setterPassword) ? 'text-green-600' : ''}>
+                        {/[a-z]/.test(setterPassword) ? '✓' : '○'} Lowercase letter (a-z)
+                      </li>
+                      <li className={/[0-9]/.test(setterPassword) ? 'text-green-600' : ''}>
+                        {/[0-9]/.test(setterPassword) ? '✓' : '○'} Number (0-9)
+                      </li>
+                      <li className={/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(setterPassword) ? 'text-green-600' : ''}>
+                        {/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(setterPassword) ? '✓' : '○'} Special character (!@#$%^&* etc.)
+                      </li>
+                    </ul>
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -516,36 +589,6 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {/* Display new setter password if just created */}
-            {newSetterPassword && (
-              <div className="bg-green-50 border-2 border-green-600 rounded-lg p-6 mb-6">
-                <h3 className="text-xl font-bold mb-2 text-green-800">Setter Created Successfully!</h3>
-                <p className="text-sm text-green-700 mb-4">
-                  Share this temporary password with your new setter. They will need to change it on first login.
-                </p>
-                <div className="bg-white p-4 rounded border-2 border-green-600">
-                  <div className="flex items-center justify-between">
-                    <code className="text-lg font-mono font-bold">{newSetterPassword}</code>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(newSetterPassword);
-                        alert('Password copied to clipboard!');
-                      }}
-                      className="bg-green-600 text-white px-4 py-2 rounded font-bold hover:bg-green-700 transition-colors ml-4"
-                    >
-                      📋 Copy
-                    </button>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setNewSetterPassword('')}
-                  className="mt-4 bg-gray-300 text-black px-4 py-2 rounded font-bold hover:bg-gray-400 transition-colors"
-                >
-                  I've Saved It
-                </button>
-              </div>
-            )}
-
             {/* List of Setters */}
             <div className="bg-white border-2 border-gray-300 rounded-lg overflow-hidden">
               <table className="w-full">
@@ -556,12 +599,13 @@ export default function SettingsPage() {
                     <th className="text-left p-4 font-bold">Role</th>
                     <th className="text-left p-4 font-bold">Created</th>
                     {isAdmin && <th className="text-left p-4 font-bold">Agent</th>}
+                    <th className="text-left p-4 font-bold">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {setters.length === 0 ? (
                     <tr>
-                      <td colSpan={isAdmin ? 5 : 4} className="text-center p-8 text-gray-500">
+                      <td colSpan={isAdmin ? 6 : 5} className="text-center p-8 text-gray-500">
                         No setters yet. Click "Add Setter / Assistant" to create one.
                       </td>
                     </tr>
@@ -581,6 +625,17 @@ export default function SettingsPage() {
                         {isAdmin && (
                           <td className="p-4 text-gray-600">{setter.agent_name || 'N/A'}</td>
                         )}
+                        <td className="p-4">
+                          <button
+                            onClick={() => {
+                              setSetterToDelete(setter);
+                              setShowDeleteConfirm(true);
+                            }}
+                            className="bg-red-500 text-white px-3 py-1 rounded font-bold hover:bg-red-600 transition-colors text-sm"
+                          >
+                            Remove
+                          </button>
+                        </td>
                       </tr>
                     ))
                   )}
@@ -588,6 +643,38 @@ export default function SettingsPage() {
               </table>
             </div>
           </>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && setterToDelete && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 border-4 border-red-600">
+              <h3 className="text-xl font-bold mb-4">Remove Team Member?</h3>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to remove <strong>{setterToDelete.name}</strong> from your team?
+                This action cannot be undone and they will no longer be able to access the system.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirm(false);
+                    setSetterToDelete(null);
+                  }}
+                  className="bg-gray-300 text-black px-4 py-2 rounded font-bold hover:bg-gray-400 transition-colors"
+                  disabled={loading}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteSetter}
+                  className="bg-red-500 text-white px-4 py-2 rounded font-bold hover:bg-red-600 transition-colors"
+                  disabled={loading}
+                >
+                  {loading ? 'Removing...' : 'Remove'}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

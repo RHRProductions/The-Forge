@@ -46,6 +46,7 @@ interface AnalyticsData {
     dialingPatterns: { attempts: number; leads: number; contacted: number; appointments: number }[];
     dayOfWeek: { dayOfWeek: number; dials: number; contacts: number; appointments: number }[];
     temperaturePerformance: { lead_temperature: string; totalLeads: number; appointments: number; sales: number }[];
+    outcomeAnalysis: { outcomeCategory: string; count: number; uniqueLeads: number }[];
   };
 }
 
@@ -425,15 +426,8 @@ export default function AnalyticsPage() {
           </div>
         )}
 
-        {/* Platform Insights (Admin Only) */}
-        {userRole === 'admin' && analytics.aggregateInsights && (
-          <>
-            <div className="mb-8">
-              <h2 className="text-3xl font-bold mb-6 text-red-600">📈 Platform Insights</h2>
-            </div>
-
-            {/* Lead Source Performance */}
-            {analytics.aggregateInsights.sourcePerformance.length > 0 && (
+        {/* Lead Source Performance - Available to all users */}
+        {analytics.aggregateInsights && analytics.aggregateInsights.sourcePerformance.length > 0 && (
               <div className="mb-8">
                 <div
                   onClick={() => setShowSourcePerformance(!showSourcePerformance)}
@@ -507,7 +501,8 @@ export default function AnalyticsPage() {
               </div>
             )}
 
-            {/* Lead Temperature Performance */}
+        {/* Lead Temperature Performance - Available to all users */}
+        {analytics.aggregateInsights && analytics.aggregateInsights.temperaturePerformance && analytics.aggregateInsights.temperaturePerformance.length > 0 && (
             <div className="mb-8">
               <div
                 onClick={() => setShowTemperature(!showTemperature)}
@@ -518,7 +513,7 @@ export default function AnalyticsPage() {
                     {showTemperature ? '▼' : '▶'}
                   </span>
                 </div>
-                {showTemperature && analytics.aggregateInsights.temperaturePerformance.length > 0 && (
+                {showTemperature && (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {analytics.aggregateInsights.temperaturePerformance.map((temp, index) => {
                     const apptRate = temp.totalLeads > 0 ? (temp.appointments / temp.totalLeads) * 100 : 0;
@@ -545,8 +540,10 @@ export default function AnalyticsPage() {
                   </div>
                 )}
             </div>
+        )}
 
-            {/* Outcome Analysis */}
+        {/* Call Outcome Breakdown - Available to all users */}
+        {analytics.aggregateInsights && analytics.aggregateInsights.outcomeAnalysis && analytics.aggregateInsights.outcomeAnalysis.length > 0 && (
             <div className="mb-8">
               <div
                 onClick={() => setShowOutcomes(!showOutcomes)}
@@ -557,7 +554,7 @@ export default function AnalyticsPage() {
                   {showOutcomes ? '▼' : '▶'}
                 </span>
               </div>
-              {showOutcomes && analytics.aggregateInsights.outcomeAnalysis && analytics.aggregateInsights.outcomeAnalysis.length > 0 && (
+              {showOutcomes && (
                   <div className="bg-white border-2 border-gray-300 rounded-lg p-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {analytics.aggregateInsights.outcomeAnalysis.map((outcome:any, index:number) => {
@@ -596,7 +593,6 @@ export default function AnalyticsPage() {
                   </div>
                 )}
             </div>
-          </>
         )}
 
         {/* Daily Activity Chart */}

@@ -14,9 +14,12 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Only admins can bulk delete
-    if ((session.user as any).role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
+    const userRole = (session.user as any).role;
+    const userId = (session.user as any).id;
+
+    // Only admins and agents can bulk delete (not setters)
+    if (userRole !== 'admin' && userRole !== 'agent') {
+      return NextResponse.json({ error: 'Forbidden - Agent or Admin access required' }, { status: 403 });
     }
 
     // Apply rate limiting: 5 bulk delete operations per hour
@@ -49,26 +52,97 @@ export async function DELETE(request: NextRequest) {
         // Delete specific leads
         leadIds = body.leadIds;
         const placeholders = body.leadIds.map(() => '?').join(',');
-        const stmt = db.prepare(`DELETE FROM leads WHERE id IN (${placeholders})`);
-        const result = stmt.run(...body.leadIds);
-        deletedCount = result.changes;
+
+        if (userRole === 'admin') {
+          // Admins can delete any leads
+          const stmt = db.prepare(`DELETE FROM leads WHERE id IN (${placeholders})`);
+          const result = stmt.run(...body.leadIds);
+          deletedCount = result.changes;
+        } else {
+          // Agents can only delete their own leads or their setters' leads
+          const stmt = db.prepare(`
+            DELETE FROM leads
+            WHERE id IN (${placeholders})
+            AND id IN (
+              SELECT l.id FROM leads l
+              LEFT JOIN users u ON l.owner_id = u.id
+              WHERE l.owner_id = ? OR u.agent_id = ?
+            )
+          `);
+          const result = stmt.run(...body.leadIds, userId, userId);
+          deletedCount = result.changes;
+        }
       } else {
-        // Delete all leads if no specific IDs provided
+        // Delete all leads (filtered by user role)
+        if (userRole === 'admin') {
+          // Admins can delete all leads in the system
+          const countResult = db.prepare('SELECT COUNT(*) as count FROM leads').get() as { count: number };
+          deletedCount = countResult.count;
+          // Get all lead IDs before deleting
+          const allLeadIds = db.prepare('SELECT id FROM leads').all() as { id: number }[];
+          leadIds = allLeadIds.map(l => l.id);
+          db.prepare('DELETE FROM leads').run();
+        } else {
+          // Agents can only delete their own leads
+          const countResult = db.prepare(`
+            SELECT COUNT(DISTINCT l.id) as count FROM leads l
+            LEFT JOIN users u ON l.owner_id = u.id
+            WHERE l.owner_id = ? OR u.agent_id = ?
+          `).get(userId, userId) as { count: number };
+          deletedCount = countResult.count;
+
+          // Get lead IDs before deleting
+          const allLeadIds = db.prepare(`
+            SELECT DISTINCT l.id FROM leads l
+            LEFT JOIN users u ON l.owner_id = u.id
+            WHERE l.owner_id = ? OR u.agent_id = ?
+          `).all(userId, userId) as { id: number }[];
+          leadIds = allLeadIds.map(l => l.id);
+
+          db.prepare(`
+            DELETE FROM leads
+            WHERE id IN (
+              SELECT l.id FROM leads l
+              LEFT JOIN users u ON l.owner_id = u.id
+              WHERE l.owner_id = ? OR u.agent_id = ?
+            )
+          `).run(userId, userId);
+        }
+      }
+    } catch (jsonError) {
+      // If no body or invalid JSON, delete all leads (filtered by user role)
+      if (userRole === 'admin') {
         const countResult = db.prepare('SELECT COUNT(*) as count FROM leads').get() as { count: number };
         deletedCount = countResult.count;
         // Get all lead IDs before deleting
         const allLeadIds = db.prepare('SELECT id FROM leads').all() as { id: number }[];
         leadIds = allLeadIds.map(l => l.id);
         db.prepare('DELETE FROM leads').run();
+      } else {
+        const countResult = db.prepare(`
+          SELECT COUNT(DISTINCT l.id) as count FROM leads l
+          LEFT JOIN users u ON l.owner_id = u.id
+          WHERE l.owner_id = ? OR u.agent_id = ?
+        `).get(userId, userId) as { count: number };
+        deletedCount = countResult.count;
+
+        // Get lead IDs before deleting
+        const allLeadIds = db.prepare(`
+          SELECT DISTINCT l.id FROM leads l
+          LEFT JOIN users u ON l.owner_id = u.id
+          WHERE l.owner_id = ? OR u.agent_id = ?
+        `).all(userId, userId) as { id: number }[];
+        leadIds = allLeadIds.map(l => l.id);
+
+        db.prepare(`
+          DELETE FROM leads
+          WHERE id IN (
+            SELECT l.id FROM leads l
+            LEFT JOIN users u ON l.owner_id = u.id
+            WHERE l.owner_id = ? OR u.agent_id = ?
+          )
+        `).run(userId, userId);
       }
-    } catch (jsonError) {
-      // If no body or invalid JSON, delete all leads
-      const countResult = db.prepare('SELECT COUNT(*) as count FROM leads').get() as { count: number };
-      deletedCount = countResult.count;
-      // Get all lead IDs before deleting
-      const allLeadIds = db.prepare('SELECT id FROM leads').all() as { id: number }[];
-      leadIds = allLeadIds.map(l => l.id);
-      db.prepare('DELETE FROM leads').run();
     }
 
     // AUDIT LOG: Critical operation - bulk delete

@@ -19,15 +19,9 @@ export async function GET(request: NextRequest) {
     const userId = parseInt((session.user as any).id);
     const userRole = (session.user as any).role;
 
-    // Get all leads based on role
+    // Get all leads based on role - admins and agents see only their own leads
     let leads;
-    if (userRole === 'admin') {
-      leads = db.prepare(`
-        SELECT id, first_name, last_name, email, phone, phone_2, address, city, state, zip_code, source, created_at
-        FROM leads
-        ORDER BY created_at DESC
-      `).all();
-    } else if (userRole === 'agent') {
+    if (userRole === 'admin' || userRole === 'agent') {
       leads = db.prepare(`
         SELECT l.id, l.first_name, l.last_name, l.email, l.phone, l.phone_2, l.address, l.city, l.state, l.zip_code, l.source, l.created_at
         FROM leads l

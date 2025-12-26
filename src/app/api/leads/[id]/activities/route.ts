@@ -57,13 +57,15 @@ export async function POST(
     const currentTotalTexts = lead?.total_texts || 0;
     const currentTotalEmails = lead?.total_emails || 0;
 
-    // Each activity type counts as 1
-    const newTotalDials = activity.activity_type === 'call' ? currentTotalDials + 1 : currentTotalDials;
+    // Use provided dial_count for calls, default to 1 if not provided, 0 for non-calls
+    const dialCountToAdd = activity.activity_type === 'call'
+      ? (activity.dial_count && activity.dial_count > 0 ? activity.dial_count : 1)
+      : 0;
+
+    // Update totals - use actual dial count for calls
+    const newTotalDials = activity.activity_type === 'call' ? currentTotalDials + dialCountToAdd : currentTotalDials;
     const newTotalTexts = activity.activity_type === 'text' ? currentTotalTexts + 1 : currentTotalTexts;
     const newTotalEmails = activity.activity_type === 'email' ? currentTotalEmails + 1 : currentTotalEmails;
-
-    // For dial_count, always use 1 for calls, 0 for everything else
-    const dialCountToAdd = activity.activity_type === 'call' ? 1 : 0;
 
     // Insert the activity
     const result = db.prepare(

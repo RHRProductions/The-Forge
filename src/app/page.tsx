@@ -2532,10 +2532,11 @@ function LeadDetailForm({
 // ActivitiesSection Component
 function ActivitiesSection({ leadId, lead, onLeadUpdate, session }: { leadId: number; lead: Lead; onLeadUpdate: (lead: Lead) => void; session: any }) {
   const [activities, setActivities] = useState<LeadActivity[]>([]);
-  const [showActivityForm, setShowActivityForm] = useState(false);
+  const [showActivityForm, setShowActivityForm] = useState(true);
   const [activityType, setActivityType] = useState<ActivityType>('call');
   const [activityDetail, setActivityDetail] = useState('');
   const [activityOutcome, setActivityOutcome] = useState<ActivityOutcome | ''>('no_answer');
+  const [dialCount, setDialCount] = useState(1);
   const [leadTemperature, setLeadTemperature] = useState<LeadTemperature | ''>('');
   const [nextFollowUpDate, setNextFollowUpDate] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -2613,7 +2614,8 @@ function ActivitiesSection({ leadId, lead, onLeadUpdate, session }: { leadId: nu
           activity_detail: detail,
           outcome: activityOutcome || null,
           lead_temperature_after: leadTemperature || null,
-          next_follow_up_date: nextFollowUpDate || null
+          next_follow_up_date: nextFollowUpDate || null,
+          dial_count: activityType === 'call' ? dialCount : 0
         })
       });
 
@@ -2657,6 +2659,7 @@ function ActivitiesSection({ leadId, lead, onLeadUpdate, session }: { leadId: nu
         setActivityOutcome('no_answer');
         setLeadTemperature('');
         setNextFollowUpDate('');
+        setDialCount(1);
         setAppointmentDateTime('');
         setAppointmentEndDateTime('');
         setShowActivityForm(false);
@@ -2803,6 +2806,21 @@ function ActivitiesSection({ leadId, lead, onLeadUpdate, session }: { leadId: nu
       {showActivityForm && (
         <div className="mb-4 bg-gray-50 p-3 rounded border">
 
+          {/* Dial Count - only show for calls, FIRST since it's changed most often */}
+          {activityType === 'call' && (
+            <div className="mb-3">
+              <label className="block text-xs font-medium text-gray-700 mb-1">Number of Dials</label>
+              <select
+                value={dialCount}
+                onChange={(e) => setDialCount(parseInt(e.target.value))}
+                className="w-full p-2 border border-gray-300 rounded focus:border-red-600 focus:outline-none text-sm"
+              >
+                <option value={1}>1 dial</option>
+                <option value={2}>2 dials</option>
+              </select>
+            </div>
+          )}
+
           <div className="mb-3">
             <label className="block text-xs font-medium text-gray-700 mb-1">Outcome</label>
             <select
@@ -2810,9 +2828,8 @@ function ActivitiesSection({ leadId, lead, onLeadUpdate, session }: { leadId: nu
               onChange={(e) => setActivityOutcome(e.target.value as ActivityOutcome | '')}
               className="w-full p-2 border border-gray-300 rounded focus:border-red-600 focus:outline-none text-sm"
             >
-              <option value="">Select outcome...</option>
-              <option value="answered">Answered</option>
               <option value="no_answer">No Answer</option>
+              <option value="answered">Answered</option>
               <option value="scheduled">Scheduled</option>
               <option value="disconnected">Disconnected</option>
             </select>
@@ -3030,6 +3047,7 @@ function ActivitiesSection({ leadId, lead, onLeadUpdate, session }: { leadId: nu
                 setActivityOutcome('');
                 setLeadTemperature('');
                 setNextFollowUpDate('');
+                setDialCount(1);
               }}
               className="px-3 py-2 bg-gray-200 text-gray-700 rounded text-xs hover:bg-gray-300 transition-colors"
             >

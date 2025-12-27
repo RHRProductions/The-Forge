@@ -31,6 +31,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Moved Lead Vendor filter to fill the empty slot
 - Row 2 now contains: Zip Code, Age Range, Turning 65 Within, Lead Vendor
 
+**Chat Bubble Styling**
+- Improved readability with 85% opacity backgrounds
+- Bold text for message content
+- Added text shadow for better contrast
+- Backdrop blur effect (frosted glass)
+- Subtle border around bubbles for definition
+
 ---
 
 ## [0.5.6] - 2025-12-27

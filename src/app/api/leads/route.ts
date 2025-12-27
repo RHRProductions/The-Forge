@@ -216,6 +216,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all warm/hot leads for follow-up reminders (regardless of pagination)
+    // Exclude empty strings in addition to NULL
     let followUpLeads;
     if (userRole === 'admin' || userRole === 'agent') {
       followUpLeads = db.prepare(`
@@ -224,6 +225,7 @@ export async function GET(request: NextRequest) {
         WHERE (l.owner_id = ? OR u.agent_id = ?)
           AND (l.lead_temperature = 'warm' OR l.lead_temperature = 'hot')
           AND l.next_follow_up IS NOT NULL
+          AND l.next_follow_up != ''
         ORDER BY l.next_follow_up ASC
       `).all(userId, userId);
     } else {
@@ -235,6 +237,7 @@ export async function GET(request: NextRequest) {
           WHERE (l.owner_id = ? OR u.agent_id = ?)
             AND (l.lead_temperature = 'warm' OR l.lead_temperature = 'hot')
             AND l.next_follow_up IS NOT NULL
+            AND l.next_follow_up != ''
           ORDER BY l.next_follow_up ASC
         `).all(user.agent_id, user.agent_id);
       } else {
@@ -243,6 +246,7 @@ export async function GET(request: NextRequest) {
           WHERE owner_id = ?
             AND (lead_temperature = 'warm' OR lead_temperature = 'hot')
             AND next_follow_up IS NOT NULL
+            AND next_follow_up != ''
           ORDER BY next_follow_up ASC
         `).all(userId);
       }

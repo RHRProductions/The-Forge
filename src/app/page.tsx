@@ -1169,7 +1169,7 @@ Type "DELETE ALL" to confirm:`;
               {/* Follow-Up Reminders Button */}
               {followUpLeads.length > 0 && (
                 <button
-                  onClick={() => setShowFollowUpModal(true)}
+                  onClick={() => router.push('/follow-ups')}
                   className="bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 px-4 py-2 rounded font-black text-sm transition-colors whitespace-nowrap flex items-center gap-2 animate-pulse border-2 border-yellow-400"
                 >
                   📋 FOLLOW-UPS ({followUpLeads.length})
@@ -2096,6 +2096,19 @@ Type "DELETE ALL" to confirm:`;
               setFilteredLeads(prevFiltered => {
                 return prevFiltered.map(l => l.id === updatedLead.id ? updatedLead : l);
               });
+              // Update followUpLeads - remove if no longer qualifies, update if still qualifies
+              setFollowUpLeads(prevFollowUp => {
+                const isWarmOrHot = updatedLead.lead_temperature === 'warm' || updatedLead.lead_temperature === 'hot';
+                const hasFollowUp = !!updatedLead.next_follow_up;
+
+                if (isWarmOrHot && hasFollowUp) {
+                  // Still qualifies - update it
+                  return prevFollowUp.map(l => l.id === updatedLead.id ? updatedLead : l);
+                } else {
+                  // No longer qualifies - remove it
+                  return prevFollowUp.filter(l => l.id !== updatedLead.id);
+                }
+              });
             }}
           />
         </ResizableMovableModal>
@@ -2545,6 +2558,16 @@ function ActivitiesSection({ leadId, lead, onLeadUpdate, session }: { leadId: nu
 
   useEffect(() => {
     fetchActivities();
+    // Reset activity form state when navigating to a new lead
+    setShowActivityForm(true);
+    setActivityType('call');
+    setActivityOutcome('no_answer');
+    setDialCount(1);
+    setActivityDetail('');
+    setLeadTemperature('');
+    setNextFollowUpDate('');
+    setAppointmentDateTime('');
+    setAppointmentEndDateTime('');
   }, [leadId]);
 
   const fetchActivities = async () => {

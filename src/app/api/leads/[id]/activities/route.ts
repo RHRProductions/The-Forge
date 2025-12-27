@@ -120,8 +120,10 @@ export async function POST(
     }
 
     // Auto-update lead status to "appointment_set" when outcome is "scheduled"
+    // Also clear next_follow_up so lead is removed from warm/hot follow-up list
     if (activity.outcome === 'scheduled') {
       updates.push(`status = 'appointment_set'`);
+      updates.push(`next_follow_up = NULL`);
     }
 
     // Auto-update lead status to "not_set" when outcome is "answered" (without temperature)
@@ -139,8 +141,8 @@ export async function POST(
       updates.push(`lead_temperature = '${activity.lead_temperature_after}'`);
     }
 
-    // Update next follow-up date if provided
-    if (activity.next_follow_up_date) {
+    // Update next follow-up date if provided (but NOT if scheduled - appointment clears follow-up)
+    if (activity.next_follow_up_date && activity.outcome !== 'scheduled') {
       updates.push(`next_follow_up = '${activity.next_follow_up_date}'`);
     }
 

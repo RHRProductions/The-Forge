@@ -72,23 +72,26 @@ export default function MessageThread({
                 className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[75%] rounded-lg px-4 py-2 ${
+                  className={`max-w-[75%] rounded-lg px-4 py-2 backdrop-blur-sm border ${
                     isOwn
-                      ? 'bg-red-600 text-white'
-                      : 'bg-gray-100 text-black'
+                      ? 'bg-red-600/85 border-red-500/50'
+                      : 'bg-gray-300/85 border-gray-400/50'
                   }`}
                 >
                   {!isOwn && (
-                    <div className="text-xs font-semibold mb-1 opacity-75">
+                    <div className="text-xs font-bold mb-1 text-black/80">
                       {message.sender_name || 'Unknown'}
                     </div>
                   )}
-                  <div className="break-words whitespace-pre-wrap">
+                  <div
+                    className={`break-words whitespace-pre-wrap font-bold ${isOwn ? 'text-white' : 'text-black'}`}
+                    style={{ textShadow: isOwn ? '0 1px 2px rgba(0,0,0,0.3)' : '0 1px 2px rgba(255,255,255,0.5)' }}
+                  >
                     {message.content}
                   </div>
                   <div
-                    className={`text-xs mt-1 ${
-                      isOwn ? 'text-red-200' : 'text-gray-400'
+                    className={`text-xs mt-1 font-medium ${
+                      isOwn ? 'text-white/80' : 'text-black/70'
                     }`}
                   >
                     {formatMessageTime(message.created_at)}

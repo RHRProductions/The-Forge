@@ -9,6 +9,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.5] - 2025-12-26
+
+### Added
+
+**The Warm Well - Dedicated Follow-Ups Page**
+- New dedicated page at `/follow-ups` for managing warm and hot lead follow-ups
+- Renamed from "Follow-Up Reminders" to "The Warm Well"
+- Clickable header navigates back to dashboard
+- Temperature conversion stats at the top showing hot/warm lead counts with all-time conversion rates
+- Full lead detail modal matching the dashboard (resizable, movable)
+- All sections included: Activities, Notes, Images, and Policies
+- Categorized sections: Overdue, Today, Upcoming (7 days), and Future
+- Inline date editing for follow-up dates
+- Quick remove button to clear follow-up from a lead
+
+### Fixed
+
+- Activity form state now properly resets when navigating between leads with Next/Prev
+- Scheduled leads are automatically removed from follow-up list (next_follow_up cleared)
+- Empty string follow-up dates no longer count in follow-up queries
+
+### Technical Details
+
+**New Files:**
+- `src/app/follow-ups/page.tsx` - The Warm Well page with full lead management
+
+**Modified Files:**
+- `src/components/NavigationMenu.tsx` - Added Follow-Ups link
+- `src/app/api/leads/route.ts` - Exclude empty string follow-ups from queries
+- `src/app/api/leads/[id]/activities/route.ts` - Clear next_follow_up when scheduled
+- `src/app/page.tsx` - Activity form state reset on lead navigation
+
+---
+
+## [0.5.4] - 2025-12-23
+
+### Added
+
+**Real-Time Team Chat**
+- Live chat functionality for team communication
+- Dial count tracking improvements
+
+---
+
 ## [0.5.3] - 2025-12-23
 
 ### Added

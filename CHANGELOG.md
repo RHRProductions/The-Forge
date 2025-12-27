@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.6] - 2025-12-26
+
+### Fixed
+
+**Analytics - Personal Lead Pool Scoping**
+- Lead Source Performance now correctly shows only leads owned by the current user
+- Previously, admins saw all leads in the system instead of just their personal pool
+- All users (including admins) now see only their own leads on the Analytics page
+- System-wide data belongs on Platform Insights (separate feature)
+
+**Lead Temperature Conversion**
+- Removed "Unset" category from display
+- Section now only shows Hot, Warm, and Cold leads
+- Eliminates confusing data from leads with unassigned temperatures
+
+### Technical Details
+
+**Modified Files:**
+- `src/app/api/analytics/route.ts` - Apply owner_id filter to all users, not just agents
+- `src/app/analytics/page.tsx` - Filter temperaturePerformance to only show hot/warm/cold
+
+---
+
 ## [0.5.5] - 2025-12-26
 
 ### Added
@@ -701,6 +724,12 @@ All security features verified and working:
 
 | Version | Date | Major Changes |
 |---------|------|---------------|
+| 0.5.6 | 2025-12-26 | **ANALYTICS FIX:** Personal lead pool scoping for all users, removed Unset from temperature display |
+| 0.5.5 | 2025-12-26 | **THE WARM WELL:** Dedicated follow-ups page with full lead management |
+| 0.5.4 | 2025-12-23 | **TEAM CHAT:** Real-time team chat, dial count tracking |
+| 0.5.3 | 2025-12-23 | **BULK ASSIGN:** Admin tool to distribute CSV leads among agents |
+| 0.5.2 | 2025-12-23 | **CONSENT & PROFILE:** Data sharing consent, self-service email/password |
+| 0.5.1 | 2025-12-22 | **AGENT ANALYTICS:** Agent-scoped data, team management, custom setter passwords |
 | 0.5.0 | 2025-12-21 | **2FA IMPLEMENTATION:** TOTP-based two-factor authentication, backup codes, profile page, encrypted secrets, comprehensive security |
 | 0.4.1 | 2025-12-21 | **EMERGENCY CLEANUP:** Removed 3 additional RCE backdoors from production server, clean rebuild deployed |
 | 0.4.0 | 2025-12-20 | **SECURITY HARDENING:** Localhost binding, image auth fixes, input sanitization, file validation, CORS, error sanitization |

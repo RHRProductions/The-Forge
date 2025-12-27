@@ -515,7 +515,9 @@ export default function AnalyticsPage() {
                 </div>
                 {showTemperature && (
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {analytics.aggregateInsights.temperaturePerformance.map((temp, index) => {
+                  {analytics.aggregateInsights.temperaturePerformance
+                    .filter((temp) => ['hot', 'warm', 'cold'].includes(temp.lead_temperature))
+                    .map((temp, index) => {
                     const apptRate = temp.totalLeads > 0 ? (temp.appointments / temp.totalLeads) * 100 : 0;
                     const closeRate = temp.totalLeads > 0 ? (temp.sales / temp.totalLeads) * 100 : 0;
                     const bgColor = temp.lead_temperature === 'hot' ? 'bg-red-500' : temp.lead_temperature === 'warm' ? 'bg-orange-500' : 'bg-blue-500';

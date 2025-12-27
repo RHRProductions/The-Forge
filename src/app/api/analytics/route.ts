@@ -136,7 +136,8 @@ export async function GET(request: NextRequest) {
     if (userRole === 'admin' || userRole === 'agent') {
       // For agents, scope data to their own leads/activities
       const activityUserFilter = userRole === 'agent' ? `AND la.created_by_user_id = ${userId}` : '';
-      const leadOwnerFilter = userRole === 'agent' ? `AND l.owner_id = ${userId}` : '';
+      // All users (including admins) only see their own leads on Analytics
+      const leadOwnerFilter = `AND l.owner_id = ${userId}`;
 
       // Best performing times of day (hour of day analysis)
       // Convert UTC timestamps to Mountain Time (UTC-6 for MDT, UTC-7 for MST)

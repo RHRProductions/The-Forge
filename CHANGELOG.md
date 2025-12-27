@@ -20,21 +20,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Scoped to personal lead pool only (not system-wide)
 - Accessible from Admin Settings → "🔀 Merge Lead Sources"
 
+**Call Screening Tracking**
+- New checkbox in lead detail modal to mark leads with call screening (Google, carrier screening, etc.)
+- Purple-themed checkbox below "Wrong Info" checkbox
+- New "Call Screen" column in Lead Source Performance analytics table
+- Tracks percentage of leads with call screening per source
+
+**Daily Activity Line Chart**
+- Replaced bar chart with SVG line chart for better trend visualization
+- Shows Dials, Contacts, Appointments, and Sales as colored trend lines
+- Hoverable data points with tooltips
+- Y-axis scale with grid lines
+- Legend with period totals for each metric
+
+### Changed
+
+**Lead Source Performance Table Reorganization**
+- Moved Disconnected, Wrong Info, and Call Screen columns to end of table (after ROI)
+- Added visual divider bar between ROI and Disconnected columns
+- Groups "issue tracking" metrics separately from performance metrics
+
 ### Fixed
 
 **Analytics - Personal Lead Pool Scoping**
 - Lead Source Performance now correctly shows only leads owned by the current user
 - Previously, admins saw all leads in the system instead of just their personal pool
 - All users (including admins) now see only their own leads on the Analytics page
-- System-wide data belongs on Platform Insights (separate feature)
 
 **Lead Temperature Conversion**
 - Removed "Unset" category from display
 - Section now only shows Hot, Warm, and Cold leads
-- Eliminates confusing data from leads with unassigned temperatures
 
 **Lead Source Performance Table**
 - Removed "Emails" column (not currently used for outreach)
+
+**Chat Message Timestamps**
+- Fixed timestamp inconsistency between sending and viewing messages
+- Messages now store ISO format timestamps for consistent timezone handling
+- Existing messages converted to ISO format
 
 ### Technical Details
 
@@ -43,10 +66,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `src/app/api/admin/merge-sources/route.ts` - API to merge sources (personal pool only)
 
 **Modified Files:**
-- `src/app/api/analytics/route.ts` - Apply owner_id filter to all users, not just agents
-- `src/app/analytics/page.tsx` - Filter temperaturePerformance, remove emails column
+- `src/app/api/analytics/route.ts` - Owner filter, call_screening column
+- `src/app/analytics/page.tsx` - Line chart, column reorder, call screening
 - `src/app/api/admin/lead-sources/route.ts` - Scope to personal lead pool
 - `src/app/admin/settings/page.tsx` - Added Merge Lead Sources button
+- `src/app/page.tsx` - Call screening checkbox in lead detail
+- `src/app/api/leads/[id]/route.ts` - Handle call_screening updates
+- `src/app/api/chat/conversations/[id]/messages/route.ts` - ISO timestamp storage
+- `types/lead.ts` - Added call_screening field
+- `lib/database/connection.ts` - Added call_screening column
 
 ---
 
@@ -742,7 +770,7 @@ All security features verified and working:
 
 | Version | Date | Major Changes |
 |---------|------|---------------|
-| 0.5.6 | 2025-12-27 | **ANALYTICS & TOOLS:** Merge Lead Sources admin tool, personal lead pool scoping, removed Unset/Emails from display |
+| 0.5.6 | 2025-12-27 | **ANALYTICS & TOOLS:** Merge Lead Sources, Call Screening tracking, Line chart, table reorg, chat timestamp fix |
 | 0.5.5 | 2025-12-26 | **THE WARM WELL:** Dedicated follow-ups page with full lead management |
 | 0.5.4 | 2025-12-23 | **TEAM CHAT:** Real-time team chat, dial count tracking |
 | 0.5.3 | 2025-12-23 | **BULK ASSIGN:** Admin tool to distribute CSV leads among agents |

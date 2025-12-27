@@ -41,7 +41,7 @@ interface AnalyticsData {
   }[];
   aggregateInsights?: {
     timeOfDay: { hour: number; dials: number; contacts: number; appointments: number }[];
-    sourcePerformance: { source: string; totalLeads: number; totalDials: number; totalTexts: number; contacted: number; appointments: number; disconnected: number; sales: number; avgCost: number; totalRevenue: number; wrongInfo: number }[];
+    sourcePerformance: { source: string; totalLeads: number; totalDials: number; totalTexts: number; contacted: number; appointments: number; disconnected: number; sales: number; avgCost: number; totalRevenue: number; wrongInfo: number; callScreening: number }[];
     geoPerformance: { city: string; zip_code: string; state: string; totalLeads: number; contacted: number; appointments: number; sales: number }[];
     dialingPatterns: { attempts: number; leads: number; contacted: number; appointments: number }[];
     dayOfWeek: { dayOfWeek: number; dials: number; contacts: number; appointments: number }[];
@@ -449,12 +449,13 @@ export default function AnalyticsPage() {
                           <th className="p-3 text-center">Texts</th>
                           <th className="p-3 text-center">Contacted</th>
                           <th className="p-3 text-center">Appointments</th>
-                          <th className="p-3 text-center">Disconnected</th>
-                          <th className="p-3 text-center">Wrong Info</th>
                           <th className="p-3 text-center">Sales</th>
                           <th className="p-3 text-center">Avg Cost</th>
                           <th className="p-3 text-center">Revenue</th>
                           <th className="p-3 text-center">ROI</th>
+                          <th className="p-3 text-center border-l-4 border-gray-400">Disconnected</th>
+                          <th className="p-3 text-center">Wrong Info</th>
+                          <th className="p-3 text-center">Call Screen</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -475,12 +476,6 @@ export default function AnalyticsPage() {
                               <td className="p-3 text-center">
                                 {source.appointments} ({source.totalLeads > 0 ? ((source.appointments / source.totalLeads) * 100).toFixed(1) : 0}%)
                               </td>
-                              <td className="p-3 text-center text-red-600">
-                                {source.disconnected} ({source.totalLeads > 0 ? ((source.disconnected / source.totalLeads) * 100).toFixed(1) : 0}%)
-                              </td>
-                              <td className="p-3 text-center text-yellow-600">
-                                {source.wrongInfo || 0} ({source.totalLeads > 0 ? (((source.wrongInfo || 0) / source.totalLeads) * 100).toFixed(1) : 0}%)
-                              </td>
                               <td className="p-3 text-center">
                                 {source.sales} ({source.totalLeads > 0 ? ((source.sales / source.totalLeads) * 100).toFixed(1) : 0}%)
                               </td>
@@ -488,6 +483,15 @@ export default function AnalyticsPage() {
                               <td className="p-3 text-center font-bold text-green-600">${source.totalRevenue.toLocaleString()}</td>
                               <td className={`p-3 text-center font-bold ${roi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                 {roi.toFixed(0)}%
+                              </td>
+                              <td className="p-3 text-center text-red-600 border-l-4 border-gray-300">
+                                {source.disconnected} ({source.totalLeads > 0 ? ((source.disconnected / source.totalLeads) * 100).toFixed(1) : 0}%)
+                              </td>
+                              <td className="p-3 text-center text-yellow-600">
+                                {source.wrongInfo || 0} ({source.totalLeads > 0 ? (((source.wrongInfo || 0) / source.totalLeads) * 100).toFixed(1) : 0}%)
+                              </td>
+                              <td className="p-3 text-center text-purple-600">
+                                {source.callScreening || 0} ({source.totalLeads > 0 ? (((source.callScreening || 0) / source.totalLeads) * 100).toFixed(1) : 0}%)
                               </td>
                             </tr>
                           );
@@ -621,123 +625,125 @@ export default function AnalyticsPage() {
                 );
               }
 
+              const data = analytics.timeSeriesData;
+              const maxValue = Math.max(
+                ...data.flatMap(d => [d.dials, d.contacts, d.appointments, d.sales]),
+                1
+              );
+
+              const chartWidth = 800;
+              const chartHeight = 250;
+              const padding = { top: 20, right: 20, bottom: 40, left: 50 };
+              const innerWidth = chartWidth - padding.left - padding.right;
+              const innerHeight = chartHeight - padding.top - padding.bottom;
+
+              const xStep = innerWidth / (data.length - 1 || 1);
+
+              const getY = (value: number) => {
+                return padding.top + innerHeight - (value / maxValue) * innerHeight;
+              };
+
+              const createPath = (values: number[]) => {
+                return values.map((v, i) => {
+                  const x = padding.left + i * xStep;
+                  const y = getY(v);
+                  return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+                }).join(' ');
+              };
+
+              const lines = [
+                { key: 'dials', color: '#3b82f6', label: 'Dials', values: data.map(d => d.dials) },
+                { key: 'contacts', color: '#22c55e', label: 'Contacts', values: data.map(d => d.contacts) },
+                { key: 'appointments', color: '#a855f7', label: 'Appointments', values: data.map(d => d.appointments) },
+                { key: 'sales', color: '#ef4444', label: 'Sales', values: data.map(d => d.sales) },
+              ];
+
               return (
-                <div className="overflow-x-auto">
-                  <div className="flex gap-3 min-w-max pb-4">
-                    {analytics.timeSeriesData.map((day, index) => {
-                      // Calculate max for scaling (use overall max across all metrics)
-                      const maxValue = Math.max(
-                        ...analytics.timeSeriesData.flatMap(d => [d.dials, d.contacts, d.appointments, d.sales]),
-                        1
-                      );
+                <div>
+                  <div className="overflow-x-auto">
+                    <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="w-full min-w-[600px]" style={{ maxHeight: '300px' }}>
+                      {/* Grid lines */}
+                      {[0, 0.25, 0.5, 0.75, 1].map((pct) => (
+                        <g key={pct}>
+                          <line
+                            x1={padding.left}
+                            y1={padding.top + innerHeight * (1 - pct)}
+                            x2={chartWidth - padding.right}
+                            y2={padding.top + innerHeight * (1 - pct)}
+                            stroke="#e5e7eb"
+                            strokeDasharray="4,4"
+                          />
+                          <text
+                            x={padding.left - 8}
+                            y={padding.top + innerHeight * (1 - pct) + 4}
+                            textAnchor="end"
+                            className="text-xs fill-gray-500"
+                            fontSize="11"
+                          >
+                            {Math.round(maxValue * pct)}
+                          </text>
+                        </g>
+                      ))}
 
-                      const hasData = day.dials > 0 || day.contacts > 0 || day.appointments > 0 || day.sales > 0;
+                      {/* Lines */}
+                      {lines.map((line) => (
+                        <path
+                          key={line.key}
+                          d={createPath(line.values)}
+                          fill="none"
+                          stroke={line.color}
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      ))}
 
-                      // Skip days with no data to save space
-                      if (!hasData) return null;
+                      {/* Data points */}
+                      {lines.map((line) => (
+                        line.values.map((v, i) => (
+                          <circle
+                            key={`${line.key}-${i}`}
+                            cx={padding.left + i * xStep}
+                            cy={getY(v)}
+                            r="4"
+                            fill={line.color}
+                            className="hover:r-6 cursor-pointer"
+                          >
+                            <title>{`${line.label}: ${v} on ${new Date(data[i].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}</title>
+                          </circle>
+                        ))
+                      ))}
 
-                      return (
-                        <div key={index} className="flex flex-col items-center min-w-[100px]">
-                          <div className="text-xs text-center mb-2 font-bold text-gray-700">
+                      {/* X-axis labels */}
+                      {data.map((day, i) => {
+                        // Only show every few labels to avoid crowding
+                        if (data.length > 14 && i % 3 !== 0 && i !== data.length - 1) return null;
+                        if (data.length > 7 && data.length <= 14 && i % 2 !== 0 && i !== data.length - 1) return null;
+                        return (
+                          <text
+                            key={i}
+                            x={padding.left + i * xStep}
+                            y={chartHeight - 10}
+                            textAnchor="middle"
+                            className="fill-gray-600"
+                            fontSize="11"
+                          >
                             {new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                          </div>
-
-                          {/* Grouped bars with fixed height container */}
-                          <div className="flex gap-1 items-end w-full px-2" style={{ height: '200px' }}>
-                            {/* Dials bar */}
-                            <div className="flex-1 flex flex-col justify-end items-center group relative h-full">
-                              {day.dials > 0 && (
-                                <div
-                                  className="w-full bg-blue-500 rounded-t hover:bg-blue-600 transition-colors cursor-pointer"
-                                  style={{
-                                    height: `${Math.max((day.dials / maxValue) * 100, 8)}%`,
-                                    minHeight: '8px'
-                                  }}
-                                >
-                                  <div className="hidden group-hover:block absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
-                                    Dials: {day.dials}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Contacts bar */}
-                            <div className="flex-1 flex flex-col justify-end items-center group relative h-full">
-                              {day.contacts > 0 && (
-                                <div
-                                  className="w-full bg-green-500 rounded-t hover:bg-green-600 transition-colors cursor-pointer"
-                                  style={{
-                                    height: `${Math.max((day.contacts / maxValue) * 100, 8)}%`,
-                                    minHeight: '8px'
-                                  }}
-                                >
-                                  <div className="hidden group-hover:block absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
-                                    Contacts: {day.contacts}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Appointments bar */}
-                            <div className="flex-1 flex flex-col justify-end items-center group relative h-full">
-                              {day.appointments > 0 && (
-                                <div
-                                  className="w-full bg-purple-500 rounded-t hover:bg-purple-600 transition-colors cursor-pointer"
-                                  style={{
-                                    height: `${Math.max((day.appointments / maxValue) * 100, 8)}%`,
-                                    minHeight: '8px'
-                                  }}
-                                >
-                                  <div className="hidden group-hover:block absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
-                                    Appointments: {day.appointments}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Sales bar */}
-                            <div className="flex-1 flex flex-col justify-end items-center group relative h-full">
-                              {day.sales > 0 && (
-                                <div
-                                  className="w-full bg-red-500 rounded-t hover:bg-red-600 transition-colors cursor-pointer"
-                                  style={{
-                                    height: `${Math.max((day.sales / maxValue) * 100, 8)}%`,
-                                    minHeight: '8px'
-                                  }}
-                                >
-                                  <div className="hidden group-hover:block absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
-                                    Sales: {day.sales}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Show count below for primary metric */}
-                          <div className="text-xs text-center mt-2 font-bold text-blue-600">
-                            {day.dials} dials
-                          </div>
-                        </div>
-                      );
-                    })}
+                          </text>
+                        );
+                      })}
+                    </svg>
                   </div>
-                  <div className="flex gap-4 justify-center mt-4 text-xs">
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 bg-blue-500 rounded"></div>
-                      <span>Dials</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 bg-green-500 rounded"></div>
-                      <span>Contacts</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 bg-purple-500 rounded"></div>
-                      <span>Appointments</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 bg-red-500 rounded"></div>
-                      <span>Sales</span>
-                    </div>
+
+                  {/* Legend */}
+                  <div className="flex gap-6 justify-center mt-4 text-sm">
+                    {lines.map((line) => (
+                      <div key={line.key} className="flex items-center gap-2">
+                        <div className="w-4 h-1 rounded" style={{ backgroundColor: line.color }}></div>
+                        <span className="font-medium">{line.label}</span>
+                        <span className="text-gray-500">({line.values.reduce((a, b) => a + b, 0)})</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               );

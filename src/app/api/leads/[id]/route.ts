@@ -83,6 +83,9 @@ export async function PUT(
     if (leadData.wrong_info !== undefined) {
       addField('wrong_info', leadData.wrong_info ? 1 : 0);
     }
+    if (leadData.call_screening !== undefined) {
+      addField('call_screening', leadData.call_screening ? 1 : 0);
+    }
 
     // Always update updated_at
     updates.push('updated_at = CURRENT_TIMESTAMP');

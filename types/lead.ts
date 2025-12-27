@@ -50,6 +50,7 @@ export interface Lead {
   owner_id?: number;
   worked_by_id?: number;
   wrong_info?: boolean;
+  call_screening?: boolean;
   created_at?: string;
   updated_at?: string;
 }

@@ -173,7 +173,8 @@ export async function GET(request: NextRequest) {
           AVG(l.cost_per_lead) as avgCost,
           -- Sum revenue only from policies created in the time period
           COALESCE(SUM(CASE WHEN lp.status IN ('active', 'pending') ${period !== 'all' ? `AND datetime(lp.created_at) >= datetime('now', '-${daysBack} days')` : ''} THEN lp.commission_amount ELSE 0 END), 0) as totalRevenue,
-          SUM(CASE WHEN l.wrong_info = 1 THEN 1 ELSE 0 END) as wrongInfo
+          SUM(CASE WHEN l.wrong_info = 1 THEN 1 ELSE 0 END) as wrongInfo,
+          SUM(CASE WHEN l.call_screening = 1 THEN 1 ELSE 0 END) as callScreening
         FROM leads l
         LEFT JOIN lead_activities la ON l.id = la.lead_id ${period !== 'all' ? dateFilter : ''}
         LEFT JOIN lead_policies lp ON l.id = lp.lead_id

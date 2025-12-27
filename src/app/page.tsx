@@ -3044,6 +3044,37 @@ function ActivitiesSection({ leadId, lead, onLeadUpdate, session }: { leadId: nu
             </label>
           </div>
 
+          {/* Call Screening Checkbox */}
+          <div className="mb-2">
+            <label className="flex items-center gap-2 cursor-pointer bg-purple-50 border border-purple-300 rounded p-2 hover:bg-purple-100 transition-colors">
+              <input
+                type="checkbox"
+                checked={lead?.call_screening || false}
+                onChange={async (e) => {
+                  if (!lead?.id) return;
+                  const newValue = e.target.checked;
+                  try {
+                    const response = await fetch(`/api/leads/${lead.id}`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ call_screening: newValue }),
+                    });
+                    if (response.ok) {
+                      const updatedLead = await response.json();
+                      onLeadUpdate(updatedLead);
+                    }
+                  } catch (error) {
+                    console.error('Error updating call screening:', error);
+                  }
+                }}
+                className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+              />
+              <span className="text-xs font-medium text-gray-700">
+                📵 Has Call Screening (Google, carrier screening, etc.)
+              </span>
+            </label>
+          </div>
+
           <div className="mb-2">
             <label className="block text-xs font-medium text-gray-700 mb-1">Additional Details (Optional)</label>
             <textarea

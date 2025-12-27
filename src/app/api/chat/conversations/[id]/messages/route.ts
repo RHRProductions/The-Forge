@@ -104,14 +104,16 @@ export async function POST(
       .replace(/javascript:/gi, '')
       .replace(/on\w+\s*=/gi, '');
 
-    // Insert message
+    // Generate ISO timestamp for consistent timezone handling
+    const createdAt = new Date().toISOString();
+
+    // Insert message with explicit ISO timestamp
     const result = db.prepare(`
-      INSERT INTO messages (conversation_id, sender_id, content)
-      VALUES (?, ?, ?)
-    `).run(conversationId, userId, sanitizedContent);
+      INSERT INTO messages (conversation_id, sender_id, content, created_at)
+      VALUES (?, ?, ?, ?)
+    `).run(conversationId, userId, sanitizedContent, createdAt);
 
     const messageId = result.lastInsertRowid as number;
-    const createdAt = new Date().toISOString();
 
     // Update conversation updated_at
     db.prepare(`

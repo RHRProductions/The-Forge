@@ -490,6 +490,12 @@ Type RESET to confirm:`;
                 🏷️ Lead Sources
               </button>
               <button
+                onClick={() => router.push('/admin/merge-sources')}
+                className="bg-teal-600 text-white px-6 py-3 rounded font-bold hover:bg-teal-700 transition-colors"
+              >
+                🔀 Merge Lead Sources
+              </button>
+              <button
                 onClick={() => router.push('/duplicates')}
                 className="bg-yellow-600 text-white px-6 py-3 rounded font-bold hover:bg-yellow-700 transition-colors"
               >

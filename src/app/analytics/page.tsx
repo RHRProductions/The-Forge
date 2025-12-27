@@ -41,7 +41,7 @@ interface AnalyticsData {
   }[];
   aggregateInsights?: {
     timeOfDay: { hour: number; dials: number; contacts: number; appointments: number }[];
-    sourcePerformance: { source: string; totalLeads: number; totalDials: number; totalTexts: number; totalEmails: number; contacted: number; appointments: number; disconnected: number; sales: number; avgCost: number; totalRevenue: number; wrongInfo: number }[];
+    sourcePerformance: { source: string; totalLeads: number; totalDials: number; totalTexts: number; contacted: number; appointments: number; disconnected: number; sales: number; avgCost: number; totalRevenue: number; wrongInfo: number }[];
     geoPerformance: { city: string; zip_code: string; state: string; totalLeads: number; contacted: number; appointments: number; sales: number }[];
     dialingPatterns: { attempts: number; leads: number; contacted: number; appointments: number }[];
     dayOfWeek: { dayOfWeek: number; dials: number; contacts: number; appointments: number }[];
@@ -447,7 +447,6 @@ export default function AnalyticsPage() {
                           <th className="p-3 text-center">Total Leads</th>
                           <th className="p-3 text-center">Calls</th>
                           <th className="p-3 text-center">Texts</th>
-                          <th className="p-3 text-center">Emails</th>
                           <th className="p-3 text-center">Contacted</th>
                           <th className="p-3 text-center">Appointments</th>
                           <th className="p-3 text-center">Disconnected</th>
@@ -462,7 +461,7 @@ export default function AnalyticsPage() {
                         {analytics.aggregateInsights.sourcePerformance.map((source, index) => {
                           const totalCost = source.totalLeads * (source.avgCost || 0);
                           const roi = totalCost > 0 ? ((source.totalRevenue - totalCost) / totalCost) * 100 : 0;
-                          const totalContactAttempts = (source.totalDials || 0) + (source.totalTexts || 0) + (source.totalEmails || 0);
+                          const totalContactAttempts = (source.totalDials || 0) + (source.totalTexts || 0);
                           const contactRate = totalContactAttempts > 0 ? ((source.contacted / totalContactAttempts) * 100) : 0;
                           return (
                             <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
@@ -470,7 +469,6 @@ export default function AnalyticsPage() {
                               <td className="p-3 text-center">{source.totalLeads}</td>
                               <td className="p-3 text-center">{source.totalDials || 0}</td>
                               <td className="p-3 text-center">{source.totalTexts || 0}</td>
-                              <td className="p-3 text-center">{source.totalEmails || 0}</td>
                               <td className="p-3 text-center">
                                 {source.contacted} ({contactRate.toFixed(1)}%)
                               </td>

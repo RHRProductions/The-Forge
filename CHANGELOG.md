@@ -9,7 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.5.6] - 2025-12-26
+## [0.5.6] - 2025-12-27
+
+### Added
+
+**Merge Lead Sources Tool (Admin)**
+- New admin tool at `/admin/merge-sources` to combine lead sources
+- Select multiple sources to merge into one target source
+- Option to create a new source name or merge into existing
+- Scoped to personal lead pool only (not system-wide)
+- Accessible from Admin Settings → "🔀 Merge Lead Sources"
 
 ### Fixed
 
@@ -24,11 +33,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Section now only shows Hot, Warm, and Cold leads
 - Eliminates confusing data from leads with unassigned temperatures
 
+**Lead Source Performance Table**
+- Removed "Emails" column (not currently used for outreach)
+
 ### Technical Details
+
+**New Files:**
+- `src/app/admin/merge-sources/page.tsx` - Merge Lead Sources admin UI
+- `src/app/api/admin/merge-sources/route.ts` - API to merge sources (personal pool only)
 
 **Modified Files:**
 - `src/app/api/analytics/route.ts` - Apply owner_id filter to all users, not just agents
-- `src/app/analytics/page.tsx` - Filter temperaturePerformance to only show hot/warm/cold
+- `src/app/analytics/page.tsx` - Filter temperaturePerformance, remove emails column
+- `src/app/api/admin/lead-sources/route.ts` - Scope to personal lead pool
+- `src/app/admin/settings/page.tsx` - Added Merge Lead Sources button
 
 ---
 
@@ -724,7 +742,7 @@ All security features verified and working:
 
 | Version | Date | Major Changes |
 |---------|------|---------------|
-| 0.5.6 | 2025-12-26 | **ANALYTICS FIX:** Personal lead pool scoping for all users, removed Unset from temperature display |
+| 0.5.6 | 2025-12-27 | **ANALYTICS & TOOLS:** Merge Lead Sources admin tool, personal lead pool scoping, removed Unset/Emails from display |
 | 0.5.5 | 2025-12-26 | **THE WARM WELL:** Dedicated follow-ups page with full lead management |
 | 0.5.4 | 2025-12-23 | **TEAM CHAT:** Real-time team chat, dial count tracking |
 | 0.5.3 | 2025-12-23 | **BULK ASSIGN:** Admin tool to distribute CSV leads among agents |

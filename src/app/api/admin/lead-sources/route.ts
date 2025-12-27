@@ -11,17 +11,19 @@ export async function GET() {
     }
 
     const db = getDatabase();
+    const userId = parseInt((session.user as any).id);
 
+    // Only show sources from leads owned by the current user
     const sources = db.prepare(`
       SELECT
         source,
         COUNT(*) as count,
         AVG(cost_per_lead) as avg_cost
       FROM leads
-      WHERE source IS NOT NULL AND source != ''
+      WHERE source IS NOT NULL AND source != '' AND owner_id = ?
       GROUP BY source
       ORDER BY count DESC
-    `).all();
+    `).all(userId);
 
     return NextResponse.json(sources);
   } catch (error) {

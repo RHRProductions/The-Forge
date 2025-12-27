@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.7] - 2025-12-27
+
+### Added
+
+**T65 Window Filter**
+- New "Turning 65 Within" dropdown filter on dashboard
+- Filter leads who are 64 and turning 65 within 1-4 months
+- Useful for targeting Medicare T65 prospects at optimal timing
+- Handles year boundary scenarios (e.g., filtering in Nov for Jan birthdays)
+
+### Changed
+
+**Age Filter Behavior**
+- Entering only a minimum age now filters for exact age match
+- Previously showed all leads >= that age
+- More intuitive for targeting specific age groups
+
+**Filter Layout Reorganization**
+- Removed State filter from dashboard (not needed for current workflow)
+- Moved Lead Vendor filter to fill the empty slot
+- Row 2 now contains: Zip Code, Age Range, Turning 65 Within, Lead Vendor
+
+---
+
 ## [0.5.6] - 2025-12-27
 
 ### Added

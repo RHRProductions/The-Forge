@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
     const temperature = searchParams.get('temperature') || '';
     const ageMin = searchParams.get('age_min') || '';
     const ageMax = searchParams.get('age_max') || '';
+    const t65Window = searchParams.get('t65_window') || '';
 
     // Build WHERE clause for filters
     const buildWhereClause = (baseWhere: string = '1=1') => {
@@ -46,57 +47,113 @@ export async function GET(request: NextRequest) {
 
         if (searchDigits.length > 0) {
           // Strip all non-numeric characters from database phone numbers for comparison
-          where += ` AND (LOWER(first_name || ' ' || last_name) LIKE ? OR REPLACE(REPLACE(REPLACE(REPLACE(phone, '-', ''), '(', ''), ')', ''), ' ', '') LIKE ? OR REPLACE(REPLACE(REPLACE(REPLACE(phone_2, '-', ''), '(', ''), ')', ''), ' ', '') LIKE ?)`;
+          where += ` AND (LOWER(l.first_name || ' ' || l.last_name) LIKE ? OR REPLACE(REPLACE(REPLACE(REPLACE(l.phone, '-', ''), '(', ''), ')', ''), ' ', '') LIKE ? OR REPLACE(REPLACE(REPLACE(REPLACE(l.phone_2, '-', ''), '(', ''), ')', ''), ' ', '') LIKE ?)`;
           params.push(`%${searchLower}%`, `%${searchDigits}%`, `%${searchDigits}%`);
         } else {
-          where += ` AND LOWER(first_name || ' ' || last_name) LIKE ?`;
+          where += ` AND LOWER(l.first_name || ' ' || l.last_name) LIKE ?`;
           params.push(`%${searchLower}%`);
         }
       }
 
       if (status) {
-        where += ` AND status = ?`;
+        where += ` AND l.status = ?`;
         params.push(status);
       }
 
       if (leadType) {
-        where += ` AND lead_type = ?`;
+        where += ` AND l.lead_type = ?`;
         params.push(leadType);
       }
 
       if (city) {
-        where += ` AND LOWER(city) LIKE ?`;
+        where += ` AND LOWER(l.city) LIKE ?`;
         params.push(`%${city.toLowerCase()}%`);
       }
 
       if (state) {
-        where += ` AND UPPER(state) = ?`;
+        where += ` AND UPPER(l.state) = ?`;
         params.push(state.toUpperCase());
       }
 
       if (zipCode) {
-        where += ` AND zip_code LIKE ?`;
+        where += ` AND l.zip_code LIKE ?`;
         params.push(`%${zipCode}%`);
       }
 
       if (source) {
-        where += ` AND LOWER(source) LIKE ?`;
+        where += ` AND LOWER(l.source) LIKE ?`;
         params.push(`%${source.toLowerCase()}%`);
       }
 
       if (temperature) {
-        where += ` AND lead_temperature = ?`;
+        where += ` AND l.lead_temperature = ?`;
         params.push(temperature);
       }
 
-      if (ageMin) {
-        where += ` AND age >= ?`;
+      // Age filtering: if only min provided, treat as exact match
+      if (ageMin && !ageMax) {
+        where += ` AND l.age = ?`;
         params.push(parseInt(ageMin));
+      } else if (ageMin && ageMax) {
+        where += ` AND l.age >= ? AND l.age <= ?`;
+        params.push(parseInt(ageMin), parseInt(ageMax));
+      } else if (ageMax) {
+        where += ` AND l.age <= ?`;
+        params.push(parseInt(ageMax));
       }
 
-      if (ageMax) {
-        where += ` AND age <= ?`;
-        params.push(parseInt(ageMax));
+      // T65 Window: filter for 64-year-olds turning 65 within X months
+      if (t65Window) {
+        const months = parseInt(t65Window);
+        // Calculate the DOB range for people turning 65 within X months
+        // Their 65th birthday must be between today and today + X months
+        // So their DOB must be between (today - 65 years) and (today + X months - 65 years)
+        const today = new Date();
+        const endDate = new Date(today);
+        endDate.setMonth(endDate.getMonth() + months);
+
+        // DOB for turning 65 today
+        const dobForToday = new Date(today);
+        dobForToday.setFullYear(dobForToday.getFullYear() - 65);
+
+        // DOB for turning 65 in X months
+        const dobForEnd = new Date(endDate);
+        dobForEnd.setFullYear(dobForEnd.getFullYear() - 65);
+
+        // Format as MM/DD for comparison (ignore year since we check age = 64)
+        const todayMonth = today.getMonth() + 1;
+        const todayDay = today.getDate();
+        const endMonth = endDate.getMonth() + 1;
+        const endDay = endDate.getDate();
+
+        // Filter: age = 64 AND birthday is within the window
+        // We compare month and day only since age already filters to the right year
+        where += ` AND l.age = 64 AND l.date_of_birth IS NOT NULL`;
+
+        // Parse month and day from M/D/YYYY or MM/DD/YYYY format
+        // Check if birthday falls between today and end date (within same calendar year context)
+        if (endMonth > todayMonth || (endMonth === todayMonth && endDay >= todayDay)) {
+          // Window doesn't cross year boundary
+          where += ` AND (
+            (CAST(substr(l.date_of_birth, 1, instr(l.date_of_birth, '/') - 1) AS INTEGER) > ${todayMonth})
+            OR (CAST(substr(l.date_of_birth, 1, instr(l.date_of_birth, '/') - 1) AS INTEGER) = ${todayMonth}
+                AND CAST(substr(l.date_of_birth, instr(l.date_of_birth, '/') + 1, instr(substr(l.date_of_birth, instr(l.date_of_birth, '/') + 1), '/') - 1) AS INTEGER) > ${todayDay})
+          ) AND (
+            (CAST(substr(l.date_of_birth, 1, instr(l.date_of_birth, '/') - 1) AS INTEGER) < ${endMonth})
+            OR (CAST(substr(l.date_of_birth, 1, instr(l.date_of_birth, '/') - 1) AS INTEGER) = ${endMonth}
+                AND CAST(substr(l.date_of_birth, instr(l.date_of_birth, '/') + 1, instr(substr(l.date_of_birth, instr(l.date_of_birth, '/') + 1), '/') - 1) AS INTEGER) <= ${endDay})
+          )`;
+        } else {
+          // Window crosses year boundary (e.g., Nov to Feb)
+          where += ` AND (
+            (CAST(substr(l.date_of_birth, 1, instr(l.date_of_birth, '/') - 1) AS INTEGER) > ${todayMonth})
+            OR (CAST(substr(l.date_of_birth, 1, instr(l.date_of_birth, '/') - 1) AS INTEGER) = ${todayMonth}
+                AND CAST(substr(l.date_of_birth, instr(l.date_of_birth, '/') + 1, instr(substr(l.date_of_birth, instr(l.date_of_birth, '/') + 1), '/') - 1) AS INTEGER) > ${todayDay})
+            OR (CAST(substr(l.date_of_birth, 1, instr(l.date_of_birth, '/') - 1) AS INTEGER) < ${endMonth})
+            OR (CAST(substr(l.date_of_birth, 1, instr(l.date_of_birth, '/') - 1) AS INTEGER) = ${endMonth}
+                AND CAST(substr(l.date_of_birth, instr(l.date_of_birth, '/') + 1, instr(substr(l.date_of_birth, instr(l.date_of_birth, '/') + 1), '/') - 1) AS INTEGER) <= ${endDay})
+          )`;
+        }
       }
 
       return { where, params };

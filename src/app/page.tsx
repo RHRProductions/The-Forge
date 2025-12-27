@@ -526,6 +526,7 @@ function HomeContent() {
     zip_code: '',
     age_min: '',
     age_max: '',
+    t65_window: '',
     source: '',
     temperature: '',
     search: ''
@@ -687,6 +688,7 @@ function HomeContent() {
       if (filters.temperature) params.append('temperature', filters.temperature);
       if (filters.age_min) params.append('age_min', filters.age_min);
       if (filters.age_max) params.append('age_max', filters.age_max);
+      if (filters.t65_window) params.append('t65_window', filters.t65_window);
 
       const response = await fetch(`/api/leads?${params.toString()}`);
       if (response.ok) {
@@ -763,6 +765,7 @@ function HomeContent() {
       zip_code: '',
       age_min: '',
       age_max: '',
+      t65_window: '',
       source: '',
       temperature: '',
       search: ''
@@ -1768,21 +1771,8 @@ Type "DELETE ALL" to confirm:`;
             </div>
           </div>
 
-          {/* Row 2: State, Zip, Age Range, Vendor */}
+          {/* Row 2: Zip, Age Range, T65 Window, Lead Vendor */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-            {/* State Filter */}
-            <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-600 mb-1">State</label>
-              <input
-                type="text"
-                placeholder="e.g. CO"
-                value={filters.state}
-                onChange={(e) => handleFilterChange('state', e.target.value.toUpperCase())}
-                maxLength={2}
-                className="px-3 py-2 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none uppercase"
-              />
-            </div>
-
             {/* Zip Code Filter */}
             <div className="flex flex-col">
               <label className="text-sm font-medium text-gray-600 mb-1">Zip Code</label>
@@ -1816,6 +1806,22 @@ Type "DELETE ALL" to confirm:`;
               </div>
             </div>
 
+            {/* T65 Window Filter */}
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-600 mb-1">Turning 65 Within</label>
+              <select
+                value={filters.t65_window}
+                onChange={(e) => handleFilterChange('t65_window', e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded text-sm focus:border-red-600 focus:outline-none bg-white"
+              >
+                <option value="">Any</option>
+                <option value="1">1 month</option>
+                <option value="2">2 months</option>
+                <option value="3">3 months</option>
+                <option value="4">4 months</option>
+              </select>
+            </div>
+
             {/* Lead Vendor Filter */}
             <div className="flex flex-col">
               <label className="text-sm font-medium text-gray-600 mb-1">Lead Vendor</label>
@@ -1843,7 +1849,7 @@ Type "DELETE ALL" to confirm:`;
             </button>
 
             {/* Bulk Delete Filtered Leads Button - Hidden by default, Agents/Admins only */}
-            {(session.user as any).role !== 'setter' && (filters.status || filters.lead_type || filters.city || filters.state || filters.zip_code || filters.age_min || filters.age_max || filters.source) && filteredLeads.length > 0 && (
+            {(session.user as any).role !== 'setter' && (filters.status || filters.lead_type || filters.city || filters.zip_code || filters.age_min || filters.age_max || filters.source) && filteredLeads.length > 0 && (
               <div className="flex flex-col justify-end">
                 {!showBulkDeleteButton ? (
                   <button

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import NavigationMenu from '@/components/NavigationMenu';
 
 interface AnalyticsData {
@@ -202,7 +203,9 @@ export default function AnalyticsPage() {
       <header className="bg-black text-white p-6 border-b-4 border-red-600">
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-center">
-            <h1 className="text-4xl font-black">📊 Analytics</h1>
+            <Link href="/" className="hover:text-red-400 transition-colors">
+              <h1 className="text-4xl font-black">📊 Analytics</h1>
+            </Link>
             <NavigationMenu currentPage="analytics" />
           </div>
         </div>

@@ -21,7 +21,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'", // Tailwind and Next.js require unsafe-inline
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
-              "connect-src 'self'",
+              "connect-src 'self' wss://*.pusher.com https://*.pusher.com",
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",

@@ -126,38 +126,45 @@ export function sanitizeInteger(input: string | number | null | undefined): numb
 
 /**
  * Sanitize lead object - applies appropriate sanitization to each field
+ * Only includes fields that were actually provided in the input
  */
 export function sanitizeLead(lead: any): any {
-  return {
-    first_name: sanitizeText(lead.first_name, { maxLength: 100 }),
-    last_name: sanitizeText(lead.last_name, { maxLength: 100 }),
-    email: sanitizeEmail(lead.email),
-    phone: sanitizePhone(lead.phone),
-    phone_2: sanitizePhone(lead.phone_2),
-    company: sanitizeText(lead.company, { maxLength: 200 }),
-    address: sanitizeText(lead.address, { maxLength: 300 }),
-    city: sanitizeText(lead.city, { maxLength: 100 }),
-    state: sanitizeText(lead.state, { maxLength: 50 }),
-    zip_code: sanitizeText(lead.zip_code, { maxLength: 20 }),
-    date_of_birth: sanitizeText(lead.date_of_birth, { maxLength: 20 }),
-    age: sanitizeInteger(lead.age),
-    gender: sanitizeText(lead.gender, { maxLength: 20 }),
-    marital_status: sanitizeText(lead.marital_status, { maxLength: 50 }),
-    occupation: sanitizeText(lead.occupation, { maxLength: 200 }),
-    income: sanitizeText(lead.income, { maxLength: 50 }),
-    household_size: sanitizeInteger(lead.household_size),
-    status: sanitizeText(lead.status, { maxLength: 50 }),
-    contact_method: sanitizeText(lead.contact_method, { maxLength: 50 }),
-    lead_type: sanitizeText(lead.lead_type, { maxLength: 50 }),
-    cost_per_lead: sanitizeNumber(lead.cost_per_lead),
-    sales_amount: sanitizeNumber(lead.sales_amount),
-    notes: sanitizeNotes(lead.notes),
-    source: sanitizeText(lead.source, { maxLength: 200 }),
-    lead_score: sanitizeInteger(lead.lead_score),
-    lead_temperature: sanitizeText(lead.lead_temperature, { maxLength: 20 }),
-    last_contact_date: sanitizeText(lead.last_contact_date, { maxLength: 50 }),
-    next_follow_up: sanitizeText(lead.next_follow_up, { maxLength: 50 }),
-  };
+  const result: any = {};
+
+  // Only sanitize and include fields that exist in the input
+  if (lead.first_name !== undefined) result.first_name = sanitizeText(lead.first_name, { maxLength: 100 });
+  if (lead.last_name !== undefined) result.last_name = sanitizeText(lead.last_name, { maxLength: 100 });
+  if (lead.email !== undefined) result.email = sanitizeEmail(lead.email);
+  if (lead.phone !== undefined) result.phone = sanitizePhone(lead.phone);
+  if (lead.phone_2 !== undefined) result.phone_2 = sanitizePhone(lead.phone_2);
+  if (lead.company !== undefined) result.company = sanitizeText(lead.company, { maxLength: 200 });
+  if (lead.address !== undefined) result.address = sanitizeText(lead.address, { maxLength: 300 });
+  if (lead.city !== undefined) result.city = sanitizeText(lead.city, { maxLength: 100 });
+  if (lead.state !== undefined) result.state = sanitizeText(lead.state, { maxLength: 50 });
+  if (lead.zip_code !== undefined) result.zip_code = sanitizeText(lead.zip_code, { maxLength: 20 });
+  if (lead.date_of_birth !== undefined) result.date_of_birth = sanitizeText(lead.date_of_birth, { maxLength: 20 });
+  if (lead.age !== undefined) result.age = sanitizeInteger(lead.age);
+  if (lead.gender !== undefined) result.gender = sanitizeText(lead.gender, { maxLength: 20 });
+  if (lead.marital_status !== undefined) result.marital_status = sanitizeText(lead.marital_status, { maxLength: 50 });
+  if (lead.occupation !== undefined) result.occupation = sanitizeText(lead.occupation, { maxLength: 200 });
+  if (lead.income !== undefined) result.income = sanitizeText(lead.income, { maxLength: 50 });
+  if (lead.household_size !== undefined) result.household_size = sanitizeInteger(lead.household_size);
+  if (lead.status !== undefined) result.status = sanitizeText(lead.status, { maxLength: 50 });
+  if (lead.contact_method !== undefined) result.contact_method = sanitizeText(lead.contact_method, { maxLength: 50 });
+  if (lead.lead_type !== undefined) result.lead_type = sanitizeText(lead.lead_type, { maxLength: 50 });
+  if (lead.cost_per_lead !== undefined) result.cost_per_lead = sanitizeNumber(lead.cost_per_lead);
+  if (lead.sales_amount !== undefined) result.sales_amount = sanitizeNumber(lead.sales_amount);
+  if (lead.notes !== undefined) result.notes = sanitizeNotes(lead.notes);
+  if (lead.source !== undefined) result.source = sanitizeText(lead.source, { maxLength: 200 });
+  if (lead.lead_score !== undefined) result.lead_score = sanitizeInteger(lead.lead_score);
+  if (lead.lead_temperature !== undefined) result.lead_temperature = sanitizeText(lead.lead_temperature, { maxLength: 20 });
+  if (lead.last_contact_date !== undefined) result.last_contact_date = sanitizeText(lead.last_contact_date, { maxLength: 50 });
+  if (lead.next_follow_up !== undefined) result.next_follow_up = sanitizeText(lead.next_follow_up, { maxLength: 50 });
+  // Boolean fields - pass through as-is (handled by API)
+  if (lead.wrong_info !== undefined) result.wrong_info = lead.wrong_info;
+  if (lead.call_screening !== undefined) result.call_screening = lead.call_screening;
+
+  return result;
 }
 
 /**

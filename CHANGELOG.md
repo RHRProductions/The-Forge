@@ -9,6 +9,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.8] - 2026-01-01
+
+### Fixed
+
+**CRITICAL: Lead Data Loss Bug**
+- Fixed `sanitizeLead()` function that was wiping all lead data when updating single fields
+- When updating just `wrong_info` or `call_screening`, the function was returning empty strings for ALL other fields
+- This caused leads to appear "deleted" when searching (data still existed but was blanked out)
+- Root cause: sanitizer returned all fields regardless of input, converting `undefined` to empty strings
+- Fix: Now only includes fields that were actually provided in the update request
+
+**Analytics Page 500 Error**
+- Added missing `call_screening` column to database schema
+- The column was referenced in analytics queries but never added to the schema migration
+- This caused the analytics API to crash with a SQL error
+
+**Content Security Policy (CSP) Blocking Pusher**
+- Updated CSP `connect-src` directive to allow Pusher websocket connections
+- Team chat feature was being blocked by `connect-src 'self'`
+- Added `wss://*.pusher.com` and `https://*.pusher.com` to allowed origins
+
+### Technical Details
+
+**Modified Files:**
+- `lib/database/connection.ts` - Added `call_screening BOOLEAN DEFAULT 0` column
+- `lib/security/input-sanitizer.ts` - Fixed `sanitizeLead()` to only include provided fields
+- `next.config.ts` - Updated CSP connect-src for Pusher
+
+### Data Recovery Note
+
+Leads affected by the data loss bug still exist in the database with their original IDs, but have empty field values. If you have backups, affected leads can be identified with:
+```sql
+SELECT id, created_at FROM leads WHERE first_name = '' OR phone = '';
+```
+
+---
+
 ## [0.5.7] - 2025-12-27
 
 ### Added
@@ -801,6 +838,8 @@ All security features verified and working:
 
 | Version | Date | Major Changes |
 |---------|------|---------------|
+| 0.5.8 | 2026-01-01 | **CRITICAL FIX:** Lead data loss bug, analytics 500 error, CSP for Pusher |
+| 0.5.7 | 2025-12-27 | **T65 FILTER:** Turning 65 filter, age filter behavior, chat styling |
 | 0.5.6 | 2025-12-27 | **ANALYTICS & TOOLS:** Merge Lead Sources, Call Screening tracking, Line chart, table reorg, chat timestamp fix |
 | 0.5.5 | 2025-12-26 | **THE WARM WELL:** Dedicated follow-ups page with full lead management |
 | 0.5.4 | 2025-12-23 | **TEAM CHAT:** Real-time team chat, dial count tracking |

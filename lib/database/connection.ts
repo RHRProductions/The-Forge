@@ -83,7 +83,8 @@ function initializeDatabase() {
     'contact_attempt_count INTEGER DEFAULT 0',
     'owner_id INTEGER',
     'worked_by_id INTEGER',
-    'wrong_info BOOLEAN DEFAULT 0'
+    'wrong_info BOOLEAN DEFAULT 0',
+    'call_screening BOOLEAN DEFAULT 0'
   ];
 
   newColumns.forEach(column => {
